@@ -254,6 +254,10 @@ def rewrite_images(soup: BeautifulSoup, manifest: dict) -> int:
             img["data-original-src"] = src
             img["src"] = ""
             img["alt"] = img.get("alt", filename)
+        # Drop srcset — its high-DPI variants point at remote CDN we don't mirror,
+        # and browsers prefer srcset over src. Single src is sufficient offline.
+        if img.has_attr("srcset"):
+            del img["srcset"]
         n += 1
     return n
 

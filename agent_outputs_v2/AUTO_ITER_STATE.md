@@ -184,6 +184,20 @@ Bug fixes in v0.3.4 build:
 - ✅ Rebuilt build_v2 + build_class_hubs_v2 → **25/25 真职业 with full class pages**
 - ✅ Re-zipped v0.3.7 portable (1.22 GB unchanged) + re-uploaded to release
 
+### Iter 12 — Pf2Icon TTF font (action symbols) (2026-05-20, DONE)
+- ✅ Discovered wiki uses custom `Pf2Icon` TTF with chars 1/2/3/F/R = action symbols
+- ✅ Source: `https://huiji-public.huijistatic.com/pf2/uploads/7/73/PATHFINDER2EACTIONS.TTF` (3.9 KB)
+- ✅ Downloaded to `_wiki_full_v2/assets/pf2icon.ttf`
+- ✅ Appended @font-face + `.pf2icon-1/2/3/F/R::before` rules to `_v2_compat.css`
+- ✅ Playwright verified: `Pf2Icon:loaded`, action symbols render visibly on 灵魂纱幕
+
+### Iter 13 — Regression QA + srcset fix (2026-05-20, DONE)
+- ✅ Classes hub 25/25 verified via Playwright
+- ✅ Pf2Icon glyphs render correctly
+- ⚠️ Found image 403 errors from `srcset` attributes (high-DPI variants pointed at remote CDN)
+- ✅ Fixed: `rewrite_images()` now strips `srcset` attribute (single local `src` is enough)
+- ✅ Console-error count: 2 → 0 on 灵魂纱幕
+
 ### Iter 10 — Final status + remaining gaps (2026-05-20, DONE)
 - 10 iterations of bug-find + fix loop completed
 - Releases shipped this auto-loop: v0.3.3, v0.3.4, v0.3.5, v0.3.6
