@@ -96,9 +96,47 @@
 
   function init() {
     var els = document.querySelectorAll('.mw-collapsible');
+    // mw-autocollapse: if >= 2 such elements on page, MediaWiki collapses them
+    // all by default. We replicate that here so navbox-heavy pages (e.g. 战士)
+    // don't render with 2-3 fully expanded 1000-row navboxes pushing content down.
+    var autocollapse = document.querySelectorAll('.mw-collapsible.mw-autocollapse');
+    if (autocollapse.length >= 2) {
+      for (var j = 0; j < autocollapse.length; j++) {
+        autocollapse[j].classList.add('mw-collapsed');
+      }
+    }
     for (var i = 0; i < els.length; i++) {
       try { injectToggle(els[i]); } catch (e) { console.error('[mw_collapsible] failed', e); }
     }
+  }
+
+  // Hamburger toggle for mobile (paired with _v2_compat.css .sidebar-hamburger)
+  function setupHamburger() {
+    if (window.innerWidth > 640) return;
+    if (document.querySelector('.sidebar-hamburger')) return;
+    var sidebar = document.querySelector('.wiki-sidebar');
+    if (!sidebar) return;
+    var btn = document.createElement('button');
+    btn.className = 'sidebar-hamburger';
+    btn.setAttribute('aria-label', '打开导航');
+    btn.textContent = '☰';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      document.body.classList.toggle('sidebar-open');
+    });
+    document.body.appendChild(btn);
+    // Close on click overlay
+    document.addEventListener('click', function (e) {
+      if (document.body.classList.contains('sidebar-open') &&
+          !sidebar.contains(e.target) && e.target !== btn) {
+        document.body.classList.remove('sidebar-open');
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupHamburger);
+  } else {
+    setupHamburger();
   }
 
   if (document.readyState === 'loading') {

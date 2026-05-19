@@ -174,6 +174,15 @@ def rewrite_links(soup: BeautifulSoup, redirect_map: dict, title_index: dict) ->
         if not target_title:
             continue
 
+        # Skip image/media file links — they were /wiki/File:foo.png style and
+        # get rewritten by rewrite_images() (since the wiki templates often
+        # have the bare image name as both a link and an embedded src).
+        # Avoids generating dead `pages/额外学识.png.html` style links.
+        if re.search(r"\.(png|jpg|jpeg|gif|webp|svg|bmp|ico)$", target_title, re.IGNORECASE):
+            # No matching local page; remove the broken anchor (keep label text)
+            a.replace_with(a.get_text())
+            continue
+
         # Follow redirect if known
         target_title = target_title.replace("_", " ")
         resolved = redirect_map.get(target_title, target_title)

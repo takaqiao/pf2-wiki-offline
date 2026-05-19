@@ -136,19 +136,46 @@ fn main() {
         .invoke_handler(tauri::generate_handler![open_external, install_update])
         .setup(move |app| {
             let base = app.path().resource_dir().expect("resource_dir");
+            // exe_dir is where pf2-wiki.exe sits. In portable ZIP layout this
+            // is the directory containing _wiki_full_v2/, so it must be probed
+            // first; Tauri 2's resource_dir() can point elsewhere when the app
+            // is launched without an installer.
+            let exe_dir: PathBuf = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| base.clone());
             let candidates = [
+                exe_dir.join("_wiki_full_v2"),
+                exe_dir.join("_up_").join("_wiki_full_v2"),
                 base.join("_up_").join("_wiki_full_v2"),
                 base.join("_wiki_full_v2"),
                 base.join("resources").join("_up_").join("_wiki_full_v2"),
                 base.join("resources").join("_wiki_full_v2"),
                 base.join("..").join("..").join("..").join("_wiki_full_v2"),
             ];
-            let resource_root = candidates
-                .iter()
-                .find(|p| p.exists() && p.is_dir())
-                .cloned()
-                .unwrap_or_else(|| base.join("_wiki_full_v2"));
+            let resource_root = match candidates.iter().find(|p| p.exists() && p.is_dir()) {
+                Some(p) => p.clone(),
+                None => {
+                    let probed = candidates
+                        .iter()
+                        .map(|p| format!("  - {}", p.display()))
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    panic!(
+                        "[pf2-wiki] FATAL: could not locate _wiki_full_v2/.\n\
+                         exe_dir = {}\n\
+                         resource_dir = {}\n\
+                         Checked these paths (none exist as a directory):\n{}\n\
+                         Please report this with your install layout to the project issues page.",
+                        exe_dir.display(),
+                        base.display(),
+                        probed
+                    );
+                }
+            };
 
+            eprintln!("[pf2-wiki] exe_dir = {}", exe_dir.display());
+            eprintln!("[pf2-wiki] resource_dir = {}", base.display());
             eprintln!("[pf2-wiki] resource_root = {}", resource_root.display());
             eprintln!("[pf2-wiki] resource_root exists = {}", resource_root.exists());
 
