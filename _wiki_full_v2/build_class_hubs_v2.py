@@ -23,18 +23,34 @@ SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
 CACHE_VER = "v2e"
 
-# 25 PF2 真职业 — strict allowlist (PF2r 玩家核心 2024 + Player Core 2 + 出版物)
+# 25 PF2 真职业 — strict allowlist (canonical wiki titles, verified 2026-05-20)
 # Mapping: 中文 wiki title -> English label (for tooltip / future i18n)
 KNOWN_CLASSES = {
-    "野蛮人": "Barbarian", "诗人": "Bard", "战斗大师": "Champion",
-    "圣武士": "Champion (Paladin)", "牧师": "Cleric", "德鲁伊": "Druid",
-    "战士": "Fighter", "武僧": "Monk", "游侠": "Ranger", "侠盗": "Rogue",
-    "术士": "Sorcerer", "巫师": "Wizard",
-    "炼金术士": "Alchemist", "调查员": "Investigator", "枪手": "Gunslinger",
-    "魔法师": "Magus", "神秘学者": "Oracle", "夜歌使": "Witch",
-    "动能术士": "Kineticist", "符文师": "Thaumaturge", "灵媒": "Psychic",
-    "召唤师": "Summoner", "炼魂师": "Inventor", "斗士": "Swashbuckler",
-    "锻铸者": "Animist",
+    "野蛮人": "Barbarian",
+    "吟游诗人": "Bard",
+    "神卫": "Champion",
+    "圣武士": "Champion (Paladin variant)",
+    "牧师": "Cleric",
+    "德鲁伊": "Druid",
+    "战士": "Fighter",
+    "武僧": "Monk",
+    "游侠": "Ranger",
+    "游荡者": "Rogue",
+    "术士": "Sorcerer",
+    "法师": "Wizard",
+    "炼金术士": "Alchemist",
+    "调查员": "Investigator",
+    "枪手": "Gunslinger",
+    "魔战士": "Magus",
+    "先知": "Oracle",
+    "女巫": "Witch",
+    "元素使": "Kineticist",
+    "奇术师": "Thaumaturge",
+    "灵媒": "Psychic",
+    "召唤师": "Summoner",
+    "发明家": "Inventor",
+    "斗士": "Swashbuckler",
+    "魂铸者": "Animist",
 }
 
 SAFE_RX = re.compile(r'[*?"<>|]')
