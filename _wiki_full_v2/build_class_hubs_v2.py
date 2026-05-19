@@ -21,7 +21,7 @@ PARSED_DIR = SCRAPER_OUT / "parsed"
 META_FILE = SCRAPER_OUT / "metadata.json"
 SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
-CACHE_VER = "v2b"
+CACHE_VER = "v2c"
 
 # 25 PF2e 真职业（按 PF2r 玩家核心 2024）
 KNOWN_CLASSES = [
@@ -63,6 +63,7 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
         f'<link rel="icon" href="../assets/favicon.ico">\n'
         f'<script defer src="../assets/topnav.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/theme.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="../assets/external_links.js?v={CACHE_VER}"></script>\n'
         '</head>\n<body class="mediawiki ltr sitedir-ltr action-view skin--responsive">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
         f'{topnav}\n'
@@ -85,31 +86,50 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
 
 
 def build_classes_hub():
-    """Build classes/index.html — 25 class table linking to each class page."""
-    print("[classes] scanning for class pages ...")
+    """Build classes/index.html — discover real class pages from metadata.
+
+    Heuristic: a real class page has category "职业" AND title doesn't contain
+    suffix-y modifiers like "专长"/"变体"/"试玩". Excludes archetypes/variants.
+    """
+    print("[classes] scanning for real class pages ...")
     found: dict[str, dict] = {}
+    EXCLUDE_SUFFIXES = ("专长", "变体", "试玩", "技能", "类别", "特征", "进阶", "进度",
+                         "选择", "招式", "符文", "套装", "格式", "动作")
+    EXCLUDE_PREFIXES = ("Data:", "数据:", "Category:", "分类:", "File:", "Template:")
     for doc in iter_parsed():
         title = doc.get("title", "")
-        if title in KNOWN_CLASSES:
-            parse = doc.get("parse", {})
-            text = (parse.get("text") or "")[:200]
-            # Strip HTML for excerpt
-            excerpt = re.sub(r"<[^>]+>", "", text).strip()[:80]
-            found[title] = {
-                "title": title,
-                "href": f"../pages/{urllib.parse.quote(safe_title(title))}.html",
-                "excerpt": excerpt,
-            }
-    print(f"  found {len(found)} of {len(KNOWN_CLASSES)} known classes")
-    rows = []
-    for name in KNOWN_CLASSES:
-        e = found.get(name)
-        if not e:
-            rows.append(
-                f'<tr><td><span style="color:var(--fg-mute)">{html_lib.escape(name)}</span></td>'
-                '<td><em>未抓取</em></td></tr>'
-            )
+        if any(title.startswith(p) for p in EXCLUDE_PREFIXES):
             continue
+        if any(s in title for s in EXCLUDE_SUFFIXES):
+            continue
+        if "(2e)" in title or "（2e）" in title:
+            # Old edition — skip if 2r version exists; for now skip all 2e
+            continue
+        parse = doc.get("parse", {})
+        cats = [c.get("category", "") for c in parse.get("categories", []) if isinstance(c, dict)]
+        # Must have "职业" as exact category
+        if "职业" not in [c.replace("_", " ").strip() for c in cats]:
+            continue
+        # Should NOT have category suggesting variant
+        if any(("变体" in c or "试玩" in c) for c in cats):
+            continue
+        # Short title likely real class (e.g. "战士", "魔法师")
+        if len(title) > 8:
+            continue
+        text = (parse.get("text") or "")[:200]
+        excerpt = re.sub(r"<[^>]+>", "", text).strip()[:80]
+        found[title] = {
+            "title": title,
+            "href": f"../pages/{urllib.parse.quote(safe_title(title))}.html",
+            "excerpt": excerpt,
+            "cats": cats[:5],
+        }
+    print(f"  found {len(found)} real class candidates")
+    # Sort alphabetically by Chinese title
+    sorted_titles = sorted(found.keys())
+    rows = []
+    for name in sorted_titles:
+        e = found[name]
         rows.append(
             '<tr>'
             f'<td><a href="{e["href"]}"><strong>{html_lib.escape(e["title"])}</strong></a></td>'
@@ -117,7 +137,7 @@ def build_classes_hub():
             '</tr>'
         )
     body = (
-        f'<p>共 {len(KNOWN_CLASSES)} 真职业（PF2r 2024 玩家核心 + Player Core 2 + 出版物补充）。</p>'
+        f'<p>共 {len(found)} 真职业（PF2r 2024 玩家核心 + Player Core 2 + 出版物补充）。</p>'
         '<table class="aon-table" style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">'
         '<thead><tr><th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">职业</th>'
         '<th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">简介</th></tr></thead>'

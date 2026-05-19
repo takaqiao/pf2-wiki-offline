@@ -40,7 +40,7 @@ SNIPPET_TOPNAV = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
-CACHE_VER = "v2b"
+CACHE_VER = "v2c"
 
 NS_TO_DIR = {
     0: "pages",
@@ -350,6 +350,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         f'<script defer src="../assets/topnav.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/theme.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/huiji_tt.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="../assets/external_links.js?v={CACHE_VER}"></script>\n'
         '</head>\n'
         f'<body class="{body_class}">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'

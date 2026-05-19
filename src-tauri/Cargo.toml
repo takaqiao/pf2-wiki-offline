@@ -1,6 +1,6 @@
 [package]
 name = "pf2-wiki"
-version = "0.1.0"
+version = "0.2.0"
 description = "PF2 中文百科 离线镜像 — Pathfinder 2e Chinese wiki offline mirror"
 authors = ["takaqiao"]
 license = "MIT"
@@ -13,11 +13,13 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tiny_http = "0.12"
 mime_guess = "2"
 urlencoding = "2"
+open = "5"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

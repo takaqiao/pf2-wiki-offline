@@ -26,7 +26,7 @@ SNIPPET_TOPNAV_ROOT = ROOT / "_snippets" / "topnav_root.html"
 SNIPPET_TOPNAV_SUB = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR_SUB = ROOT / "_snippets" / "sidebar_sub.html"
 
-CACHE_VER = "v2b"
+CACHE_VER = "v2c"
 
 # Browse bucket definitions: bucket_name -> set of category keywords (any match)
 BUCKETS = {
@@ -140,6 +140,7 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         f'<script defer src="assets/topnav.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="assets/theme.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="assets/aon_table.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="assets/external_links.js?v={CACHE_VER}"></script>\n'
         '<style>\n'
         '.browse-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: var(--card); font-size: 13.5px; }\n'
         '.browse-table thead th { background: var(--accent-band); color: var(--accent-on); padding: 8px 12px; text-align: left; font-weight: 600; cursor: pointer; user-select: none; }\n'
