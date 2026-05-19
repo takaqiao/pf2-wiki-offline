@@ -1,17 +1,25 @@
-// PF2 离线百科 — Tauri 2 entry.
-// Spins up an embedded HTTP server on 127.0.0.1:<random_port>, then loads the
-// localhost URL in the WebView. External link clicks are intercepted by
-// assets/external_links.js which invokes the open_external IPC command — Rust
-// then opens the URL in the system default browser via `open` crate.
+// PF2 离线百科 — Tauri 2 entry with auto-updater UI.
+//
+// Architecture:
+//   1. Embedded tiny_http server on 127.0.0.1:<random_port> serves the wiki corpus
+//   2. WebView loads localhost URL via window.location.replace
+//   3. External link clicks intercepted by assets/external_links.js -> IPC
+//      open_external -> open crate launches default browser
+//   4. On startup, async update check vs GitHub Release latest.json:
+//      - If newer version, emit "update-available" event to webview
+//      - Webview's updater_ui.js shows banner; user clicks "更新" -> IPC
+//        install_update -> Rust downloads + installs + restarts
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
-use tauri::Manager;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_updater::{Update, UpdaterExt};
 use tiny_http::{Header, Response, Server};
 
 fn pick_free_port() -> u16 {
@@ -68,22 +76,47 @@ fn serve_static(resource_root: PathBuf, port: u16) {
     }
 }
 
-/// IPC command: open URL in system default browser.
-/// Invoked from assets/external_links.js when user clicks an http(s) link not
-/// pointing to 127.0.0.1 / localhost.
+#[derive(Clone, Serialize)]
+struct UpdateInfo {
+    current_version: String,
+    new_version: String,
+    body: Option<String>,
+}
+
+// Holds the latest Update object for the install_update command to use.
+type PendingUpdate = Arc<Mutex<Option<Update>>>;
+
 #[tauri::command]
 fn open_external(url: String) -> Result<(), String> {
     open::that(&url).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn install_update(
+    app: AppHandle,
+    pending: tauri::State<'_, PendingUpdate>,
+) -> Result<(), String> {
+    let update = pending.lock().map_err(|e| e.to_string())?.take();
+    let update = update.ok_or_else(|| "no pending update".to_string())?;
+    update
+        .download_and_install(|_chunk, _total| {}, || {})
+        .await
+        .map_err(|e| e.to_string())?;
+    // Restart the application after install
+    app.restart();
 }
 
 fn main() {
     let port = pick_free_port();
     let start_url = format!("http://127.0.0.1:{port}/index.html");
 
+    let pending_update: PendingUpdate = Arc::new(Mutex::new(None));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![open_external])
+        .manage(pending_update.clone())
+        .invoke_handler(tauri::generate_handler![open_external, install_update])
         .setup(move |app| {
             let base = app.path().resource_dir().expect("resource_dir");
             let candidates = [
@@ -108,10 +141,10 @@ fn main() {
                 let _ = main.eval(&format!("window.location.replace('{}')", start_url));
             }
 
-            // Auto-update check (non-blocking, silent log on failure)
+            // Async update check; emit "update-available" if newer version exists
             let handle = app.handle().clone();
+            let pending = pending_update.clone();
             tauri::async_runtime::spawn(async move {
-                use tauri_plugin_updater::UpdaterExt;
                 match handle.updater() {
                     Ok(updater) => match updater.check().await {
                         Ok(Some(update)) => {
@@ -119,7 +152,15 @@ fn main() {
                                 "[pf2-wiki updater] update available: {} -> {}",
                                 update.current_version, update.version
                             );
-                            // Future iteration: emit event to webview so a UI banner can prompt download.
+                            let info = UpdateInfo {
+                                current_version: update.current_version.clone(),
+                                new_version: update.version.clone(),
+                                body: update.body.clone(),
+                            };
+                            if let Ok(mut slot) = pending.lock() {
+                                *slot = Some(update);
+                            }
+                            let _ = handle.emit("update-available", info);
                         }
                         Ok(None) => {
                             eprintln!("[pf2-wiki updater] no update available");
