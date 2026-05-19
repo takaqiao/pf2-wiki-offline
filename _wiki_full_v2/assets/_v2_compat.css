@@ -461,3 +461,21 @@ div.page-toc-v2 a:hover {
   main.page-body { padding: 0; }
   header.page-head { background: #000; color: #fff; }
 }
+
+/* ---------- Pf2Icon font (action symbols) ---------- */
+@font-face {
+  font-family: "Pf2Icon";
+  src: url("pf2icon.ttf") format("truetype");
+  font-display: swap;
+}
+.pf2icon {
+  font-size: 1.15em;
+  line-height: 0;
+  display: inline-block;
+}
+.pf2icon-1::before { content: "1"; font-family: "Pf2Icon"; }
+.pf2icon-2::before { content: "2"; font-family: "Pf2Icon"; }
+.pf2icon-3::before { content: "3"; font-family: "Pf2Icon"; }
+.pf2icon-F::before { content: "F"; font-family: "Pf2Icon"; }
+.pf2icon-R::before { content: "R"; font-family: "Pf2Icon"; }
+

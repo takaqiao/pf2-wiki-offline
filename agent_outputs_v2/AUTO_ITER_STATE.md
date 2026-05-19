@@ -166,7 +166,25 @@ Bug fixes in v0.3.4 build:
 - Conclusion: **Both NSIS and MSI struggle at ~2 GB resource bundle volume**
 - Going forward: **portable ZIP is the canonical distribution**, NSIS is best-effort
 
-### Iter 10 — Final status + remaining gaps (2026-05-20, in-progress)
+### Iter 11 — Classes hub 25/25 ✓ (2026-05-20, DONE)
+- ✅ Found 7 of missing 10 classes under different canonical titles:
+  - 诗人 → **吟游诗人** (Bard)
+  - 战斗大师 → **神卫** (Champion)
+  - 侠盗 → **游荡者** (Rogue)
+  - 巫师 → **法师** (Wizard)
+  - 魔法师 → **魔战士** (Magus)
+  - 神秘学者 → **先知** (Oracle)
+  - 夜歌使 → **女巫** (Witch)
+  - 动能术士 → **元素使** (Kineticist)
+  - 符文师 → **奇术师** (Thaumaturge)
+  - 炼魂师 → **发明家** (Inventor)
+  - 锻铸者 → **魂铸者** (Animist)
+- ✅ Mined wiki's master 职业 page links via parse — extracted full canonical list
+- ✅ Scraped 元素使 + 魂铸者 (were in metadata but skipped during parse) via curl_cffi
+- ✅ Rebuilt build_v2 + build_class_hubs_v2 → **25/25 真职业 with full class pages**
+- ✅ Re-zipped v0.3.7 portable (1.22 GB unchanged) + re-uploaded to release
+
+### Iter 10 — Final status + remaining gaps (2026-05-20, DONE)
 - 10 iterations of bug-find + fix loop completed
 - Releases shipped this auto-loop: v0.3.3, v0.3.4, v0.3.5, v0.3.6
 - All visible UI bugs found via Playwright QA: addressed
@@ -181,11 +199,12 @@ Bug fixes in v0.3.4 build:
 | v0.3.4 | 2026-05-19 | Data: h1 strip, section TOC, dark mode navbox | NSIS + zip |
 | v0.3.5 | 2026-05-19 | search.html URL `?q=` auto-trigger | NSIS + zip |
 | v0.3.6 | 2026-05-20 | mw-collapsible JS toggles (8发弹匣 verified) | **portable-only** (NSIS bug exposed) |
+| v0.3.7 | 2026-05-20 | Classes 25/25 hub fix + new 元素使/魂铸者 pages | **portable-only** |
 
 ## Pending P2/P3 (next iterations)
 - pf2icon sprite (action symbols) — wiki_native.css has no `.pf2icon-X` rules; sprite is in `Template:动作/style` rendered inline → need separate fetch
 - sortable wikitable JS — wiki tables don't have `.sortable` class; defer  
-- 25 真职业: 14 found / 11 placeholder (could find via wider search but probably not all titles match canonical)
+- 25 真职业: **25/25 ✓** (canonical wiki names mined from master 职业 page)
 - Code signing cert ($300/年) to drop SmartScreen warning
 - NSIS bundle solution: bigger TEMP dir? makensis flags? Inno Setup?
 
