@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent
 META_FILE = ROOT.parent / "pf2wiki-scraper" / "out_v2" / "metadata.json"
 SNIPPET_TOPNAV_SUB = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR_SUB = ROOT / "_snippets" / "sidebar_sub.html"
-CACHE_VER = "v2f"
+CACHE_VER = "v2h"
 
 NS_TO_DIR = {0: "pages", 4: "project", 14: "category", 102: "pages", 3500: "data"}
 SAFE_RX = re.compile(r'[*?"<>|]')

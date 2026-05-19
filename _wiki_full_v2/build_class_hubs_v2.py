@@ -21,7 +21,7 @@ PARSED_DIR = SCRAPER_OUT / "parsed"
 META_FILE = SCRAPER_OUT / "metadata.json"
 SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
-CACHE_VER = "v2f"
+CACHE_VER = "v2h"
 
 # 25 PF2 真职业 — strict allowlist (canonical wiki titles, verified 2026-05-20)
 # Mapping: 中文 wiki title -> English label (for tooltip / future i18n)

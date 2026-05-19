@@ -45,6 +45,68 @@ SKIP_TITLE_PREFIXES = (
     "MediaWiki:", "Form:", "表单:",
 )
 
+# --- Type inference from parse.categories ---
+# Each entry: (type_name, code_char, set_of_categories_that_signal_it).
+# Order matters: first match wins. Tighter / more-specific types come first.
+# Type names align with search.js TYPE_INFO labels (feat/spell/creature/...).
+TYPE_RULES: list[tuple[str, str, set[str]]] = [
+    # Spell: 法术 / 戏法 (cantrip). Many spells also have 'PC' but 法术 is canonical.
+    ("spell", "S", {"法术", "戏法"}),
+    # Feat: 专长 + variants (职业专长 / 族裔专长 / 通用专长 / 技能专长 / 通用专长).
+    ("feat", "F", {"专长", "职业专长", "族裔专长", "通用专长", "技能专长"}),
+    # Class: 职业 (top-level class page).
+    ("class", "L", {"职业"}),
+    # Ancestry: 族裔 (top-level race / lineage page).
+    ("ancestry", "A", {"族裔"}),
+    # Background: 背景 (character background).
+    ("background", "B", {"背景"}),
+    # Deity: 信仰 / 主流神祇 / 其他神祇 / 信仰和哲学.
+    ("deity", "G", {"信仰", "信仰和哲学", "主流神祇", "其他神祇"}),
+    # Condition: 状态.
+    ("condition", "N", {"状态"}),
+    # Creature: size category (中型/小型/大型/巨型/微型/超巨型) is the canonical
+    # bestiary marker; 生物子类 catches sub-type pages too.
+    ("creature", "C", {"中型", "小型", "大型", "巨型", "微型", "超巨型", "极巨型", "生物子类"}),
+    # Item: 物品 + 装备 + 穿戴物品 / 手持物品 / 基础武器 / 基础护甲, etc.
+    ("item", "I", {
+        "物品", "装备", "穿戴物品", "手持物品", "辅助物品",
+        "基础武器", "基础护甲", "诅咒物品", "魔法物品",
+    }),
+    # Location: 地理 (geography / regions).
+    ("location", "P", {"地理"}),
+    # Action: 动作 / 基础动作 / 技能动作.
+    ("action", "T", {"动作", "基础动作", "技能动作", "通用技能动作"}),
+    # Trait: 特征 (top-level traits hub; individual 'X（特征）' is noise, skip).
+    ("trait", "R", {"特征"}),
+]
+
+DEFAULT_TYPE = ("other", "O")
+
+# Legend embedded in types.js so search.js does not need to keep the map in
+# sync — single source of truth.
+TYPE_LEGEND: dict[str, str] = {
+    "F": "feat", "S": "spell", "C": "creature", "I": "item",
+    "G": "deity", "B": "background", "L": "class", "A": "ancestry",
+    "P": "location", "N": "condition", "T": "action", "R": "trait",
+    "U": "stub", "O": "other",
+}
+
+
+def infer_type(categories: list, is_stub: bool = False) -> str:
+    """Return single-char type code based on parse.categories list.
+
+    `categories` is the raw list from parsed JSON: [{'category': '...'}, ...].
+    Stubs always map to 'U' regardless of categories so the UI can group them
+    separately.
+    """
+    if is_stub:
+        return "U"
+    cat_set = {c.get("category", "") for c in categories if isinstance(c, dict)}
+    for _name, code, signals in TYPE_RULES:
+        if cat_set & signals:
+            return code
+    return DEFAULT_TYPE[1]
+
 EN_STOP = {"a", "an", "and", "or", "of", "to", "the", "in", "on", "at", "is",
            "as", "by", "for", "be", "it", "with", "from", "this", "that"}
 ZH_STOP_CHARS = set("的了是在与和及或但因為为以及他她它我你们们之于而")
@@ -141,7 +203,7 @@ def should_skip(title: str) -> bool:
 
 
 def iter_parsed(limit: int | None = None):
-    """Yield (ns, pageid, title, body_text, excerpt) from parsed JSON."""
+    """Yield (ns, pageid, title, body_text, excerpt, categories) from parsed JSON."""
     n = 0
     for sub in sorted(PARSED_DIR.iterdir()):
         if not sub.is_dir() or sub.name.startswith("_"):
@@ -168,7 +230,8 @@ def iter_parsed(limit: int | None = None):
             body_text = soup.get_text(" ", strip=True)
             body_text = WHITESPACE_RE.sub(" ", body_text)
             excerpt = make_excerpt(body_text, 100)
-            yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt
+            categories = parse.get("categories", []) or []
+            yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt, categories
             n += 1
             if limit and n >= limit:
                 return
@@ -181,12 +244,13 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
     titles: list[dict] = []
     bigram_posts: dict[str, list[int]] = {}
     word_posts: dict[str, list[int]] = {}
+    type_codes: list[str] = []  # one char per title, aligned to titles[i]
 
     t0 = time.time()
     seen_id = 0
     stub_count = 0
 
-    for ns, pageid, title, body, excerpt in iter_parsed(limit=limit):
+    for ns, pageid, title, body, excerpt, categories in iter_parsed(limit=limit):
         href = page_href(ns, title)
         kind = "d" if ns == 3500 else ("c" if ns == 14 else "p")
         is_stub = len(body) < STUB_BODY_THRESHOLD
@@ -196,6 +260,7 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         entry_id = seen_id
         seen_id += 1
         titles.append({"i": entry_id, "t": title, "h": href, "k": kind, "e": excerpt})
+        type_codes.append(infer_type(categories, is_stub=is_stub))
 
         # Index sources: title + first 600 chars of body (skip body for stubs)
         token_text = title + (" \n " + body[:600] if not is_stub else "")
@@ -230,6 +295,21 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
     titles_payload = {"v": 2, "items": titles}
     titles_js = "window.__PF2_TITLES = " + json.dumps(titles_payload, ensure_ascii=False, separators=(",", ":")) + ";"
     (out_dir / "titles.js").write_text(titles_js, encoding="utf-8")
+
+    # Write types.js — single string of type codes aligned 1:1 to titles[i].
+    # search.js reads window.__PF2_TYPES.{codes, legend} and renders type badges.
+    types_payload = {
+        "v": 2,
+        "n": len(type_codes),
+        "codes": "".join(type_codes),
+        "legend": TYPE_LEGEND,
+    }
+    (out_dir / "types.js").write_text(
+        "window.__PF2_TYPES = "
+        + json.dumps(types_payload, ensure_ascii=False, separators=(",", ":"))
+        + ";\n",
+        encoding="utf-8",
+    )
 
     # Write bigram shards as function-call JSONP: __PF2_SHARD_B("<hex>", {bigram: [ids]})
     bg_shard_files: list[str] = []
@@ -275,9 +355,19 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
             (SHARDS_DIR / f).stat().st_size for f in bg_filenames + w_filenames
         ),
     }
+    # Type distribution (code -> count) for quick inference QA.
+    type_dist: dict[str, int] = {}
+    for c in type_codes:
+        type_dist[c] = type_dist.get(c, 0) + 1
+    dist_pretty = ", ".join(
+        f"{TYPE_LEGEND.get(c, c)}={n}"
+        for c, n in sorted(type_dist.items(), key=lambda x: -x[1])
+    )
+
     print(f"\n[done] {len(titles)} pages, {stub_count} stubs, {len(bigram_posts)} bigrams, {len(word_posts)} words")
     print(f"       titles.js: {sizes['titles.js']/1024/1024:.1f} MB")
     print(f"       shards total: {sizes['shards_total']/1024/1024:.1f} MB ({len(bg_shard_files)}b + {len(w_shard_files)}w)")
+    print(f"       types.js distribution: {dist_pretty}")
     print(f"       built in {elapsed:.1f}s")
     return sizes
 

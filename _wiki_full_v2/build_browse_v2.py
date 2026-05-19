@@ -26,7 +26,7 @@ SNIPPET_TOPNAV_ROOT = ROOT / "_snippets" / "topnav_root.html"
 SNIPPET_TOPNAV_SUB = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR_SUB = ROOT / "_snippets" / "sidebar_sub.html"
 
-CACHE_VER = "v2f"
+CACHE_VER = "v2h"
 
 # Browse bucket definitions: bucket_name -> set of category keywords (any match)
 BUCKETS = {
