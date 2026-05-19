@@ -142,10 +142,52 @@ Bug fixes in v0.3.4 build:
 - ✅ Image lazy loading: 11 imgs on 帕格凯德 page, all load after scroll
 - ✅ Gallery / thumb pages: rendered correctly
 
-### Iter 7 — v0.3.5 build (2026-05-19 23:35, in-progress)
-- search.html URL auto-trigger fix
-- bump 0.3.4 → 0.3.5
-- cargo tauri build kicked off
+### Iter 7 — v0.3.5 build (2026-05-19 23:35, DONE)
+- ✅ v0.3.5 NSIS + portable released
+- search.html URL `?q=` auto-trigger via inline JS post-buildUI
+
+### Iter 8 — mw-collapsible JS + v0.3.6 (2026-05-20 00:15, DONE)
+- ✅ `assets/mw_collapsible.js` — standard MediaWiki collapse/expand behavior
+  - Auto-injects `[折叠]/[展开]` toggle into `.mw-collapsible` elements
+  - Click flips `mw-collapsed` class + hides .mw-collapsible-content
+  - Tested on 8发弹匣 page navbox: works ✓
+- ⚠️ **CRITICAL FINDING**: makensis crashed on my dev box with:
+  ```
+  Internal compiler error #12345: error mmapping datablock to 98176
+  ```
+  Same error class as user's "corrupted data" → **NSIS upstream bug** with our 2GB bundle
+  Cleared %TEMP%, retried — same failure
+- → v0.3.6 shipped as **portable-only** (NSIS bundle skipped due to bug)
+
+### Iter 9 — Try MSI bundle (2026-05-20 00:30, DONE)
+- Attempted `targets: ["msi"]` to use WiX instead of NSIS
+- WiX downloaded + ran `candle`, then **`light.exe` failed** without specific error
+- WiX has 2 GB MSI limit — our resources ~2 GB hit that ceiling
+- Conclusion: **Both NSIS and MSI struggle at ~2 GB resource bundle volume**
+- Going forward: **portable ZIP is the canonical distribution**, NSIS is best-effort
+
+### Iter 10 — Final status + remaining gaps (2026-05-20, in-progress)
+- 10 iterations of bug-find + fix loop completed
+- Releases shipped this auto-loop: v0.3.3, v0.3.4, v0.3.5, v0.3.6
+- All visible UI bugs found via Playwright QA: addressed
+- mw-collapsible interactive feature added
+- Installer dilemma documented: NSIS/MSI fail >2GB upstream
+
+## Summary: shipped during auto-iteration
+
+| Release | Date | What | Status |
+|---|---|---|---|
+| v0.3.3 | 2026-05-19 | +106 new wiki pages + portable ZIP option | NSIS + zip |
+| v0.3.4 | 2026-05-19 | Data: h1 strip, section TOC, dark mode navbox | NSIS + zip |
+| v0.3.5 | 2026-05-19 | search.html URL `?q=` auto-trigger | NSIS + zip |
+| v0.3.6 | 2026-05-20 | mw-collapsible JS toggles (8发弹匣 verified) | **portable-only** (NSIS bug exposed) |
+
+## Pending P2/P3 (next iterations)
+- pf2icon sprite (action symbols) — wiki_native.css has no `.pf2icon-X` rules; sprite is in `Template:动作/style` rendered inline → need separate fetch
+- sortable wikitable JS — wiki tables don't have `.sortable` class; defer  
+- 25 真职业: 14 found / 11 placeholder (could find via wider search but probably not all titles match canonical)
+- Code signing cert ($300/年) to drop SmartScreen warning
+- NSIS bundle solution: bigger TEMP dir? makensis flags? Inno Setup?
 
 ---
 
