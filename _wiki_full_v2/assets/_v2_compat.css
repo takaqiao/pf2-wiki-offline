@@ -462,6 +462,50 @@ div.page-toc-v2 a:hover {
   header.page-head { background: #000; color: #fff; }
 }
 
+/* ---------- Dark-mode 内容链接颜色（WCAG AA） ----------
+   旧版用 #0645AD 在深背景上对比度只有 1.68:1。改成浅蓝。 */
+body.dark a, body.dark .mw-parser-output a {
+  color: #6cb6ff;
+}
+body.dark a:visited, body.dark .mw-parser-output a:visited {
+  color: #b9a0e0;
+}
+body.dark a:hover, body.dark .mw-parser-output a:hover {
+  color: #a0d0ff;
+}
+body.dark a.new, body.dark .mw-parser-output a.new {
+  color: #ff8888;
+}
+body.dark a.external, body.dark .mw-parser-output a.external {
+  color: #87d4f0;
+}
+
+/* ---------- 移动端 sidebar 折叠 (≤640px hamburger) ----------
+   旧版 sidebar 在 375px 上盖到主内容。给它做汉堡按钮 toggled。 */
+@media (max-width: 640px) {
+  .layout { flex-direction: column; }
+  .wiki-sidebar {
+    position: fixed; top: 0; left: -260px; width: 240px;
+    height: 100vh; z-index: 9998; background: var(--bg);
+    transition: left 0.25s ease; overflow-y: auto;
+    border-right: 1px solid var(--border); padding: 50px 12px 12px;
+  }
+  body.sidebar-open .wiki-sidebar { left: 0; }
+  body.sidebar-open::before {
+    content: ""; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 9997;
+  }
+  .sidebar-hamburger {
+    position: fixed; top: 8px; right: 8px; z-index: 9999;
+    background: var(--accent-band, #6d2002); color: var(--accent-on, #fffbf6);
+    border: 0; padding: 6px 10px; border-radius: 3px;
+    font: 16px/1 sans-serif; cursor: pointer;
+  }
+}
+@media (min-width: 641px) {
+  .sidebar-hamburger { display: none; }
+}
+
 /* ---------- Pf2Icon font (action symbols) ---------- */
 @font-face {
   font-family: "Pf2Icon";
