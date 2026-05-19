@@ -61,18 +61,51 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Tauri (release, no-bundle if no wiki-data)
+      - name: Build Tauri (release; signing for updater if v2 corpus present)
         working-directory: src-tauri
         run: |
-          if (Test-Path ../wiki-data.zip) {
+          if (Test-Path ../_wiki_full_v2/index.html) {
+            # Have wiki corpus -> full build with NSIS bundle + signing
             cargo tauri build
           } else {
-            # Without wiki-data, still try full build but expect NSIS to fail gracefully
+            # No corpus -> just compile exe, skip bundle
             cargo tauri build --no-bundle
           }
         shell: pwsh
         env:
           RUST_BACKTRACE: 1
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Generate updater latest.json (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: src-tauri/target/release/bundle/nsis
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          $exe = Get-ChildItem -Filter '*setup.exe' | Select-Object -First 1
+          $sig = Get-ChildItem -Filter '*setup.exe.sig' | Select-Object -First 1
+          if (-not $exe -or -not $sig) {
+            Write-Error "missing setup.exe or .sig"
+            exit 1
+          }
+          $sigContent = (Get-Content $sig.FullName -Raw).Trim()
+          $manifest = @{
+            version = $version
+            notes = "PF2 离线百科 $tag"
+            pub_date = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')
+            platforms = @{
+              'windows-x86_64' = @{
+                signature = $sigContent
+                url = "https://github.com/${{ github.repository }}/releases/download/$tag/$($exe.Name)"
+              }
+            }
+          }
+          $json = $manifest | ConvertTo-Json -Depth 5
+          $json | Out-File -FilePath 'latest.json' -Encoding utf8
+          Write-Host "Generated latest.json:"
+          Write-Host $json
+        shell: pwsh
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
@@ -94,6 +127,8 @@ jobs:
         with:
           files: |
             src-tauri/target/release/bundle/nsis/*setup.exe
+            src-tauri/target/release/bundle/nsis/*setup.exe.sig
+            src-tauri/target/release/bundle/nsis/latest.json
             src-tauri/target/release/pf2-wiki.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
