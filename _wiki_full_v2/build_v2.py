@@ -40,7 +40,8 @@ SNIPPET_TOPNAV = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
-CACHE_VER = "v2f"
+CACHE_VER = "v2g"
+APP_VERSION = "v0.3.7"  # bumped per release; used to populate <meta name="app-version">
 
 NS_TO_DIR = {
     0: "pages",
@@ -431,6 +432,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<head>\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f'<meta name="app-version" content="{APP_VERSION}">\n'
         f'<meta name="description" content="{html_lib.escape(meta_desc)}">\n'
         f'{redirect_meta_html}'
         f'<link rel="canonical" href="https://pf2.huijiwiki.com/wiki/{urllib.parse.quote(title)}">\n'

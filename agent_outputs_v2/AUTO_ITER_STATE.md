@@ -212,6 +212,21 @@ Bug fixes in v0.3.4 build:
 - This means **~10% of total wiki pages** (37k) were dead-end "重定向到:" pages
   before this loop. Now they all jump to real content.
 
+### Iter 16 — Updater 改造 for portable (2026-05-20, DONE)
+- 问题: Tauri-plugin-updater 依赖 NSIS .exe + latest.json，但 v0.3.6+ portable-only
+  没有 latest.json → updater 永远静默失败。
+- ✅ 重写 `updater_ui.js`: 不再依赖 Tauri plugin，改成 fetch GitHub Releases
+  API（`/api.github.com/repos/.../latest`），semver 比较，弹 banner
+- ✅ banner 提供 3 个按钮:
+  - **下载新版** → 直接打开 portable.zip 链接
+  - **看说明** → release 页（带 release notes）
+  - **本次忽略** → localStorage snooze 当前 tag
+- ✅ build_v2.py 注入 `<meta name="app-version" content="v0.3.7">` 每页（这样
+  下次升 v0.3.8 时只需改一处 APP_VERSION 常量）
+- ✅ Playwright 验证: 模拟 currentVersion=v0.3.5, banner 弹出, 文案 "v0.3.5 → v0.3.7"，
+  下载链接指向 portable.zip
+- 离线场景: fetch 失败 → 静默无 banner（不打扰用户）
+
 ### Iter 10 — Final status + remaining gaps (2026-05-20, DONE)
 - 10 iterations of bug-find + fix loop completed
 - Releases shipped this auto-loop: v0.3.3, v0.3.4, v0.3.5, v0.3.6
