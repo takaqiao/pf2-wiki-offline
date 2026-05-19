@@ -312,6 +312,101 @@ img.v2-missing-image {
   nav.wiki-sidebar { position: static; max-height: none; }
 }
 
+/* ---------- 6b. Dark mode overrides for wiki_native.css hardcoded colors ----------
+   wiki_native.css uses fixed light colors for many widgets (quote-block, statblock,
+   navbox, etc.) — they don't read from CSS variables, so body.dark alone doesn't
+   flip them. Override with !important to maintain dark-mode coherence. */
+
+body.dark main.page-body,
+body.dark #mw-content-text,
+body.dark .mw-parser-output {
+  color: var(--fg);
+}
+
+body.dark .quote-block {
+  background: var(--bg-alt) !important;
+  color: var(--fg) !important;
+}
+body.dark .quote-block .name {
+  color: var(--gold) !important;
+}
+body.dark .quote-block .category {
+  color: var(--fg-mute) !important;
+}
+
+body.dark .statblock {
+  background: var(--card) !important;
+  color: var(--fg) !important;
+  border-color: var(--border) !important;
+}
+
+body.dark .navbox {
+  background-color: #1a1a1a !important;
+  color: #ddd !important;
+}
+body.dark .navbox-title {
+  background-color: #4a1500 !important;
+}
+body.dark .navbox a {
+  color: var(--gold) !important;
+}
+
+body.dark .infobox,
+body.dark .infobox table,
+body.dark .infobox td,
+body.dark .infobox th {
+  background: var(--card) !important;
+  color: var(--fg) !important;
+  border-color: var(--border) !important;
+}
+
+body.dark table.wikitable,
+body.dark table.wikitable td,
+body.dark table.wikitable th {
+  background: var(--card) !important;
+  color: var(--fg) !important;
+  border-color: var(--border) !important;
+}
+body.dark table.wikitable th {
+  background: var(--bg-alt) !important;
+}
+body.dark table.wikitable tr:nth-child(even) td {
+  background: var(--bg-alt) !important;
+}
+
+body.dark .toc {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--fg) !important;
+}
+
+body.dark .thumb,
+body.dark .thumbinner {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--fg) !important;
+}
+body.dark .thumbcaption {
+  color: var(--fg-mute) !important;
+}
+
+body.dark .mw-parser-output a {
+  color: var(--link);
+}
+body.dark .mw-parser-output a.new {
+  color: #ff7575 !important;
+}
+
+/* page-categories in dark */
+body.dark div.page-categories {
+  border-top-color: var(--border);
+}
+body.dark div.page-categories li a {
+  background: var(--bg-alt);
+  border-color: var(--border);
+  color: var(--link);
+}
+
 /* ---------- 7. Print ---------- */
 
 @media print {
