@@ -40,7 +40,7 @@ SNIPPET_TOPNAV = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
-CACHE_VER = "v2e"
+CACHE_VER = "v2f"
 
 NS_TO_DIR = {
     0: "pages",
