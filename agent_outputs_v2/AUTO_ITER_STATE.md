@@ -44,7 +44,7 @@
 - **Source repo (for GitHub)**: `C:\Users\Taka\pf2-wiki-offline\`
 - **Signing key**: `C:\Users\Taka\.tauri\pf2-wiki.key` (private, no password)
 - **GitHub**: takaqiao/pf2-wiki-offline (PUBLIC, auto CI on push)
-- **GitHub token**: stored locally in env / shell history — NOT committed (GitHub secret scanning blocks)
+- **GitHub token**: stored locally in env / shell history — NOT committed (GitHub secret scanning would reject)
 
 ## Pipeline commands quick reference
 
@@ -128,10 +128,26 @@ Bug fixes in v0.3.4 build:
 - _v2_compat.css: body.dark overrides for quote-block / statblock / navbox / infobox /
   wikitable / toc / thumb / page-categories (12 selectors)
 
-### Iter 4 — v0.3.4 build (2026-05-19 23:15, in-progress)
-- bumped 0.3.3 → 0.3.4
-- cargo tauri build kicked off in BG
-- Will sign + build portable ZIP + Release
+### Iter 4 — v0.3.4 build (2026-05-19 23:15, DONE)
+- ✅ v0.3.4 NSIS + portable released
+- URL: https://github.com/takaqiao/pf2-wiki-offline/releases/tag/v0.3.4
+
+### Iter 5 — Comprehensive QA: search/index/browse (2026-05-19 23:20, DONE)
+- ✅ search.html: 50 results in 4.3 ms for query "战士" — BUT URL `?q=` 不自动触发
+  - Fix: inline JS in search.html that reads `?q=` after buildUI, populates input + dispatches input event
+- ✅ index.html: renders OK with stats cards + topnav + sidebar
+- ✅ classes/index.html: 14/25 真职业 (with placeholders for 11 不在 corpus)
+
+### Iter 6 — Redirect stubs + mobile + image-heavy (2026-05-19 23:25, DONE)
+- ✅ Redirect stub: 敏捷.html → 属性.html via meta refresh ✓
+- ✅ Mobile responsive 375px: topnav 折叠为 hamburger ☰, 图响应式全宽
+- ✅ Image lazy loading: 11 imgs on 帕格凯德 page, all load after scroll
+- ✅ Gallery / thumb pages: rendered correctly
+
+### Iter 7 — v0.3.5 build (2026-05-19 23:35, in-progress)
+- search.html URL auto-trigger fix
+- bump 0.3.4 → 0.3.5
+- cargo tauri build kicked off
 
 ---
 
