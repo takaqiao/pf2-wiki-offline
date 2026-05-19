@@ -322,6 +322,46 @@ def add_lazy_loading(soup: BeautifulSoup) -> None:
             img["loading"] = "lazy"
 
 
+def build_section_toc(sections: list, page_word_count: int) -> str:
+    """Render a simple TOC for long pages from parse.sections.
+
+    Skips for short pages (< 1500 chars). Renders only h2/h3.
+    """
+    if not sections or page_word_count < 1500:
+        return ""
+    items = []
+    for s in sections:
+        if not isinstance(s, dict):
+            continue
+        level = s.get("level", "2")
+        try:
+            lvl = int(level)
+        except Exception:
+            continue
+        if lvl > 3:
+            continue
+        line = s.get("line", "")
+        anchor = s.get("anchor", "")
+        if not line or not anchor:
+            continue
+        # Strip HTML from heading line
+        line_plain = re.sub(r"<[^>]+>", "", line).strip()
+        if not line_plain:
+            continue
+        indent = "  " if lvl >= 3 else ""
+        items.append(
+            f'{indent}<li class="toclevel-{lvl}">'
+            f'<a href="#{html_lib.escape(anchor)}">{html_lib.escape(line_plain)}</a></li>'
+        )
+    if len(items) < 3:
+        return ""
+    return (
+        '<div class="page-toc-v2" role="navigation" aria-label="本页目录">'
+        '<details open><summary><strong>本页目录</strong></summary>'
+        '<ul>\n' + "\n".join(items) + '\n</ul></details></div>'
+    )
+
+
 def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, title_index: dict, manifest: dict) -> tuple[str, str, str]:
     """Returns (target_dir, safe_filename_with_ext, full_html)."""
     parse = doc.get("parse", {})
@@ -354,10 +394,20 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     display_title = parse.get("displaytitle") or bare_title
     # Strip HTML from displaytitle for use in <title> + <h1>
     display_plain = re.sub(r"<[^>]+>", "", display_title)
+    # For Data: namespace, strip "Data:" prefix and ".json" suffix so h1 reads cleaner
+    if ns == 3500:
+        if display_plain.startswith("Data:"):
+            display_plain = display_plain[5:]
+        if display_plain.endswith(".json"):
+            display_plain = display_plain[:-5]
     meta_desc = make_meta_description(parse.get("text", ""))
 
     breadcrumb_html = build_breadcrumb(ns, bare_title)
     categories_html = build_categories_block(cats, redirect_map, title_index)
+    # Section TOC for long pages
+    sections = parse.get("sections", []) or []
+    page_text_len = len(re.sub(r"<[^>]+>", "", parse.get("text", "") or ""))
+    toc_html = build_section_toc(sections, page_text_len)
     safe_fn = safe_title(bare_title)
 
     full_html = (
@@ -388,6 +438,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         f'{sidebar}\n'
         '<main class="page-body" id="main-content">\n'
         '<div id="mw-content-text" class="mw-body-content mw-content-ltr">\n'
+        f'{toc_html}\n'
         f'{content_html}\n'
         f'{categories_html}\n'
         '</div>\n'
