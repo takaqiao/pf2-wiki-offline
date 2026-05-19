@@ -1,0 +1,97 @@
+/* ============================================================
+   Image placeholder styling (additive; consumes existing theme
+   variables from style.css). Matches three markup shapes emitted
+   by current renderers — none of the renderers are modified.
+
+   1. <aside class="sb-image">…<span class="placeholder">…
+       <span class="filename">…</span></aside>      (creature_render.py)
+   2. <a class="wl" href="FileXXX.html">caption</a>  (raw [[File:…]] passthrough)
+   3. <a class="wl" href="%E6%96%87%E4%BB%B6XXX.html">caption</a>
+                                                    (raw [[文件:…]] passthrough)
+   ============================================================ */
+
+/* Shape 1 — semantic aside. Override the legacy hardcoded colors. */
+.sb-image {
+  background: var(--bg-alt);
+  border: 1px dashed var(--border-strong);
+  color: var(--fg-mute);
+}
+.sb-image .placeholder { color: var(--fg-mute); }
+.sb-image .placeholder::before { content: "\1F4F7"; }   /* 📷 */
+.sb-image .placeholder { font-size: 26px; line-height: 1; }
+.sb-image .filename {
+  display: block;
+  font-size: 11px;
+  word-break: break-all;
+  line-height: 1.35;
+  color: var(--fg-soft);
+}
+.sb-image::after {
+  content: "图片未抓取";
+  display: block;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+/* Shape 2 & 3 — raw passthrough File:/文件: wikilinks. Re-skin the <a>
+   into a framed inline-block placeholder so it stops looking like a
+   live link. Selectors target the URL-encoded namespace prefix. */
+a.wl[href^="File"],
+a.wl[href^="%E6%96%87%E4%BB%B6"] {
+  display: inline-block;
+  max-width: clamp(160px, 60%, 320px);
+  min-width: 120px;
+  padding: 12px 10px 8px;
+  margin: 6px 4px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-alt);
+  color: var(--fg-mute);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: break-all;
+  vertical-align: top;
+  cursor: default;
+}
+a.wl[href^="File"]:hover,
+a.wl[href^="%E6%96%87%E4%BB%B6"]:hover {
+  border-color: var(--accent-soft);
+  color: var(--fg-soft);
+  text-decoration: none;
+  border-bottom-style: dashed;
+}
+a.wl[href^="File"]::before,
+a.wl[href^="%E6%96%87%E4%BB%B6"]::before {
+  content: "\1F5BC";          /* 🖼️ */
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--fg-mute);
+}
+a.wl[href^="File"]::after,
+a.wl[href^="%E6%96%87%E4%BB%B6"]::after {
+  content: "图片未抓取";
+  display: block;
+  font-size: 10.5px;
+  margin-top: 4px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+/* Block modifier for explicit thumbnails / right-floats. */
+.placeholder.block,
+a.wl.placeholder.block[href^="File"],
+a.wl.placeholder.block[href^="%E6%96%87%E4%BB%B6"] { display: block; max-width: 100%; }
+
+/* Responsive: collapse to full width on narrow viewports. */
+@media (max-width: 480px) {
+  .sb-image { float: none; width: 100%; margin: 8px 0; }
+  a.wl[href^="File"],
+  a.wl[href^="%E6%96%87%E4%BB%B6"] { display: block; max-width: 100%; margin: 8px 0; }
+}

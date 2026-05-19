@@ -1,0 +1,861 @@
+/* ============================================================
+   statblock_pf2.css — Phase 5, Agent SB
+   Publication-grade PF2 statblock visuals (creature / spell / feat /
+   item / condition / trait / generic data card).
+
+   Layered ON TOP of creature_style.css; written so the cascade
+   produces a result resembling AoN 2e.aonprd.com / official PF2
+   sourcebook cards:
+
+     - Red band header (white-on-red, full bleed)
+     - English subtitle in italic light grey
+     - Trait pill row with rarity-coloured chips
+     - Red small-caps section heads with horizontal rule
+     - 6-column ability grid (stacks 3x2 below 600px)
+     - Compact line-height, AoN-style double horizontal rules
+       between major sections
+
+   Consumes design tokens from style.css:
+       --accent, --accent-band, --accent-on, --accent-soft,
+       --border, --border-strong, --bg, --bg-alt, --card,
+       --fg, --fg-soft, --fg-mute, --tag-bg, --tag-fg,
+       --rare-bg/-fg, --uncommon-bg/-fg, --size-bg/-fg,
+       --shadow-sm, --shadow-md.
+
+   Optional Agent-AT token --gold (used for the trim line under the
+   header band); falls back to a sensible parchment hue if --gold is
+   not defined.
+
+   This file ONLY adds new visual rules to the existing
+   .sb-* class skeleton. It does NOT modify creature_style.css,
+   does NOT introduce new HTML schemas, and is import-order
+   tolerant (imported LAST in style.css so its overrides win).
+   ============================================================ */
+
+/* ---------- Local tokens (graceful fallback for --gold) ---------- */
+:root {
+  --sb-gold: var(--gold, #c8a560);
+  --sb-band-shade: rgba(0, 0, 0, 0.18);
+  --sb-trait-bg: #5b1414;
+  --sb-trait-fg: #fdf3f3;
+  --sb-trait-border: rgba(0, 0, 0, 0.25);
+  --sb-trait-rare-bg: #2a3a7a;
+  --sb-trait-rare-fg: #f1ecff;
+  --sb-trait-uncommon-bg: #6f3d0a;
+  --sb-trait-uncommon-fg: #fdecc6;
+  --sb-trait-unique-bg: #5b2880;
+  --sb-trait-unique-fg: #f4e9ff;
+  --sb-trait-size-bg: #4a4630;
+  --sb-trait-size-fg: #f3ecd6;
+  --sb-trait-alignment-bg: #2e2e2e;
+  --sb-trait-alignment-fg: #ece8df;
+  --sb-rule-strong: rgba(124, 31, 31, 0.85);
+  --sb-rule-soft: rgba(124, 31, 31, 0.20);
+  --sb-ability-bg: #f3ecd6;
+  --sb-ability-border: #c9bb88;
+  --sb-ability-fg: #1f1d18;
+}
+body.dark {
+  --sb-gold: var(--gold, #8a7430);
+  --sb-band-shade: rgba(0, 0, 0, 0.35);
+  --sb-trait-bg: #3a0c0c;
+  --sb-trait-fg: #fdf3f3;
+  --sb-trait-border: rgba(0, 0, 0, 0.55);
+  --sb-trait-rare-bg: #1c2a5e;
+  --sb-trait-rare-fg: #d8d0ff;
+  --sb-trait-uncommon-bg: #4a2a08;
+  --sb-trait-uncommon-fg: #f0d29a;
+  --sb-trait-unique-bg: #3e1a58;
+  --sb-trait-unique-fg: #e3d2f6;
+  --sb-trait-size-bg: #2e2b1c;
+  --sb-trait-size-fg: #d6cba8;
+  --sb-trait-alignment-bg: #1a1a1a;
+  --sb-trait-alignment-fg: #d4d0c6;
+  --sb-rule-strong: rgba(200, 120, 120, 0.85);
+  --sb-rule-soft: rgba(200, 120, 120, 0.22);
+  --sb-ability-bg: #2a2719;
+  --sb-ability-border: #3d3a2d;
+  --sb-ability-fg: #e6e2d4;
+}
+
+/* ============================================================
+   Card shell
+   ============================================================ */
+
+.statblock.creature,
+.statblock.condition,
+.statblock.spell,
+.statblock.feat,
+.statblock.item,
+.statblock.trait,
+.statblock.data-generic {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 5px;
+  margin: 18px 0;
+  padding: 0;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  position: relative;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* gold trim under the red band */
+.statblock.creature::before,
+.statblock.condition::before,
+.statblock.spell::before,
+.statblock.feat::before,
+.statblock.item::before,
+.statblock.trait::before,
+.statblock.data-generic::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 0;
+}
+
+/* ============================================================
+   Red band header  (.sb-head)
+   ============================================================ */
+
+.sb-head {
+  background: var(--accent-band);
+  color: var(--accent-on);
+  padding: 10px 16px 8px;
+  margin: 0;
+  border-bottom: 3px solid var(--sb-gold);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+.sb-titles { min-width: 0; flex: 1 1 auto; }
+
+.sb-head .sb-name {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC",
+               "STZhongsong", "STSong", "Songti SC", serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent-on);
+  letter-spacing: 0.5px;
+  line-height: 1.18;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sb-head .sb-name-en {
+  display: block;
+  font-family: "Source Sans 3", "Source Sans Pro", "Segoe UI",
+               -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.2px;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.sb-head .action {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--accent-on);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+  vertical-align: 1px;
+  margin: 0 4px;
+  padding: 0 6px;
+  border-radius: 3px;
+}
+
+/* level chip on the right */
+.sb-head .sb-level-chip {
+  flex-shrink: 0;
+  background: var(--sb-band-shade);
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system,
+               sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 14px;
+  align-self: center;
+  white-space: nowrap;
+  box-shadow: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   Trait pill row
+   ============================================================ */
+
+.sb-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 16px 6px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+}
+.sb-traits:empty { display: none; }
+
+.trait-pill {
+  display: inline-block;
+  background: var(--sb-trait-bg);
+  color: var(--sb-trait-fg);
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system,
+               "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding: 2px 9px;
+  border: 1px solid var(--sb-trait-border);
+  border-radius: 2px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+/* Rarity variants */
+.trait-pill.rarity-common   { display: none; } /* suppress: default */
+.trait-pill.rarity-uncommon { background: var(--sb-trait-uncommon-bg);
+                              color: var(--sb-trait-uncommon-fg); }
+.trait-pill.rarity-rare     { background: var(--sb-trait-rare-bg);
+                              color: var(--sb-trait-rare-fg); }
+.trait-pill.rarity-unique   { background: var(--sb-trait-unique-bg);
+                              color: var(--sb-trait-unique-fg); }
+.trait-pill.size            { background: var(--sb-trait-size-bg);
+                              color: var(--sb-trait-size-fg); }
+.trait-pill.alignment       { background: var(--sb-trait-alignment-bg);
+                              color: var(--sb-trait-alignment-fg); }
+
+/* Spell schools / roots / categories — secondary slate-blue chip */
+.trait-pill.school,
+.trait-pill.school-arcane,
+.trait-pill.school-divine,
+.trait-pill.school-occult,
+.trait-pill.school-primal {
+  background: #2e3a4f; color: #e6ecf6; border-color: rgba(0,0,0,0.3);
+}
+body.dark .trait-pill.school { background: #1a2433; color: #cfd8e8; }
+
+/* ============================================================
+   Body & section heads
+   ============================================================ */
+
+.sb-body {
+  padding: 10px 16px 6px;
+}
+
+/* Compact text blocks fed via _line / _section */
+.statblock .sb-line {
+  margin: 2px 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.statblock .sb-line .label {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system,
+               sans-serif;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 4px;
+  letter-spacing: 0.1px;
+}
+.statblock .sb-line .label::after { content: ""; }
+
+/* Section divider — red small-caps */
+.statblock .sb-section-head {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system,
+               "Segoe UI", sans-serif;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--accent);
+  margin: 12px 0 4px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 0;
+}
+.statblock .sb-section-head > span {
+  flex: 0 0 auto;
+  padding-right: 4px;
+}
+.statblock .sb-section-head::before {
+  content: "";
+  position: absolute;
+  /* offset; the real rule is the ::after below */
+}
+.statblock .sb-section-head::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 3px;
+  background:
+    linear-gradient(to bottom,
+      var(--sb-rule-strong) 0,
+      var(--sb-rule-strong) 1px,
+      transparent 1px,
+      transparent 2px,
+      var(--sb-rule-soft) 2px,
+      var(--sb-rule-soft) 3px);
+}
+
+/* ============================================================
+   Ability score row (6 columns)
+   ============================================================ */
+
+.statblock .sb-abilities {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  margin: 8px 0 6px;
+  padding: 8px 6px;
+  background: var(--sb-ability-bg);
+  border: 1px solid var(--sb-ability-border);
+  border-radius: 3px;
+}
+
+.statblock .sb-ability {
+  text-align: center;
+  border-right: 1px dotted var(--border-strong);
+  padding: 0 4px;
+}
+.statblock .sb-ability:last-child { border-right: 0; }
+
+.statblock .sb-ability .ability-label {
+  display: block;
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system,
+               sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--accent);
+  line-height: 1.3;
+}
+
+.statblock .sb-ability .ability-value {
+  display: block;
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC",
+               "STSong", serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--sb-ability-fg);
+  line-height: 1.22;
+}
+
+.statblock .sb-ability .ability-value.positive::before { content: "+"; }
+.statblock .sb-ability .ability-value.zero::before     { content: "+"; }
+.statblock .sb-ability .ability-value.missing         { color: var(--fg-mute); font-weight: 500; }
+
+/* ============================================================
+   Defense row — AC / saves / HP grouped tightly
+   ============================================================ */
+
+.statblock .sb-defenses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 6px 0;
+  padding: 4px 0;
+  align-items: baseline;
+  font-size: 14.5px;
+}
+
+.statblock .sb-defenses .def-cell .label,
+.statblock .sb-defenses .save-cell .label {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-right: 4px;
+}
+
+.statblock .sb-defenses .def-cell .value {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fg);
+}
+
+.statblock .sb-defenses .def-saves {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.statblock .sb-defenses .save-cell {
+  display: inline-block;
+}
+.statblock .sb-defenses .save-cell .value {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--fg);
+}
+.statblock .sb-defenses .save-cell .value.positive::before { content: "+"; }
+.statblock .sb-defenses .save-cell .value.zero::before     { content: "+"; }
+
+.statblock .sb-defenses .def-cell.hp .value {
+  font-size: 17px;
+  color: var(--accent);
+}
+
+/* Immune / Resist / Weak ribbon */
+.statblock .sb-irw {
+  margin: 4px 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.statblock .sb-irw .label {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 11.5px;
+  letter-spacing: 0.6px;
+  margin-right: 6px;
+}
+
+/* ============================================================
+   Action rows (defense / attack abilities, free-form)
+   ============================================================ */
+
+.statblock .sb-action-row {
+  margin: 6px 0;
+  padding: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.statblock .sb-action-row > div {
+  margin: 4px 0;
+}
+.statblock .sb-action-row b,
+.statblock .sb-action-row strong {
+  color: var(--fg);
+  font-weight: 700;
+}
+.statblock .sb-action-row .row-label {
+  font-weight: 800;
+  color: var(--accent);
+  margin-right: 3px;
+}
+
+/* In-statblock action glyph — refined, monochrome red */
+.statblock .action {
+  display: inline-block;
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  padding: 0 2px;
+  margin: 0 1px;
+  vertical-align: 0;
+  border-radius: 0;
+  border: 0;
+  font-family: "Pathfinder2eActions", "Source Han Sans SC",
+               -apple-system, "Segoe UI Symbol", sans-serif;
+  line-height: 1;
+}
+/* in header band, the glyph keeps the white-on-translucent look */
+.statblock .sb-head .action {
+  background: rgba(255,255,255,0.18);
+  color: var(--accent-on);
+  border: 1px solid rgba(255,255,255,0.35);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  padding: 0 6px;
+  border-radius: 3px;
+}
+
+/* ============================================================
+   Description / flavour text
+   ============================================================ */
+
+.statblock .sb-description {
+  margin: 8px 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--fg);
+}
+.statblock .sb-description p { margin: 0.5em 0; }
+.statblock .sb-description p:first-child { margin-top: 0; }
+.statblock .sb-description p:last-child  { margin-bottom: 0; }
+
+.statblock .sb-flavor {
+  font-style: italic;
+  color: var(--fg-soft);
+  margin: 6px 0 10px;
+  padding: 6px 10px 6px 12px;
+  border-left: 3px solid var(--accent-soft);
+  background: var(--bg-alt);
+  border-radius: 0 3px 3px 0;
+}
+
+/* Passive abilities (equipment list above defenses, etc.) */
+.statblock .sb-passives {
+  margin: 6px 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.statblock .sb-passives b,
+.statblock .sb-passives strong { color: var(--fg); }
+
+/* ============================================================
+   Targeting strip used by spells (range / target / area / dur / def)
+   ============================================================ */
+
+.statblock .sb-defenses.spell-targeting {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  margin: 8px 0 4px;
+  gap: 6px 24px;
+}
+.statblock .sb-defenses.spell-targeting .target-cell {
+  display: inline-block;
+}
+.statblock .sb-defenses.spell-targeting .target-cell .label {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-right: 4px;
+}
+
+/* ============================================================
+   Source footer
+   ============================================================ */
+
+.statblock .sb-source-line {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
+  font-size: 12px;
+  color: var(--fg-soft);
+  background: var(--bg-alt);
+  margin: 10px 0 0;
+  padding: 8px 16px 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.statblock .sb-source-line a.wl { color: var(--fg-soft); }
+.statblock .sb-source-line a.wl:hover { color: var(--accent); }
+
+/* ============================================================
+   Floating creature image placeholder
+   ============================================================ */
+
+.statblock .sb-image {
+  float: right;
+  width: 140px;
+  margin: 12px 16px 8px 14px;
+  background: var(--bg-alt);
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+  padding: 10px 8px;
+  text-align: center;
+  color: var(--fg-soft);
+  font-size: 11px;
+  position: relative;
+  z-index: 1;
+}
+.statblock .sb-image .placeholder {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 4px;
+  color: var(--accent-soft);
+}
+.statblock .sb-image .filename {
+  display: block;
+  font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  word-break: break-all;
+}
+
+/* ============================================================
+   Per-kind accent overrides
+   (creature uses the global red; the others tint the header band
+   to match the official sourcebook colour for that page type)
+   ============================================================ */
+
+.statblock.condition .sb-head { background: #2a3a6a; border-bottom-color: #c8b96a; }
+.statblock.condition .sb-section-head { color: #2a3a6a; }
+.statblock.condition .sb-section-head::after {
+  background:
+    linear-gradient(to bottom,
+      rgba(42,58,106,0.85) 0, rgba(42,58,106,0.85) 1px,
+      transparent 1px, transparent 2px,
+      rgba(42,58,106,0.20) 2px, rgba(42,58,106,0.20) 3px);
+}
+
+.statblock.spell .sb-head { background: #4d2275; border-bottom-color: var(--sb-gold); }
+.statblock.spell .sb-section-head { color: #4d2275; }
+.statblock.spell .sb-section-head::after {
+  background:
+    linear-gradient(to bottom,
+      rgba(77,34,117,0.85) 0, rgba(77,34,117,0.85) 1px,
+      transparent 1px, transparent 2px,
+      rgba(77,34,117,0.20) 2px, rgba(77,34,117,0.20) 3px);
+}
+.statblock.spell .action { color: #4d2275; }
+
+.statblock.feat .sb-head { background: #2d5a2a; border-bottom-color: var(--sb-gold); }
+.statblock.feat .sb-section-head { color: #2d5a2a; }
+.statblock.feat .sb-section-head::after {
+  background:
+    linear-gradient(to bottom,
+      rgba(45,90,42,0.85) 0, rgba(45,90,42,0.85) 1px,
+      transparent 1px, transparent 2px,
+      rgba(45,90,42,0.20) 2px, rgba(45,90,42,0.20) 3px);
+}
+.statblock.feat .action { color: #2d5a2a; }
+
+.statblock.item .sb-head { background: #6b3a1a; border-bottom-color: var(--sb-gold); }
+.statblock.item .sb-section-head { color: #6b3a1a; }
+.statblock.item .sb-section-head::after {
+  background:
+    linear-gradient(to bottom,
+      rgba(107,58,26,0.85) 0, rgba(107,58,26,0.85) 1px,
+      transparent 1px, transparent 2px,
+      rgba(107,58,26,0.20) 2px, rgba(107,58,26,0.20) 3px);
+}
+.statblock.item .action { color: #6b3a1a; }
+
+.statblock.trait .sb-head { background: #4a4030; border-bottom-color: var(--sb-gold); }
+.statblock.trait .sb-section-head { color: #4a4030; }
+
+.statblock.data-generic .sb-head { background: #555; border-bottom-color: var(--sb-gold); }
+
+/* Dark mode: dim the per-kind colors slightly for legibility */
+body.dark .statblock.condition .sb-head { background: #1a2440; }
+body.dark .statblock.spell     .sb-head { background: #2e1448; }
+body.dark .statblock.feat      .sb-head { background: #1a3318; }
+body.dark .statblock.item      .sb-head { background: #401e0c; }
+body.dark .statblock.trait     .sb-head { background: #2a2418; }
+
+/* ============================================================
+   Item variant cards
+   ============================================================ */
+
+.statblock .sb-item-variants {
+  margin: 8px 0 4px;
+  display: grid;
+  gap: 8px;
+}
+.statblock .sb-item-variant {
+  background: var(--bg-alt);
+  border-left: 3px solid #6b3a1a;
+  border-radius: 0 3px 3px 0;
+  padding: 8px 12px;
+}
+.statblock .sb-item-variant .variant-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 700;
+  color: #6b3a1a;
+  font-size: 14.5px;
+}
+body.dark .statblock .sb-item-variant .variant-head { color: #d8a06a; }
+.statblock .sb-item-variant .variant-name em {
+  color: var(--fg-soft);
+  font-weight: 500;
+  font-style: italic;
+}
+.statblock .sb-item-variant .variant-price {
+  font-family: "Source Han Serif SC", serif;
+  color: var(--fg);
+  font-weight: 700;
+}
+.statblock .sb-item-variant .variant-desc {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--fg);
+  line-height: 1.55;
+}
+
+/* ============================================================
+   Generic key-value fallback
+   ============================================================ */
+
+.statblock .sb-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.statblock .sb-kv dt {
+  font-weight: 700;
+  color: var(--accent);
+  text-align: right;
+  padding: 2px 0;
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
+}
+.statblock .sb-kv dd {
+  margin: 0;
+  padding: 2px 0;
+  color: var(--fg);
+}
+
+/* ============================================================
+   Wikilinks inside statblocks — subtle dotted under, accent-coloured
+   ============================================================ */
+
+.statblock a.wl {
+  color: var(--link);
+  border-bottom: 1px dotted rgba(124,31,31,0.4);
+  text-decoration: none;
+}
+.statblock a.wl:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--link-hover);
+}
+body.dark .statblock a.wl { border-bottom-color: rgba(200,120,120,0.4); }
+
+/* Header-band links stay white */
+.statblock .sb-head a,
+.statblock .sb-head a.wl {
+  color: var(--accent-on);
+  border-bottom-color: rgba(255,255,255,0.4);
+}
+
+/* ============================================================
+   Responsive — phone (<600px) — stack ability row 3x2
+   ============================================================ */
+
+@media (max-width: 599px) {
+  .statblock.creature,
+  .statblock.condition,
+  .statblock.spell,
+  .statblock.feat,
+  .statblock.item,
+  .statblock.trait,
+  .statblock.data-generic {
+    font-size: 14px;
+  }
+  .sb-head { padding: 8px 12px 6px; flex-wrap: wrap; }
+  .sb-head .sb-name { font-size: 19px; }
+  .sb-head .sb-name-en { font-size: 12px; }
+  .sb-head .sb-level-chip {
+    align-self: flex-start;
+    margin-top: 4px;
+    font-size: 12px;
+    padding: 2px 10px;
+  }
+  .sb-traits { padding: 6px 12px 4px; }
+  .trait-pill { font-size: 10.5px; padding: 2px 7px; letter-spacing: 0.5px; }
+  .sb-body { padding: 8px 12px 4px; }
+  .statblock .sb-abilities {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px 2px;
+    padding: 8px 4px;
+  }
+  .statblock .sb-ability {
+    border-right: 0;
+    border-bottom: 1px dotted var(--border-strong);
+    padding: 4px 2px;
+  }
+  .statblock .sb-ability:nth-last-child(-n+3) { border-bottom: 0; }
+  .statblock .sb-defenses { gap: 6px 14px; }
+  .statblock .sb-defenses .def-saves { gap: 4px 10px; }
+  .statblock .sb-image {
+    float: none;
+    width: auto;
+    margin: 10px 12px 6px;
+  }
+  .statblock .sb-source-line {
+    padding: 6px 12px 8px;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .statblock .sb-kv {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .statblock .sb-kv dt { text-align: left; padding-top: 6px; }
+}
+
+/* ============================================================
+   Print  — high-contrast, no shadows
+   ============================================================ */
+
+@media print {
+  .statblock.creature,
+  .statblock.condition,
+  .statblock.spell,
+  .statblock.feat,
+  .statblock.item,
+  .statblock.trait,
+  .statblock.data-generic {
+    border: 1pt solid #000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  .sb-head,
+  .statblock.condition .sb-head,
+  .statblock.spell     .sb-head,
+  .statblock.feat      .sb-head,
+  .statblock.item      .sb-head,
+  .statblock.trait     .sb-head,
+  .statblock.data-generic .sb-head {
+    background: #000 !important;
+    color: #fff !important;
+    border-bottom: 1pt solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sb-head .sb-level-chip {
+    background: #333 !important;
+    color: #fff !important;
+    border-color: #fff !important;
+  }
+  .sb-traits, .statblock .sb-source-line, .statblock .sb-flavor {
+    background: #f1f1f1 !important;
+  }
+  .trait-pill {
+    background: #ddd !important;
+    color: #000 !important;
+    border-color: #888 !important;
+  }
+  .statblock .sb-section-head { color: #000 !important; }
+  .statblock .sb-section-head::after {
+    background: none !important;
+    border-top: 0.5pt solid #000;
+    border-bottom: 0.5pt solid #000;
+    height: 3px;
+  }
+  .statblock .sb-abilities {
+    background: #f5f5f5 !important;
+    border-color: #888 !important;
+  }
+  .statblock .action {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

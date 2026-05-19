@@ -1,0 +1,323 @@
+/* ============================================================
+   _v2_compat.css — final overrides on top of wiki_native.css
+
+   Two jobs:
+   1. Fix wiki_native.css rules that break in our DOM context
+      (we don't have skin-huiji-dragonhide's #wrapper / #skinContainer
+      so some absolute/fixed/table-row-group rules need scoping).
+   2. Style our offline-specific chrome (.topnav, .page-head,
+      .breadcrumb, .layout, .wiki-sidebar, .page-body, .page-foot).
+   ============================================================ */
+
+/* ---------- 1. wiki_native.css leak fixes ---------- */
+
+/* wiki_native.css has `body { display: table-row-group }` from some
+   smwtable scope that wasn't properly scoped — kills our flow layout
+   if it ever matches. Defensive override. */
+html, body {
+  display: block !important;
+  width: auto !important;
+  zoom: normal !important;
+  overflow: visible !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Hide dragonhide skin chrome that we don't render */
+#skinContainer, #wrapper, #wiki-outer-body, #wiki-body,
+#mw-indicator-smw-entity-examiner, #contentSub, #firstHeading,
+#siteSub, #mw-navigation, #mw-panel, #footer, #p-personal,
+#p-search, #p-cactions, .mw-indicator { display: none !important; }
+
+/* ---------- 2. Layout chrome ---------- */
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Layout — sidebar + main content */
+div.layout {
+  display: flex;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 20px;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  div.layout {
+    flex-direction: column;
+    padding: 0 12px;
+    gap: 16px;
+  }
+}
+
+nav.wiki-sidebar {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 60px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  font-size: 13.5px;
+  padding: 16px 12px 16px 0;
+  border-right: 1px solid var(--border);
+}
+
+nav.wiki-sidebar .sb-home {
+  display: block;
+  font-weight: 600;
+  color: var(--link);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+nav.wiki-sidebar .sb-search {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+nav.wiki-sidebar .sb-search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--fg);
+}
+nav.wiki-sidebar .sb-search input[type="search"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+nav.wiki-sidebar .sb-search button {
+  padding: 4px 8px;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-alt);
+  color: var(--fg);
+  cursor: pointer;
+}
+nav.wiki-sidebar .sb-search button:hover {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: var(--accent);
+}
+
+nav.wiki-sidebar details.sb-group {
+  margin: 0 0 4px;
+}
+nav.wiki-sidebar details.sb-group > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-weight: 600;
+  color: var(--fg);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+  list-style-position: inside;
+}
+nav.wiki-sidebar details.sb-group > summary:hover {
+  color: var(--accent);
+}
+nav.wiki-sidebar details.sb-group ul {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0 0 0 16px;
+}
+nav.wiki-sidebar details.sb-group li {
+  padding: 3px 0;
+}
+nav.wiki-sidebar details.sb-group a {
+  color: var(--link);
+  text-decoration: none;
+}
+nav.wiki-sidebar details.sb-group a:hover {
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+main.page-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px 24px 60px;
+  background: var(--bg);
+}
+
+/* page-head */
+body header.page-head {
+  background: var(--accent-band) !important;
+  color: var(--accent-on) !important;
+  padding: 20px 20px 14px !important;
+  margin: 0 auto !important;
+  max-width: 1600px !important;
+  border-bottom: 4px solid var(--gold) !important;
+}
+body header.page-head h1 {
+  margin: 0 !important;
+  font-family: var(--font-display);
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: var(--accent-on) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+body.dark header.page-head {
+  background: #4a1500 !important;
+}
+
+/* breadcrumb */
+nav.breadcrumb {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--fg-mute);
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+}
+nav.breadcrumb a {
+  color: var(--link);
+}
+nav.breadcrumb .sep {
+  margin: 0 6px;
+  color: var(--border-strong);
+}
+nav.breadcrumb .current {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* footer */
+footer.page-foot {
+  max-width: 1600px;
+  margin: 32px auto 0;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--fg-mute);
+  text-align: center;
+}
+
+/* ---------- 3. Skip link (a11y, carried from v1 iter-14) ---------- */
+
+a.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  background: var(--accent);
+  color: var(--accent-on);
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  z-index: 9999;
+  transition: top 0.18s ease;
+}
+a.skip-link:focus {
+  top: 12px;
+  outline: 2px solid var(--gold);
+}
+
+/* ---------- 4. Categories block at page bottom ---------- */
+
+div.page-categories {
+  margin: 32px 0 0;
+  padding: 12px 16px;
+  border-top: 2px solid var(--border);
+  font-size: 13px;
+  color: var(--fg-mute);
+}
+div.page-categories .label {
+  font-weight: 600;
+  margin-right: 8px;
+  color: var(--fg);
+}
+div.page-categories ul {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
+}
+div.page-categories li {
+  display: inline-flex;
+}
+div.page-categories li a {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--link);
+  text-decoration: none;
+  font-size: 12.5px;
+}
+div.page-categories li a:hover {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: var(--accent);
+}
+
+/* ---------- 4b. Huiji tooltip — visual hint that title attr present ---------- */
+
+span.huiji-tt.huiji-tt-rendered {
+  border-bottom: 1px dotted var(--accent-soft);
+  cursor: help;
+}
+
+/* ---------- 5. mw-parser-output content tweaks ---------- */
+
+/* Ensure content respects column width */
+main.page-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* MediaWiki edit-section markers we passed disableeditsection=1 but defensive */
+.mw-editsection, .mw-editsection-bracket, .mw-editsection-divider {
+  display: none !important;
+}
+
+/* Red links (.new) — fall back to wiki_native or palette default */
+a.new {
+  color: #ba0000;
+  text-decoration: none;
+  border-bottom: 1px dashed #ba0000;
+}
+
+/* Image placeholder (when manifest miss) */
+img.v2-missing-image {
+  display: inline-block;
+  min-width: 32px;
+  min-height: 32px;
+  background: var(--card-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23f0f0f0"/><text x="32" y="38" text-anchor="middle" font-family="serif" font-size="32" fill="%23a8a59f">?</text></svg>') center / contain no-repeat;
+  border: 1px dashed var(--border-strong);
+}
+
+/* ---------- 6. Mobile responsive ---------- */
+
+@media (max-width: 768px) {
+  header.page-head { padding: 14px 16px 10px; }
+  header.page-head h1 { font-size: 22px; }
+  main.page-body { padding: 12px 16px 40px; }
+  nav.wiki-sidebar { position: static; max-height: none; }
+}
+
+/* ---------- 7. Print ---------- */
+
+@media print {
+  nav.topnav, nav.wiki-sidebar, nav.breadcrumb,
+  a.skip-link, footer.page-foot { display: none !important; }
+  div.layout { display: block; }
+  main.page-body { padding: 0; }
+  header.page-head { background: #000; color: #fff; }
+}

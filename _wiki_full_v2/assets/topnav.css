@@ -1,0 +1,460 @@
+/* ============================================================
+   topnav.css — Phase 6, Agent TOPNAV
+   AoN-style sticky horizontal navigation with mega-menus.
+
+   Consumes palette tokens from pf2_theme.css:
+     --accent, --accent-band, --accent-on, --gold,
+     --card, --card-alt, --bg, --bg-alt, --fg, --fg-soft,
+     --border, --border-strong, --link, --link-hover,
+     --font-display, --font-ui, --shadow-md.
+
+   Sticky at z-index 100 (above .wiki-sidebar and the legacy
+   .topbar at z=50). Mega-menus use absolute-positioned panels
+   anchored to their trigger button. Implemented with
+   click-or-hover .open class managed by topnav.js, with a
+   CSS-only :focus-within fallback for keyboard users.
+
+   Mobile breakpoint: 700px collapses to a <details> hamburger
+   (the renderer wraps the same item list in <details><summary>☰
+   </summary>...</details>; below 700px we hide the desktop bar
+   and reveal the hamburger version).
+   ============================================================ */
+
+/* ---------- 0. Bar shell ---------- */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, transparent 60%),
+    var(--accent-band);
+  color: var(--accent-on);
+  border-bottom: 2px solid var(--gold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
+  font-family: var(--font-ui);
+  line-height: 1.4;
+}
+.topnav::after {
+  /* gold sub-hairline so the bar reads as a sourcebook chapter rule */
+  content: "";
+  display: block;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%, rgba(184, 146, 72, 0.55) 18%,
+    rgba(184, 146, 72, 0.55) 82%, transparent 100%);
+  margin-top: -2px;
+  pointer-events: none;
+}
+.topnav-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 0 14px;
+  min-height: 48px;
+}
+
+/* ---------- 1. Brand ---------- */
+.topnav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--accent-on);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  padding: 0 12px 0 4px;
+  margin-right: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+.topnav-brand:hover {
+  color: #fff;
+  text-decoration: none;
+}
+.topnav-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent-band);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.10);
+}
+
+/* ---------- 2. Item list (desktop) ---------- */
+.topnav-items {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.topnav-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ---------- 3. Trigger button ---------- */
+.topnav-trigger {
+  background: transparent;
+  border: 0;
+  color: var(--accent-on);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  padding: 0 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.topnav-trigger:hover,
+.topnav-trigger:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  outline: none;
+}
+.topnav-item.open > .topnav-trigger,
+.topnav-item:focus-within > .topnav-trigger {
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.topnav-caret {
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.85;
+  transition: transform 0.15s;
+}
+.topnav-item.open > .topnav-trigger .topnav-caret,
+.topnav-item:focus-within > .topnav-trigger .topnav-caret {
+  transform: rotate(180deg);
+}
+
+/* ---------- 4. Mega-menu panel ---------- */
+.topnav-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 240px;
+  max-width: 360px;
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--gold);
+  border-radius: 0 0 3px 3px;
+  box-shadow: var(--shadow-md), 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 8px 0;
+  margin: 0;
+  list-style: none;
+  /* Hidden by default; revealed via .open or :focus-within */
+  display: none;
+  z-index: 110;
+}
+.topnav-item.open > .topnav-panel,
+.topnav-item:focus-within > .topnav-panel,
+.topnav-item:hover > .topnav-panel {
+  display: block;
+}
+
+/* Optional 2-column wide variant on the bigger menus */
+.topnav-panel.wide {
+  min-width: 360px;
+  column-count: 2;
+  column-gap: 0;
+  padding: 8px 0;
+}
+
+.topnav-panel li {
+  break-inside: avoid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.topnav-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 16px;
+  color: var(--fg);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  border-left: 3px solid transparent;
+  transition: background 0.10s, color 0.10s, border-color 0.10s;
+  white-space: nowrap;
+}
+.topnav-link:hover,
+.topnav-link:focus-visible {
+  background: var(--bg-alt);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  text-decoration: none;
+  outline: none;
+}
+.topnav-link .topnav-count {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.topnav-link:hover .topnav-count {
+  color: var(--accent-soft);
+}
+.topnav-panel hr.topnav-sep {
+  margin: 5px 12px;
+  border: 0;
+  border-top: 1px dashed var(--border);
+}
+
+/* ---------- 5. Search + theme on the right ---------- */
+.topnav-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 8px;
+  flex-shrink: 0;
+}
+.topnav-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.topnav-search-input {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f1d18;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 3px;
+  padding: 6px 30px 6px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  width: 200px;
+  outline: none;
+  transition: width 0.18s, box-shadow 0.15s, border-color 0.15s;
+}
+.topnav-search-input::placeholder { color: #6f6b62; }
+.topnav-search-input:focus {
+  width: 260px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.30);
+  border-color: rgba(255, 255, 255, 0.62);
+}
+.topnav-search-go {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: #6f6b62;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.topnav-search-go:hover { color: var(--accent); }
+.topnav-theme {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--accent-on);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 3px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, transform 0.10s;
+}
+.topnav-theme:hover { background: rgba(255, 255, 255, 0.28); }
+.topnav-theme:active { transform: scale(0.94); }
+
+/* ---------- 6. Mobile hamburger (<700px) ---------- */
+.topnav-hamburger {
+  display: none;
+  /* shown via media query */
+}
+.topnav-hamburger > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--accent-on);
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.topnav-hamburger > summary::-webkit-details-marker { display: none; }
+.topnav-hamburger > summary::before { content: "\2630"; font-size: 17px; }
+.topnav-hamburger[open] > summary::before { content: "\2715"; }
+
+.topnav-mobile-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  background: var(--card);
+  color: var(--fg);
+  border-top: 2px solid var(--gold);
+  border-bottom: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md), 0 10px 24px rgba(0, 0, 0, 0.20);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 6px 0 12px;
+  z-index: 105;
+}
+.topnav-mobile-group {
+  border-top: 1px solid var(--border);
+}
+.topnav-mobile-group:first-child { border-top: 0; }
+.topnav-mobile-group > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 18px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14.5px;
+  letter-spacing: 0.04em;
+  background: var(--card-alt);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.topnav-mobile-group > summary::-webkit-details-marker { display: none; }
+.topnav-mobile-group > summary::after {
+  content: "+";
+  color: var(--fg-mute);
+  font-weight: 700;
+  font-size: 16px;
+}
+.topnav-mobile-group[open] > summary::after { content: "\2013"; }
+.topnav-mobile-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 8px;
+}
+.topnav-mobile-group a {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 28px;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 14px;
+}
+.topnav-mobile-group a:hover {
+  background: var(--bg-alt);
+  color: var(--accent);
+}
+.topnav-mobile-group a .topnav-count {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+}
+
+/* ---------- 7. Responsive ---------- */
+@media (max-width: 980px) {
+  .topnav-search-input { width: 150px; }
+  .topnav-search-input:focus { width: 200px; }
+  .topnav-trigger { padding: 0 10px; font-size: 13.5px; }
+  .topnav-brand-tag { display: none; }
+}
+
+@media (max-width: 700px) {
+  .topnav-items,
+  .topnav-tools .topnav-search {
+    display: none;
+  }
+  .topnav-hamburger {
+    display: inline-flex;
+    margin-left: auto;
+    align-items: center;
+  }
+  .topnav-inner {
+    position: relative;
+    padding: 6px 10px;
+    min-height: 44px;
+  }
+  .topnav-brand {
+    font-size: 15px;
+    padding-right: 8px;
+    margin-right: 0;
+    border-right: 0;
+  }
+}
+
+/* ---------- 8. Dark-mode tuning ---------- */
+body.dark .topnav-search-input {
+  background: rgba(20, 16, 12, 0.92);
+  color: var(--fg);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+body.dark .topnav-search-input::placeholder { color: var(--fg-mute); }
+body.dark .topnav-search-go { color: var(--fg-mute); }
+body.dark .topnav-search-go:hover { color: var(--accent); }
+body.dark .topnav-brand-mark {
+  background: var(--card);
+  color: var(--accent);
+}
+
+/* ---------- 9. Print fallback ---------- */
+@media print {
+  .topnav { position: static !important; box-shadow: none !important; }
+  .topnav-panel, .topnav-tools, .topnav-hamburger,
+  .topnav-mobile-panel { display: none !important; }
+}
+
+/* ---------- 10. Hide legacy page-head if both present ---------- */
+.topnav + header.page-head {
+  /* keep h1 but drop the redundant home/search/theme chrome */
+  background: transparent;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+  padding: 18px 24px 10px;
+  text-align: left;
+}
+.topnav + header.page-head::after { display: none; }
+.topnav + header.page-head h1 {
+  color: var(--accent);
+  text-shadow: none;
+  font-size: 26px;
+}
+.topnav + header.page-head a.home,
+.topnav + header.page-head a.search-link,
+.topnav + header.page-head .theme-toggle {
+  display: none;
+}
+
+/* End topnav.css */

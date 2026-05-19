@@ -1,0 +1,525 @@
+/* PF2 statblock renderer — additive styles for Data: namespace pages.
+ *
+ * Design follows Archives of Nethys / Foundry VTT conventions:
+ *   - Title bar: red Trajan-style bold name + level badge on right
+ *   - Subtitle: chinese / english parenthetical
+ *   - Trait pill row with rarity / size / others
+ *   - Section headers in red caps with rule line
+ *   - Six ability scores in a single horizontal row
+ *   - AC / saves / HP / immunities grouped tightly
+ *   - Attacks list with action glyphs inline
+ *
+ * Only NEW classes are defined here. Existing .statblock / .sb-title /
+ * .sb-tags etc. from style.css are intentionally overridden to upgrade
+ * the visual quality without breaking the legacy demo page.
+ */
+
+/* ------------------------------------------------------------------ */
+/* statblock card — override the legacy style for richer presentation */
+
+.statblock.creature,
+.statblock.condition,
+.statblock.spell,
+.statblock.feat,
+.statblock.item,
+.statblock.trait,
+.statblock.data-generic {
+  background: #fbf7ee;
+  border: 1px solid #b8a878;
+  border-top: 5px solid #5a0f0f;
+  border-radius: 4px 4px 6px 6px;
+  padding: 14px 22px 18px;
+  margin: 20px 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08), inset 0 -1px 0 rgba(0,0,0,0.04);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------ */
+/* header row: name + level chip */
+
+.sb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #5a0f0f;
+  margin-bottom: 8px;
+}
+
+.sb-head .sb-name {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", "STSong", serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #5a0f0f;
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.sb-head .sb-name-en {
+  display: block;
+  font-family: "Source Han Sans SC", "Noto Sans CJK SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  font-style: italic;
+  color: #6a5a3a;
+  letter-spacing: 0.2px;
+  margin-top: 2px;
+}
+
+.sb-level-chip {
+  flex-shrink: 0;
+  background: #5a0f0f;
+  color: #fff8e7;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  align-self: center;
+  white-space: nowrap;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+/* ------------------------------------------------------------------ */
+/* trait pill row */
+
+.sb-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 10px;
+}
+
+.trait-pill {
+  display: inline-block;
+  background: #5a0f0f;
+  color: #fff8e7;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 3px 9px;
+  border-radius: 0;
+  border: 1px solid #3d0a0a;
+  line-height: 1.3;
+}
+
+.trait-pill.rarity-uncommon { background: #6b3a1a; border-color: #4a2a14; }
+.trait-pill.rarity-rare    { background: #1f3a7a; border-color: #14245a; }
+.trait-pill.rarity-unique  { background: #5b2880; border-color: #3a1860; }
+.trait-pill.rarity-common  { display: none; } /* common is default; suppress chip */
+
+.trait-pill.size {
+  background: #d6cca0;
+  color: #3a2a10;
+  border-color: #8a7a4a;
+}
+
+.trait-pill.alignment {
+  background: #444;
+  color: #fff;
+  border-color: #222;
+}
+
+/* ------------------------------------------------------------------ */
+/* section separators within the block */
+
+.sb-section-head {
+  font-family: "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #5a0f0f;
+  margin: 12px 0 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(90, 15, 15, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sb-section-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(90, 15, 15, 0.2);
+}
+
+/* ------------------------------------------------------------------ */
+/* perception / lang / skills lines */
+
+.sb-line {
+  margin: 3px 0;
+}
+
+.sb-line .label {
+  font-weight: 700;
+  color: #5a0f0f;
+  margin-right: 4px;
+}
+
+.sb-line .label::after {
+  content: "";
+}
+
+/* ------------------------------------------------------------------ */
+/* ability score row — 6 in a single horizontal strip */
+
+.sb-abilities {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin: 6px 0 4px;
+  padding: 8px 6px;
+  background: #f3ecd6;
+  border: 1px solid #c9bb88;
+  border-radius: 3px;
+}
+
+.sb-ability {
+  text-align: center;
+}
+
+.sb-ability .ability-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6a5a3a;
+}
+
+.sb-ability .ability-value {
+  display: block;
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.2;
+}
+
+.sb-ability .ability-value.positive::before { content: "+"; }
+.sb-ability .ability-value.zero::before { content: "+"; }
+
+/* ------------------------------------------------------------------ */
+/* defenses row */
+
+.sb-defenses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 22px;
+  margin: 6px 0;
+  padding: 6px 0;
+  align-items: baseline;
+}
+
+.sb-defenses .def-cell .label {
+  font-weight: 700;
+  color: #5a0f0f;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.sb-defenses .def-cell .value {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #222;
+}
+
+.sb-defenses .def-saves {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.sb-defenses .save-cell {
+  display: inline-block;
+}
+
+.sb-defenses .save-cell .label {
+  font-weight: 700;
+  font-size: 11px;
+  color: #5a0f0f;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.sb-defenses .save-cell .value {
+  font-family: "Source Han Serif SC", "Noto Serif CJK SC", serif;
+  font-weight: 700;
+}
+
+.sb-defenses .save-cell .value.positive::before { content: "+"; }
+
+/* HP gets emphasis */
+
+.sb-defenses .def-cell.hp .value {
+  font-size: 17px;
+  color: #5a0f0f;
+}
+
+/* ------------------------------------------------------------------ */
+/* immune / resist / weak row */
+
+.sb-irw {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.sb-irw .label {
+  font-weight: 700;
+  color: #5a0f0f;
+  margin-right: 3px;
+}
+
+/* ------------------------------------------------------------------ */
+/* attacks / abilities — list of blocks */
+
+.sb-actions {
+  margin: 4px 0;
+}
+
+.sb-action-row {
+  margin: 6px 0;
+  padding-left: 0;
+}
+
+.sb-action-row.attack {
+  /* one-line attack format */
+}
+
+.sb-action-row .row-label {
+  font-weight: 700;
+  color: #5a0f0f;
+  margin-right: 3px;
+}
+
+.sb-action-row .ability-name {
+  font-weight: 700;
+  color: #222;
+}
+
+/* override .action glyphs inside statblock to have a more refined look */
+
+.statblock .action {
+  display: inline-block;
+  background: transparent;
+  color: #5a0f0f;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  padding: 0 2px;
+  margin: 0 1px;
+  vertical-align: 0;
+  border-radius: 0;
+  font-family: "Source Han Sans SC", "Pathfinder2eActions", sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* description / italic-flavor blocks (mainly for non-creature pages)  */
+
+.sb-description {
+  margin: 8px 0;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.sb-description p {
+  margin: 0.6em 0;
+}
+
+.sb-flavor {
+  font-style: italic;
+  color: #6a5a3a;
+  margin: 4px 0 10px;
+  padding-left: 8px;
+  border-left: 2px solid #c9bb88;
+}
+
+/* ------------------------------------------------------------------ */
+/* source line at the bottom */
+
+.sb-source-line {
+  font-size: 12px;
+  color: #6a5a3a;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #c9bb88;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ------------------------------------------------------------------ */
+/* image placeholder when 图鉴 is set but no local file */
+
+.sb-image {
+  float: right;
+  width: 140px;
+  margin: 0 0 8px 14px;
+  background: #ece4cc;
+  border: 1px dashed #b8a878;
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+  color: #6a5a3a;
+  font-size: 11px;
+}
+
+.sb-image .placeholder {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 4px;
+  color: #b8a878;
+}
+
+/* ------------------------------------------------------------------ */
+/* condition / spell / feat / item: type-specific tweaks                */
+
+.statblock.condition .sb-head {
+  border-bottom-color: #2a3a6a;
+}
+.statblock.condition .sb-head .sb-name { color: #2a3a6a; }
+.statblock.condition .sb-level-chip { background: #2a3a6a; }
+.statblock.condition .sb-section-head { color: #2a3a6a; border-top-color: rgba(42, 58, 106, 0.3); }
+.statblock.condition .sb-section-head::after { background: rgba(42, 58, 106, 0.2); }
+.statblock.condition { border-top-color: #2a3a6a; }
+
+.statblock.spell .sb-head { border-bottom-color: #4d2275; }
+.statblock.spell .sb-head .sb-name { color: #4d2275; }
+.statblock.spell .sb-level-chip { background: #4d2275; }
+.statblock.spell .sb-section-head { color: #4d2275; border-top-color: rgba(77, 34, 117, 0.3); }
+.statblock.spell .sb-section-head::after { background: rgba(77, 34, 117, 0.2); }
+.statblock.spell { border-top-color: #4d2275; }
+
+.statblock.feat .sb-head { border-bottom-color: #2d5a2a; }
+.statblock.feat .sb-head .sb-name { color: #2d5a2a; }
+.statblock.feat .sb-level-chip { background: #2d5a2a; }
+.statblock.feat .sb-section-head { color: #2d5a2a; border-top-color: rgba(45, 90, 42, 0.3); }
+.statblock.feat .sb-section-head::after { background: rgba(45, 90, 42, 0.2); }
+.statblock.feat { border-top-color: #2d5a2a; }
+
+.statblock.item .sb-head { border-bottom-color: #6b3a1a; }
+.statblock.item .sb-head .sb-name { color: #6b3a1a; }
+.statblock.item .sb-level-chip { background: #6b3a1a; }
+.statblock.item .sb-section-head { color: #6b3a1a; border-top-color: rgba(107, 58, 26, 0.3); }
+.statblock.item .sb-section-head::after { background: rgba(107, 58, 26, 0.2); }
+.statblock.item { border-top-color: #6b3a1a; }
+
+.statblock.trait .sb-head { border-bottom-color: #444; }
+.statblock.trait .sb-head .sb-name { color: #444; }
+.statblock.trait .sb-level-chip { background: #444; }
+.statblock.trait { border-top-color: #444; }
+
+/* ------------------------------------------------------------------ */
+/* item variants table (some items have multiple sub-types)            */
+
+.sb-item-variants {
+  margin: 8px 0;
+}
+
+.sb-item-variant {
+  margin: 6px 0;
+  padding: 6px 10px;
+  background: rgba(107, 58, 26, 0.06);
+  border-left: 3px solid #6b3a1a;
+  border-radius: 0 3px 3px 0;
+}
+
+.sb-item-variant .variant-head {
+  font-weight: 700;
+  color: #6b3a1a;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sb-item-variant .variant-price {
+  font-family: "Source Han Serif SC", serif;
+  color: #444;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* generic key-value fallback (data-generic / unknown data_type)       */
+
+.sb-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.sb-kv dt {
+  font-weight: 700;
+  color: #5a0f0f;
+  text-align: right;
+  padding: 2px 0;
+}
+
+.sb-kv dd {
+  margin: 0;
+  padding: 2px 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* responsive — collapse abilities to 3x2 grid on small viewports      */
+
+@media (max-width: 640px) {
+  .statblock.creature,
+  .statblock.condition,
+  .statblock.spell,
+  .statblock.feat,
+  .statblock.item,
+  .statblock.trait,
+  .statblock.data-generic {
+    padding: 12px 14px 14px;
+    font-size: 14px;
+  }
+  .sb-head .sb-name { font-size: 20px; }
+  .sb-abilities { grid-template-columns: repeat(3, 1fr); }
+  .sb-defenses { gap: 8px 14px; }
+  .sb-image { float: none; width: 100%; margin: 0 0 10px; }
+  .sb-kv { grid-template-columns: 1fr; gap: 2px; }
+  .sb-kv dt { text-align: left; padding-top: 6px; }
+  .sb-source-line { flex-direction: column; gap: 4px; }
+}
+
+/* ------------------------------------------------------------------ */
+/* test page only (test_creatures.html)                                */
+
+body.statblock-test {
+  background: #f0ead8;
+  max-width: none;
+}
+
+body.statblock-test main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+body.statblock-test .test-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 18px;
+}
+
+body.statblock-test h1 {
+  color: #5a0f0f;
+  font-family: "Source Han Serif SC", serif;
+  margin: 0 0 8px;
+}
+
+body.statblock-test .test-note {
+  color: #6a5a3a;
+  font-size: 14px;
+  margin-bottom: 18px;
+}

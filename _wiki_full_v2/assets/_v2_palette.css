@@ -1,0 +1,130 @@
+/* ============================================================
+   _v2_palette.css — palette tokens aligned to pf2.huijiwiki.com
+
+   Replaces v1's pf2_theme.css (which used AoN warm parchment).
+   These tokens match the canonical PF2/Paizo brand colors observed
+   in wiki_native.css:
+     - body bg white #ffffff
+     - body fg dark grey #333333
+     - navbox header brown-red #6d2002 (brand accent)
+     - amber #ffb300 (link in dark contexts)
+     - font: Helvetica Neue / system sans
+
+   Defined in v2b. Bump via inject_cache_buster when changing.
+   ============================================================ */
+
+:root {
+  /* Foreground */
+  --fg:        #333333;
+  --fg-soft:   #555555;
+  --fg-mute:   #707070;
+
+  /* Surfaces */
+  --bg:        #ffffff;
+  --bg-alt:    #f5f5f5;
+  --card:      #fafafa;
+  --card-alt:  #f0f0f0;
+
+  /* Borders */
+  --border:        #dddddd;
+  --border-strong: #b0b0b0;
+
+  /* Accent — PF2 brand brown-red (navbox-title) */
+  --accent:        #6d2002;
+  --accent-soft:   #8d3a1c;
+  --accent-band:   #6d2002;
+  --accent-on:     #fffbf6;
+
+  /* Gold/amber — PF2 brand secondary (navbox links) */
+  --gold:          #ffb300;
+  --gold-soft:     #ffcb52;
+
+  /* Links — MediaWiki standard blue */
+  --link:        #0645ad;
+  --link-hover:  #0b0080;
+  --link-visited: #0b0080;
+
+  /* Trait chip family — kept from v1 for compatibility but tweaked to match flat look */
+  --tag-bg:       #ede0bf;
+  --tag-fg:       #4a3b18;
+  --rare-bg:      #d8c6ec;
+  --rare-fg:      #3a1c5a;
+  --uncommon-bg:  #f0d8a8;
+  --uncommon-fg:  #5a3308;
+  --size-bg:      #d5deb8;
+  --size-fg:      #2e3d18;
+
+  /* UI semantics */
+  --code-bg:     #f5f5f5;
+  --quote-bg:    #f9f5e8;
+  --warn-bg:     #fcf0e8;
+  --warn-fg:     #6e2a00;
+  --warn-border: #d97757;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.10);
+
+  /* PF2 head decoration */
+  --hr-double-top: rgba(109, 32, 2, 0.90);
+  --hr-double-bot: rgba(109, 32, 2, 0.35);
+
+  /* Typography stacks — Helvetica Neue + CJK fallback */
+  --font-serif:
+    "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong",
+    Georgia, "Times New Roman", serif;
+  --font-sans:
+    "Helvetica Neue", Helvetica, Arial,
+    "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-sans);
+  --font-ui: var(--font-sans);
+
+  /* Layout */
+  --p7-shell-max: 1280px;
+}
+
+/* Dark mode — flips bg/fg, accent stays */
+body.dark {
+  --fg:        #e3e3e3;
+  --fg-soft:   #b8b8b8;
+  --fg-mute:   #808080;
+  --bg:        #1a1a1a;
+  --bg-alt:    #242424;
+  --card:      #2a2a2a;
+  --card-alt:  #303030;
+  --border:        #3a3a3a;
+  --border-strong: #555555;
+  --accent:        #c43a3e;
+  --accent-soft:   #d96666;
+  --accent-band:   #6d2002;
+  --link:          #6cb4ee;
+  --link-hover:    #99ccff;
+  --code-bg:       #1f1f1f;
+  --quote-bg:      #2a261e;
+}
+
+/* Apply tokens — base body styling */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a.new, a.new:visited {
+  color: #ba0000;
+}
+body.dark a.new {
+  color: #ff7575;
+}

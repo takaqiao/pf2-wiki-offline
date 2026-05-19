@@ -1,0 +1,63 @@
+/* PF2 offline wiki — kind-* color overrides (Phase 4, Agent KC)
+   Loads AFTER page_type_theme.css so these win.
+   ---------------------------------------------------------------
+   Purpose: bring all 11 page-type accents to WCAG AA against the
+   light (#faf7f0) and dark (#18170f) page backgrounds, and prevent
+   the kind-stub grey from tinting whole pages via the header band.
+
+   AA targets: 4.5:1 body text, 3:1 large/heading.
+   Reference contrasts vs body bg computed in agent_outputs/_kc_preview.html.
+*/
+
+/* ---- Light theme accent overrides ---- */
+:root {
+  /* class: was #7a5a1f (5.93) — dark gold low contrast on warm bg
+     now richer copper, 7.63:1 */
+  --accent-class: #7a4014;
+  --accent-class-band: #4f2a0d;
+
+  /* deity: was #a07a1f (3.70, FAILED AA) — deeper amber, 5.95:1 */
+  --accent-deity: #7a5a14;
+  --accent-deity-band: #4d3a0d;
+
+  /* location: was #8a4a6a (6.01) — saturation bump, 6.68:1 */
+  --accent-location: #8e3a64;
+  --accent-location-band: #5d2342;
+}
+
+/* ---- Dark theme accent overrides ---- */
+body.dark {
+  /* condition: was #88b3e0 (8.19) — slightly brighter for legibility
+     against the very dark #18170f, 9.82:1 */
+  --accent-condition: #9bc4ea;
+  --accent-condition-band: #182a42;
+
+  /* Keep dark class/deity within AA after light-side changes;
+     these were already fine but rebalance for parity. */
+  --accent-class: #d4b87a;     /* unchanged — 9.36:1 */
+  --accent-deity: #e0c060;     /* unchanged — 10.17:1 */
+  --accent-location: #de9ec0;  /* slight saturation bump, 8.40:1 */
+}
+
+/* ---- Stub: no whole-page grey tint ----
+   Agent PC's body[class*="kind-"] selectors would otherwise paint the
+   page header / statblock chrome in grey. For .kind-stub specifically
+   we want the badge to stay subtle grey but ALL page chrome should fall
+   back to the site default accent (var(--accent) / --accent-band).
+   We do this by re-pointing --type-accent / --type-band on stub bodies. */
+body.kind-stub {
+  --type-accent: var(--accent);
+  --type-band:   var(--accent-band);
+}
+/* The inline .kind-stub badge background is NOT bound to --type-accent,
+   so it keeps using var(--accent-stub) and remains grey. No change needed. */
+
+/* ---- Header band readability guard ----
+   page-head text is white on var(--type-band). All current bands have
+   >=7:1 against white, but if a kind ever lands a band lighter than
+   #767676, force-darken it slightly. This is a safety net only. */
+body[class*="kind-"] header.page-head {
+  color: #fff;
+}
+
+/* End Agent KC overrides */

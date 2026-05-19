@@ -1,0 +1,252 @@
+/* ============================================================
+   aon_table.css — Phase 6 / Agent TABLE
+
+   Styles for the AoN-style sortable HTML tables added to
+   landing pages (browse-feats, browse-spells, ...). Coordinated
+   with Agent CLF (filter chip bar, same .aon-table host class).
+   No external dependencies; uses theme variables already
+   defined in style.css.
+   ============================================================ */
+
+/* Section wrapper */
+.aon-table-section {
+  margin: 36px 0 24px;
+}
+.aon-table-section .aon-table-head {
+  margin: 0 0 6px;
+}
+.aon-row-count {
+  font-size: 13px;
+  color: var(--fg-mute);
+  font-weight: 400;
+  margin-left: 8px;
+}
+
+/* Container — allow horizontal scroll on narrow screens */
+.aon-table-wrap {
+  overflow-x: auto;
+}
+
+/* Table base */
+.aon-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 12px 0 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  table-layout: auto;
+}
+
+/* Head */
+.aon-table thead th {
+  background: var(--bg-alt);
+  color: var(--fg);
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
+  user-select: none;
+}
+.aon-table thead th.sortable {
+  cursor: pointer;
+}
+.aon-table thead th.sortable:hover {
+  background: var(--accent);
+  color: var(--accent-on);
+}
+.aon-table thead th .sort-arrow {
+  font-size: 10px;
+  color: var(--fg-mute);
+  margin-left: 4px;
+  opacity: 0.6;
+}
+.aon-table thead th.sort-asc,
+.aon-table thead th.sort-desc {
+  background: var(--accent);
+  color: var(--accent-on);
+}
+.aon-table thead th.sort-asc .sort-arrow,
+.aon-table thead th.sort-desc .sort-arrow {
+  opacity: 1;
+  color: inherit;
+}
+.aon-table thead th.sort-asc .sort-arrow::after {
+  content: ' ▲';
+}
+.aon-table thead th.sort-desc .sort-arrow::after {
+  content: ' ▼';
+}
+.aon-table thead th.sort-asc .sort-arrow,
+.aon-table thead th.sort-desc .sort-arrow {
+  /* Replace the default ⇅ char by hiding it via font-size:0 hack; we
+     append the arrow above. */
+  font-size: 0;
+}
+.aon-table thead th.sort-asc .sort-arrow::after,
+.aon-table thead th.sort-desc .sort-arrow::after {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+/* Body */
+.aon-table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+.aon-table tbody tr:nth-child(odd) {
+  background: var(--card);
+}
+.aon-table tbody tr:nth-child(even) {
+  background: var(--bg-alt);
+}
+.aon-table tbody tr:hover {
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 12%, transparent));
+}
+
+.aon-table td {
+  padding: 6px 10px;
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+/* Column widths */
+.aon-table .col-name {
+  min-width: 160px;
+  max-width: 320px;
+}
+.aon-table .col-name a {
+  color: var(--link);
+  text-decoration: none;
+  font-weight: 500;
+}
+.aon-table .col-name a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+.aon-table .col-name .name-en {
+  display: block;
+  color: var(--fg-mute);
+  font-size: 11.5px;
+  font-weight: 400;
+  margin-top: 1px;
+}
+.aon-table .col-name a.untranslated::after {
+  content: 'EN';
+  font-size: 9px;
+  color: var(--warn-fg);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  padding: 1px 4px;
+  margin-left: 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.aon-table .col-level,
+.aon-table .col-rarity,
+.aon-table .col-category,
+.aon-table .col-tradition,
+.aon-table .col-school,
+.aon-table .col-source {
+  white-space: nowrap;
+}
+.aon-table .col-level {
+  width: 64px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.aon-table th.num,
+.aon-table td.col-level {
+  text-align: center;
+}
+.aon-table .col-source {
+  color: var(--fg-mute);
+  font-size: 12.5px;
+  width: 80px;
+}
+.aon-table .col-category .cat-detail {
+  display: block;
+  color: var(--fg-mute);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Trait pill cell — compact size */
+.aon-table .col-traits {
+  min-width: 200px;
+}
+.aon-table .col-traits .trait-pill {
+  font-size: 11px;
+  padding: 1px 6px;
+  margin: 1px 3px 1px 0;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--fg);
+  display: inline-block;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.aon-table .col-traits .trait-pill.rarity-uncommon {
+  background: #f5e8c8;
+  border-color: #c9a64f;
+  color: #5a3f10;
+}
+.aon-table .col-traits .trait-pill.rarity-rare {
+  background: #e2d8ef;
+  border-color: #8870c2;
+  color: #3b266e;
+}
+.aon-table .col-traits .trait-pill.rarity-unique {
+  background: #f5d0d0;
+  border-color: #c25a5a;
+  color: #6b1a1a;
+}
+.aon-table .col-traits .trait-pill.more {
+  color: var(--fg-mute);
+  background: transparent;
+  border-style: dashed;
+}
+
+/* Dark mode trait rarity tweaks */
+@media (prefers-color-scheme: dark) {
+  .aon-table .col-traits .trait-pill.rarity-uncommon {
+    background: #4a3a1a; border-color: #8d6f33; color: #f0d98c;
+  }
+  .aon-table .col-traits .trait-pill.rarity-rare {
+    background: #2e244a; border-color: #6c54a3; color: #d6c5f5;
+  }
+  .aon-table .col-traits .trait-pill.rarity-unique {
+    background: #4a1f1f; border-color: #a04848; color: #f0bcbc;
+  }
+}
+
+/* Mobile / narrow viewports — collapse the traits column on small widths */
+@media (max-width: 720px) {
+  .aon-table .col-traits {
+    display: none;
+  }
+  .aon-table .col-name .name-en {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .aon-table .col-source,
+  .aon-table .col-category {
+    display: none;
+  }
+}
+
+/* Compatibility: Agent CLF hooks (filter chip bar above the table) */
+.aon-filter-bar + .aon-table { margin-top: 8px; }
+
+/* Empty state */
+.aon-table tbody tr.aon-row-hidden { display: none; }

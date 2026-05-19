@@ -1,0 +1,96 @@
+/* ============================================================
+   In-page table of contents — Agent TC, Phase 3
+   Activated by injecting <nav class="page-toc"> into long pages.
+   ============================================================ */
+
+.page-toc {
+  float: right;
+  width: 240px;
+  margin: 0 0 12px 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-alt);
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.page-toc .toc-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 0;
+  padding: 0;
+}
+
+.page-toc ol {
+  list-style: decimal;
+  padding-left: 22px;
+  margin: 0;
+}
+
+.page-toc ol ol {
+  list-style: lower-alpha;
+  padding-left: 18px;
+  margin: 2px 0 4px;
+  font-size: 12px;
+}
+
+.page-toc li {
+  margin: 2px 0;
+  line-height: 1.35;
+}
+
+.page-toc a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.page-toc a:hover,
+.page-toc a:focus {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+/* Heading anchor scroll-margin so jumps don't tuck under sticky headers. */
+.page-body [id^="sec-"] {
+  scroll-margin-top: 80px;
+}
+
+/* On narrow viewports, drop the float and let it sit inline above content.
+   We collapse it inside a <details>-like card via CSS only; if integration
+   chooses to wrap the nav in a <details>, the same rules still apply. */
+@media (max-width: 900px) {
+  .page-toc {
+    float: none;
+    width: auto;
+    margin: 12px 0;
+    border-left-width: 4px;
+  }
+  .page-toc ol {
+    padding-left: 20px;
+  }
+}
+
+/* Optional collapsed form: <details class="page-toc">…</details>.
+   If integration prefers a native disclosure widget we already cover it. */
+details.page-toc > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--fg-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 13px;
+  list-style: none;
+}
+
+details.page-toc > summary::-webkit-details-marker { display: none; }
+details.page-toc > summary::after {
+  content: " ▾";
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+details.page-toc[open] > summary::after { content: " ▴"; }
