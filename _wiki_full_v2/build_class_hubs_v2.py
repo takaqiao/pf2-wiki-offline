@@ -23,13 +23,19 @@ SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
 CACHE_VER = "v2d"
 
-# 25 PF2e 真职业（按 PF2r 玩家核心 2024）
-KNOWN_CLASSES = [
-    "野蛮人", "炼金术士", "诗人", "战斗大师", "侠盗", "斗士", "圣武士", "枪手",
-    "调查员", "魔法师", "武僧", "神秘学者", "游侠", "盗贼", "术士", "巫师",
-    "炼魂师", "亡灵术士", "锻铸者", "符文师", "智魔猫", "夜歌使", "毒师",
-    "动能术士", "法师",
-]
+# 25 PF2 真职业 — strict allowlist (PF2r 玩家核心 2024 + Player Core 2 + 出版物)
+# Mapping: 中文 wiki title -> English label (for tooltip / future i18n)
+KNOWN_CLASSES = {
+    "野蛮人": "Barbarian", "诗人": "Bard", "战斗大师": "Champion",
+    "圣武士": "Champion (Paladin)", "牧师": "Cleric", "德鲁伊": "Druid",
+    "战士": "Fighter", "武僧": "Monk", "游侠": "Ranger", "侠盗": "Rogue",
+    "术士": "Sorcerer", "巫师": "Wizard",
+    "炼金术士": "Alchemist", "调查员": "Investigator", "枪手": "Gunslinger",
+    "魔法师": "Magus", "神秘学者": "Oracle", "夜歌使": "Witch",
+    "动能术士": "Kineticist", "符文师": "Thaumaturge", "灵媒": "Psychic",
+    "召唤师": "Summoner", "炼魂师": "Inventor", "斗士": "Swashbuckler",
+    "锻铸者": "Animist",
+}
 
 SAFE_RX = re.compile(r'[*?"<>|]')
 
@@ -87,56 +93,49 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
 
 
 def build_classes_hub():
-    """Build classes/index.html — discover real class pages from metadata.
+    """Build classes/index.html — strict allowlist of 25 真职业.
 
-    Heuristic: a real class page has category "职业" AND title doesn't contain
-    suffix-y modifiers like "专长"/"变体"/"试玩". Excludes archetypes/variants.
+    Only includes pages whose title is in KNOWN_CLASSES dict. Falls back to
+    placeholder row for titles not yet scraped.
     """
-    print("[classes] scanning for real class pages ...")
+    print("[classes] scanning for known classes (strict 25 allowlist) ...")
     found: dict[str, dict] = {}
-    EXCLUDE_SUFFIXES = ("专长", "变体", "试玩", "技能", "类别", "特征", "进阶", "进度",
-                         "选择", "招式", "符文", "套装", "格式", "动作")
-    EXCLUDE_PREFIXES = ("Data:", "数据:", "Category:", "分类:", "File:", "Template:")
     for doc in iter_parsed():
         title = doc.get("title", "")
-        if any(title.startswith(p) for p in EXCLUDE_PREFIXES):
-            continue
-        if any(s in title for s in EXCLUDE_SUFFIXES):
-            continue
-        if "(2e)" in title or "（2e）" in title:
-            # Old edition — skip if 2r version exists; for now skip all 2e
+        if title not in KNOWN_CLASSES:
             continue
         parse = doc.get("parse", {})
-        cats = [c.get("category", "") for c in parse.get("categories", []) if isinstance(c, dict)]
-        # Must have "职业" as exact category
-        if "职业" not in [c.replace("_", " ").strip() for c in cats]:
-            continue
-        # Should NOT have category suggesting variant
-        if any(("变体" in c or "试玩" in c) for c in cats):
-            continue
-        # Short title likely real class (e.g. "战士", "魔法师")
-        if len(title) > 8:
-            continue
-        text = (parse.get("text") or "")[:200]
+        text = (parse.get("text") or "")[:300]
         excerpt = re.sub(r"<[^>]+>", "", text).strip()[:80]
+        cats = [c.get("category", "") for c in parse.get("categories", []) if isinstance(c, dict)]
         found[title] = {
             "title": title,
+            "en": KNOWN_CLASSES[title],
             "href": f"../pages/{urllib.parse.quote(safe_title(title))}.html",
             "excerpt": excerpt,
             "cats": cats[:5],
         }
-    print(f"  found {len(found)} real class candidates")
-    # Sort alphabetically by Chinese title
-    sorted_titles = sorted(found.keys())
+    print(f"  found {len(found)} of {len(KNOWN_CLASSES)} known classes in corpus")
+    # Sort by KNOWN_CLASSES dict order (canonical PF2r order)
+    sorted_titles = [t for t in KNOWN_CLASSES.keys()]
     rows = []
     for name in sorted_titles:
-        e = found[name]
-        rows.append(
-            '<tr>'
-            f'<td><a href="{e["href"]}"><strong>{html_lib.escape(e["title"])}</strong></a></td>'
-            f'<td class="cats" style="color:var(--fg-mute);font-size:12.5px">{html_lib.escape(e["excerpt"])}…</td>'
-            '</tr>'
-        )
+        e = found.get(name)
+        if e:
+            rows.append(
+                '<tr>'
+                f'<td><a href="{e["href"]}"><strong>{html_lib.escape(e["title"])}</strong></a>'
+                f' <small style="color:var(--fg-mute)">{html_lib.escape(e["en"])}</small></td>'
+                f'<td class="cats" style="color:var(--fg-mute);font-size:12.5px">{html_lib.escape(e["excerpt"])}…</td>'
+                '</tr>'
+            )
+        else:
+            en = KNOWN_CLASSES[name]
+            rows.append(
+                f'<tr><td><span style="color:var(--fg-mute)">{html_lib.escape(name)}</span>'
+                f' <small style="color:var(--fg-mute)">{html_lib.escape(en)}</small></td>'
+                f'<td><em style="color:var(--fg-mute)">尚未抓取</em></td></tr>'
+            )
     body = (
         f'<p>共 {len(found)} 真职业（PF2r 2024 玩家核心 + Player Core 2 + 出版物补充）。</p>'
         '<table class="aon-table" style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">'
