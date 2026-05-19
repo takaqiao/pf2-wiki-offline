@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent
 META_FILE = ROOT.parent / "pf2wiki-scraper" / "out_v2" / "metadata.json"
 SNIPPET_TOPNAV_SUB = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR_SUB = ROOT / "_snippets" / "sidebar_sub.html"
-CACHE_VER = "v2d"
+CACHE_VER = "v2e"
 
 NS_TO_DIR = {0: "pages", 4: "project", 14: "category", 102: "pages", 3500: "data"}
 SAFE_RX = re.compile(r'[*?"<>|]')
@@ -82,6 +82,7 @@ def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: s
         f'<script defer src="assets/theme.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="assets/external_links.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="assets/updater_ui.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="assets/mw_collapsible.js?v={CACHE_VER}"></script>\n'
         '<style>\n'
         '.letter-nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 16px 0; padding: 10px 12px; background: var(--bg-alt); border-radius: 4px; }\n'
         '.letter-nav a { padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--link); font-weight: 600; min-width: 24px; text-align: center; }\n'
