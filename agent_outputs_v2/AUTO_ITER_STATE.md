@@ -6,14 +6,12 @@
 
 ## Current cursor
 
-- **Active iteration**: 3 — Visual QA via Playwright (sample 15+ page types)
+- **Active iteration**: 8 — mw-collapsible JS + sortable wikitable JS
 - **Status**: in-progress
-- **v0.3.3 released** with Portable ZIP fallback for NSIS-affected users
-- **Test url for user**: https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.3/pf2-wiki-offline_0.3.3_x64-portable.zip
-- **Latest release**: v0.3.2 (zlib hotfix for LZMA corruption + race fix + 25 classes + placeholder strip)
-- **Last known stable user state**: v0.2.0 (per user "之前没问题" — works on their machine)
-- **Reported broken state**: v0.3.0 + v0.3.1 (LZMA corruption + needs zlib retest)
-- **Test pending**: user trying v0.3.2 (zlib) — outcome will determine if LZMA hypothesis correct
+- **Latest release**: v0.3.5 (search URL auto-trigger + iter 5-7 fixes)
+- **Releases shipped this auto-loop**: v0.3.3 (portable), v0.3.4 (Data h1 + TOC + dark), v0.3.5 (search URL)
+- **Test url for user**: https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.5/pf2-wiki-offline_0.3.5_x64-portable.zip
+- **User-reported issue**: v0.3.x NSIS "corrupted data" — workaround = portable ZIP (bypass NSIS)
 
 ## Iteration queue (priority order)
 

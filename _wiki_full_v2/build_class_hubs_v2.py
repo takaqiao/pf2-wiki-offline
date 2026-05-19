@@ -21,7 +21,7 @@ PARSED_DIR = SCRAPER_OUT / "parsed"
 META_FILE = SCRAPER_OUT / "metadata.json"
 SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
-CACHE_VER = "v2d"
+CACHE_VER = "v2e"
 
 # 25 PF2 真职业 — strict allowlist (PF2r 玩家核心 2024 + Player Core 2 + 出版物)
 # Mapping: 中文 wiki title -> English label (for tooltip / future i18n)
@@ -70,6 +70,7 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
         f'<script defer src="../assets/topnav.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/theme.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/external_links.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="../assets/mw_collapsible.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/updater_ui.js?v={CACHE_VER}"></script>\n'
         '</head>\n<body class="mediawiki ltr sitedir-ltr action-view skin--responsive">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
