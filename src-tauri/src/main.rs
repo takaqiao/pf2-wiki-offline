@@ -123,6 +123,120 @@ async fn install_update(
     app.restart();
 }
 
+/// Apply incremental patch update for portable distribution.
+///
+/// Flow:
+/// 1. Download patch.zip from `url` to %TEMP%
+/// 2. Verify sha256 matches `expected_sha`
+/// 3. Write a self-deleting update.ps1 to %TEMP% that:
+///    - waits 2 s for pf2-wiki.exe to exit
+///    - extracts patch.zip into install_dir (exe parent)
+///    - applies _remove_these.txt deletions
+///    - cleans up patch.zip + manifest + ps1 itself
+///    - relaunches pf2-wiki.exe
+/// 4. Spawn the ps1 detached
+/// 5. app.exit(0)
+#[tauri::command]
+async fn apply_incremental_update(
+    app: AppHandle,
+    url: String,
+    expected_sha: String,
+) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+    use std::fs;
+    use std::io::{Read, Write};
+    use std::process::Command;
+
+    eprintln!("[pf2-wiki updater] downloading patch from {url}");
+    let resp = ureq::get(&url)
+        .timeout(std::time::Duration::from_secs(120))
+        .call()
+        .map_err(|e| format!("download failed: {e}"))?;
+    let mut buf = Vec::with_capacity(50 * 1024 * 1024);
+    resp.into_reader()
+        .take(500 * 1024 * 1024) // 500 MB hard cap
+        .read_to_end(&mut buf)
+        .map_err(|e| format!("read failed: {e}"))?;
+    eprintln!("[pf2-wiki updater] downloaded {} bytes", buf.len());
+
+    // Verify sha256
+    let mut hasher = Sha256::new();
+    hasher.update(&buf);
+    let actual = format!("{:x}", hasher.finalize());
+    if actual.to_lowercase() != expected_sha.to_lowercase() {
+        return Err(format!(
+            "sha256 mismatch: got {actual}, expected {expected_sha}"
+        ));
+    }
+    eprintln!("[pf2-wiki updater] sha256 verified");
+
+    // Save patch to temp
+    let temp_dir = std::env::temp_dir();
+    let patch_path = temp_dir.join("pf2-wiki-patch.zip");
+    let ps1_path = temp_dir.join("pf2-wiki-update.ps1");
+    fs::write(&patch_path, &buf).map_err(|e| format!("save failed: {e}"))?;
+
+    // Determine install dir
+    let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let install_dir = exe
+        .parent()
+        .ok_or("no parent dir")?
+        .to_path_buf();
+
+    // Generate update.ps1
+    let ps1 = format!(
+        r#"$ErrorActionPreference = 'Continue'
+Start-Sleep -Seconds 2
+$patch = '{patch}'
+$install = '{install}'
+$exe = '{exe}'
+try {{
+    Expand-Archive -Path $patch -DestinationPath $install -Force
+    $removeFile = Join-Path $install '_remove_these.txt'
+    if (Test-Path $removeFile) {{
+        Get-Content $removeFile | ForEach-Object {{
+            if ($_ -and $_.Trim()) {{
+                $target = Join-Path $install $_
+                if (Test-Path $target) {{ Remove-Item $target -Force -ErrorAction SilentlyContinue }}
+            }}
+        }}
+        Remove-Item $removeFile -Force -ErrorAction SilentlyContinue
+    }}
+    $manifestFile = Join-Path $install '_patch_manifest.json'
+    if (Test-Path $manifestFile) {{ Remove-Item $manifestFile -Force -ErrorAction SilentlyContinue }}
+    Remove-Item $patch -Force -ErrorAction SilentlyContinue
+    Start-Process -FilePath $exe
+}} catch {{
+    [System.Windows.Forms.MessageBox]::Show("PF2 离线百科更新失败：`n$_", "更新失败", 0, 16)
+}}
+Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
+"#,
+        patch = patch_path.display(),
+        install = install_dir.display(),
+        exe = exe.display()
+    );
+    fs::write(&ps1_path, ps1).map_err(|e| format!("ps1 write failed: {e}"))?;
+    eprintln!("[pf2-wiki updater] wrote {}", ps1_path.display());
+
+    // Launch detached PowerShell
+    Command::new("powershell")
+        .args([
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+            ps1_path.to_str().ok_or("ps1 path not utf-8")?,
+        ])
+        .spawn()
+        .map_err(|e| format!("spawn powershell: {e}"))?;
+
+    eprintln!("[pf2-wiki updater] update launcher spawned, exiting");
+    // Exit so PS can take over install dir
+    app.exit(0);
+    Ok(())
+}
+
 fn main() {
     let port = pick_free_port();
     let start_url = format!("http://127.0.0.1:{port}/index.html");
@@ -133,7 +247,11 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(pending_update.clone())
-        .invoke_handler(tauri::generate_handler![open_external, install_update])
+        .invoke_handler(tauri::generate_handler![
+            open_external,
+            install_update,
+            apply_incremental_update
+        ])
         .setup(move |app| {
             let base = app.path().resource_dir().expect("resource_dir");
             // exe_dir is where pf2-wiki.exe sits. In portable ZIP layout this

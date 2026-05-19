@@ -452,6 +452,110 @@ div.page-toc-v2 a:hover {
   color: var(--accent);
 }
 
+/* ---------- 6d. Infobox aliases (huiji PHP-rendered substitutes) ----------
+   huiji wiki replaced classical MediaWiki .infobox templates with custom
+   classes: .statblock (creature/NPC stat cards), .quote-block (sidebars
+   with flavor text), .sidebar.aside-box (generic right-rail aside cards).
+   Server-rendered HTML therefore never has bare .infobox, so any v2
+   styling keyed off .infobox missed these. Re-skin them to mimic an
+   infobox: float right, capped width, light card background, border,
+   padding. On narrow viewports collapse to full-width block.
+   (Bare `.sidebar` in-article boxes already handled later via
+   `.mw-parser-output .sidebar`; here we target the aside-box variant.) */
+
+.statblock,
+.quote-block,
+.sidebar.aside-box {
+  float: right;
+  clear: right;
+  max-width: 300px;
+  width: 100%;
+  margin: 0 0 16px 20px;
+  padding: 10px 14px;
+  background: var(--card, #fbf7eb);
+  border: 1px solid var(--border-strong, #b8a878);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+  box-sizing: border-box;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.statblock > :first-child,
+.quote-block > :first-child,
+.sidebar.aside-box > :first-child {
+  margin-top: 0;
+}
+.statblock > :last-child,
+.quote-block > :last-child,
+.sidebar.aside-box > :last-child {
+  margin-bottom: 0;
+}
+
+/* PF2 棕红色 accent bar on .statblock headings */
+.statblock h1,
+.statblock h2,
+.statblock h3,
+.statblock h4,
+.statblock .name,
+.statblock .title,
+.statblock > header {
+  position: relative;
+  padding-left: 10px;
+  margin: 4px 0 8px;
+  font-weight: 700;
+  color: var(--accent-band, #5b1414);
+  border-bottom: 1px solid var(--accent-soft, #8e2a2a);
+}
+.statblock h1::before,
+.statblock h2::before,
+.statblock h3::before,
+.statblock h4::before,
+.statblock .name::before,
+.statblock .title::before,
+.statblock > header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  background: var(--accent-band, #5b1414);
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .statblock,
+  .quote-block,
+  .sidebar.aside-box {
+    float: none;
+    clear: none;
+    max-width: 100%;
+    width: 100%;
+    margin: 12px 0;
+    display: block;
+  }
+}
+
+body.dark .statblock,
+body.dark .quote-block,
+body.dark .sidebar.aside-box {
+  background: var(--card, #1d1d1d) !important;
+  border-color: var(--border, #3a3a3a) !important;
+  color: var(--fg, #e6e1d3) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
+}
+body.dark .statblock h1,
+body.dark .statblock h2,
+body.dark .statblock h3,
+body.dark .statblock h4,
+body.dark .statblock .name,
+body.dark .statblock .title,
+body.dark .statblock > header {
+  color: var(--gold, #d4b56a);
+  border-bottom-color: var(--accent-soft, #8e2a2a);
+}
+
 /* ---------- 7. Print ---------- */
 
 @media print {
@@ -522,4 +626,29 @@ body.dark a.external, body.dark .mw-parser-output a.external {
 .pf2icon-3::before { content: "3"; font-family: "Pf2Icon"; }
 .pf2icon-F::before { content: "F"; font-family: "Pf2Icon"; }
 .pf2icon-R::before { content: "R"; font-family: "Pf2Icon"; }
+
+/* ---------- Naming clash guard: .wiki-sidebar (top nav) vs .sidebar (in-article infoboxes) ----------
+   Our top-nav uses class `wiki-sidebar` — substring `sidebar` overlaps the MediaWiki
+   in-article `.sidebar` infobox class (NPC info box, etc.). All rules above are already
+   scoped to `.wiki-sidebar` / `nav.wiki-sidebar`, so they do NOT leak onto in-article
+   `.sidebar`. The block below makes the boundary explicit and provides a sane default
+   for in-article `.sidebar` infoboxes inside `.mw-parser-output`. */
+.wiki-sidebar { /* top nav — styles defined above; intentional no-op anchor */ }
+.mw-parser-output .sidebar {
+  float: right;
+  clear: right;
+  width: 280px;
+  margin: 0 0 1em 1em;
+  padding: 0.6em 0.8em;
+  border: 1px solid #c8c8c8;
+  background: #f8f8f8;
+  font-size: 0.92em;
+  line-height: 1.4;
+}
+.mw-parser-output .sidebar .sidebar-title,
+.mw-parser-output .sidebar caption {
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0.4em;
+}
 

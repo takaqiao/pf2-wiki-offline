@@ -56,6 +56,45 @@ def walk_dir(root: Path) -> dict[str, str]:
     return result
 
 
+def sha256_of_zip(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open('rb') as f:
+        for chunk in iter(lambda: f.read(65536), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_patches_json(patches_json: Path, from_ver: str, to_ver: str,
+                       patch_zip: Path, base_url: str) -> None:
+    """Write/merge patches.json — manifest of available patches.
+
+    Schema:
+      {"patches": {"<old_ver>": {"url": "...", "sha256": "...", "size_mb": N}, ...}}
+
+    base_url is the GitHub release download URL prefix, e.g.
+      https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.8
+    """
+    if patches_json.exists():
+        try:
+            data = json.loads(patches_json.read_text(encoding='utf-8'))
+        except Exception:
+            data = {'patches': {}}
+    else:
+        data = {'patches': {}}
+    data.setdefault('patches', {})
+    data['patches'][from_ver] = {
+        'url': f'{base_url.rstrip("/")}/{patch_zip.name}',
+        'sha256': sha256_of_zip(patch_zip),
+        'size_mb': round(patch_zip.stat().st_size / 1024 / 1024, 2),
+        'to_version': to_ver,
+    }
+    patches_json.parent.mkdir(parents=True, exist_ok=True)
+    patches_json.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+
+
 def build_patch(old_dir: Path, new_dir: Path, out_zip: Path, from_ver: str, to_ver: str) -> None:
     print(f'[1/4] hashing OLD ({old_dir.name}) ...')
     old_hashes = walk_dir(old_dir)
@@ -111,8 +150,16 @@ def main():
     ap.add_argument('--out', required=True, help='output patch.zip path')
     ap.add_argument('--from-ver', required=True, help='e.g. v0.3.7')
     ap.add_argument('--to-ver', required=True, help='e.g. v0.3.8')
+    ap.add_argument('--patches-json', help='also write/merge patches.json next to out')
+    ap.add_argument('--base-url', help='GitHub release download URL prefix '
+                                       '(e.g. https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.8)')
     args = ap.parse_args()
-    build_patch(Path(args.old), Path(args.new), Path(args.out), args.from_ver, args.to_ver)
+    out = Path(args.out)
+    build_patch(Path(args.old), Path(args.new), out, args.from_ver, args.to_ver)
+    if args.patches_json and args.base_url:
+        pj = Path(args.patches_json)
+        write_patches_json(pj, args.from_ver, args.to_ver, out, args.base_url)
+        print(f'  patches.json updated -> {pj}')
 
 
 if __name__ == '__main__':

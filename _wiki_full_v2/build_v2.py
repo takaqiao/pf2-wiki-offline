@@ -40,8 +40,8 @@ SNIPPET_TOPNAV = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
-CACHE_VER = "v2g"
-APP_VERSION = "v0.3.7"  # bumped per release; used to populate <meta name="app-version">
+CACHE_VER = "v2h"
+APP_VERSION = "v0.3.8"  # bumped per release; used to populate <meta name="app-version">
 
 NS_TO_DIR = {
     0: "pages",
