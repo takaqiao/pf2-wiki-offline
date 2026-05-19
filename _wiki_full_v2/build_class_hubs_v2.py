@@ -105,8 +105,12 @@ def build_classes_hub():
         if title not in KNOWN_CLASSES:
             continue
         parse = doc.get("parse", {})
-        text = (parse.get("text") or "")[:300]
-        excerpt = re.sub(r"<[^>]+>", "", text).strip()[:80]
+        text = parse.get("text") or ""
+        # Strip ALL HTML before slicing — avoid partial-tag fragments
+        clean = re.sub(r"<[^>]+>", " ", text)
+        clean = re.sub(r"&[a-zA-Z]+;", " ", clean)
+        clean = re.sub(r"\s+", " ", clean).strip()
+        excerpt = clean[:80]
         cats = [c.get("category", "") for c in parse.get("categories", []) if isinstance(c, dict)]
         found[title] = {
             "title": title,
