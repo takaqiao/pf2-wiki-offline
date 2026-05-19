@@ -29,6 +29,23 @@ fn pick_free_port() -> u16 {
     port
 }
 
+/// Block until tiny_http is accepting connections on the given port, or timeout.
+/// Returns true if ready, false on timeout. Used to avoid the race where the
+/// webview tries to load localhost before tiny_http's server.incoming_requests()
+/// loop starts servicing them.
+fn wait_for_server(port: u16, deadline_ms: u64) -> bool {
+    use std::time::{Duration, Instant};
+    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().expect("addr");
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_millis(deadline_ms) {
+        if std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(100)).is_ok() {
+            return true;
+        }
+        thread::sleep(Duration::from_millis(30));
+    }
+    false
+}
+
 fn serve_static(resource_root: PathBuf, port: u16) {
     let addr: SocketAddr = format!("127.0.0.1:{port}").parse().expect("addr");
     let server = Server::http(addr).expect("start tiny_http");
@@ -136,6 +153,18 @@ fn main() {
             eprintln!("[pf2-wiki] resource_root exists = {}", resource_root.exists());
 
             thread::spawn(move || serve_static(resource_root, port));
+
+            // Wait up to 3 s for the server thread to bind + start accepting.
+            // Avoids the race where eval() runs before tiny_http is ready, which
+            // would show a "ERR_CONNECTION_REFUSED" white page until the user
+            // hits refresh.
+            let ready = wait_for_server(port, 3000);
+            if !ready {
+                eprintln!(
+                    "[pf2-wiki] WARN: tiny_http on :{} not ready after 3s; navigating anyway",
+                    port
+                );
+            }
 
             if let Some(main) = app.get_webview_window("main") {
                 let _ = main.eval(&format!("window.location.replace('{}')", start_url));

@@ -107,9 +107,17 @@ def mediawiki_body_class(ns: int, title: str, bare_title: str) -> str:
     return " ".join(classes)
 
 
+TEMPLATE_PLACEHOLDER_RX = re.compile(r"\{\{\{[^{}\n]{1,40}\}\}\}")
+# Also matches HTML-encoded version: &#123;&#123;&#123;X&#125;&#125;&#125;
+TEMPLATE_PLACEHOLDER_ENC_RX = re.compile(r"(?:&#123;){3}[^&]{0,40}?(?:&#125;){3}")
+
+
 def clean_parse_text(html: str) -> str:
     html = MW_COMMENT_RX.sub("", html)
     html = EDITSECTION_RX.sub("", html)
+    # Strip unrendered MediaWiki template placeholders like {{{动作}}}
+    html = TEMPLATE_PLACEHOLDER_RX.sub("", html)
+    html = TEMPLATE_PLACEHOLDER_ENC_RX.sub("", html)
     return html
 
 

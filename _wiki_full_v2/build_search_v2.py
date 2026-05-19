@@ -226,41 +226,54 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         b = word_bucket(w)
         word_shards.setdefault(b, {})[w] = ids
 
-    # Write titles.js (JSONP)
-    titles_js = "window.__SEARCH_TITLES__ = " + json.dumps(titles, ensure_ascii=False, separators=(",", ":")) + ";"
+    # Write titles.js (v1-compatible JSONP — search.js expects __PF2_TITLES.items)
+    titles_payload = {"v": 2, "items": titles}
+    titles_js = "window.__PF2_TITLES = " + json.dumps(titles_payload, ensure_ascii=False, separators=(",", ":")) + ";"
     (out_dir / "titles.js").write_text(titles_js, encoding="utf-8")
 
-    # Write shards
+    # Write bigram shards as function-call JSONP: __PF2_SHARD_B("<hex>", {bigram: [ids]})
     bg_shard_files: list[str] = []
     for b in sorted(bigram_shards.keys()):
         fn = f"b_{b}.js"
         SHARDS_DIR.joinpath(fn).write_text(
-            f"window.__SEARCH_BG__=window.__SEARCH_BG__||{{}};Object.assign(window.__SEARCH_BG__,"
+            f'window.__PF2_SHARD_B("{b}", '
             + json.dumps(bigram_shards[b], ensure_ascii=False, separators=(",", ":")) + ");",
             encoding="utf-8",
         )
-        bg_shard_files.append(fn)
+        bg_shard_files.append(b)
+    # Word shards: __PF2_SHARD_W("<letter>", {word: [ids]})
     w_shard_files: list[str] = []
     for b in sorted(word_shards.keys()):
         fn = f"w_{b}.js"
         SHARDS_DIR.joinpath(fn).write_text(
-            f"window.__SEARCH_W__=window.__SEARCH_W__||{{}};Object.assign(window.__SEARCH_W__,"
+            f'window.__PF2_SHARD_W("{b}", '
             + json.dumps(word_shards[b], ensure_ascii=False, separators=(",", ":")) + ");",
             encoding="utf-8",
         )
-        w_shard_files.append(fn)
+        w_shard_files.append(b)
 
-    manifest = {"bg_shards": bg_shard_files, "w_shards": w_shard_files, "total_pages": len(titles)}
+    # Write manifest.js — v1 format
+    manifest = {
+        "v": 2,
+        "n_pages": len(titles),
+        "n_stubs": stub_count,
+        "bigram_shards": bg_shard_files,
+        "word_shards": w_shard_files,
+    }
     (out_dir / "manifest.js").write_text(
-        "window.__SEARCH_MANIFEST__ = " + json.dumps(manifest, ensure_ascii=False) + ";",
+        "window.__PF2_MANIFEST = " + json.dumps(manifest, ensure_ascii=False) + ";",
         encoding="utf-8",
     )
 
     elapsed = time.time() - t0
-    # Summary sizes
+    # Summary sizes — files are named b_<bucket>.js / w_<bucket>.js
+    bg_filenames = [f"b_{b}.js" for b in bg_shard_files]
+    w_filenames = [f"w_{b}.js" for b in w_shard_files]
     sizes = {
         "titles.js": (out_dir / "titles.js").stat().st_size,
-        "shards_total": sum((SHARDS_DIR / f).stat().st_size for f in bg_shard_files + w_shard_files),
+        "shards_total": sum(
+            (SHARDS_DIR / f).stat().st_size for f in bg_filenames + w_filenames
+        ),
     }
     print(f"\n[done] {len(titles)} pages, {stub_count} stubs, {len(bigram_posts)} bigrams, {len(word_posts)} words")
     print(f"       titles.js: {sizes['titles.js']/1024/1024:.1f} MB")
