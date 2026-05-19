@@ -1,6 +1,8 @@
-// PF2 离线百科 — Tauri entry (binary-only, no lib.rs).
-// Spins up an embedded HTTP server bound to 127.0.0.1:<random port>, then
-// loads index.html in the Tauri WebView serving from resource_dir.
+// PF2 离线百科 — Tauri 2 entry.
+// Spins up an embedded HTTP server on 127.0.0.1:<random_port>, then loads the
+// localhost URL in the WebView. External link clicks are intercepted by
+// assets/external_links.js which invokes the open_external IPC command — Rust
+// then opens the URL in the system default browser via `open` crate.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -66,23 +68,29 @@ fn serve_static(resource_root: PathBuf, port: u16) {
     }
 }
 
+/// IPC command: open URL in system default browser.
+/// Invoked from assets/external_links.js when user clicks an http(s) link not
+/// pointing to 127.0.0.1 / localhost.
+#[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    open::that(&url).map_err(|e| e.to_string())
+}
+
 fn main() {
     let port = pick_free_port();
     let start_url = format!("http://127.0.0.1:{port}/index.html");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![open_external])
         .setup(move |app| {
             let base = app.path().resource_dir().expect("resource_dir");
-            // Try multiple resource path layouts (Tauri NSIS uses `_up_/` for
-            // resources from `../` glob patterns; standalone exe + dev mode
-            // expect resources next to exe). Probe in order, use first that exists.
             let candidates = [
                 base.join("_up_").join("_wiki_full_v2"),
                 base.join("_wiki_full_v2"),
                 base.join("resources").join("_up_").join("_wiki_full_v2"),
                 base.join("resources").join("_wiki_full_v2"),
-                // Try one level up — when running release exe from target/release/
                 base.join("..").join("..").join("..").join("_wiki_full_v2"),
             ];
             let resource_root = candidates
@@ -99,6 +107,33 @@ fn main() {
             if let Some(main) = app.get_webview_window("main") {
                 let _ = main.eval(&format!("window.location.replace('{}')", start_url));
             }
+
+            // Auto-update check (non-blocking, silent log on failure)
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                use tauri_plugin_updater::UpdaterExt;
+                match handle.updater() {
+                    Ok(updater) => match updater.check().await {
+                        Ok(Some(update)) => {
+                            eprintln!(
+                                "[pf2-wiki updater] update available: {} -> {}",
+                                update.current_version, update.version
+                            );
+                            // Future iteration: emit event to webview so a UI banner can prompt download.
+                        }
+                        Ok(None) => {
+                            eprintln!("[pf2-wiki updater] no update available");
+                        }
+                        Err(e) => {
+                            eprintln!("[pf2-wiki updater] check failed: {}", e);
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("[pf2-wiki updater] init failed: {}", e);
+                    }
+                }
+            });
+
             Ok(())
         })
         .run(tauri::generate_context!())
