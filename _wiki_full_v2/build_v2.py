@@ -40,7 +40,7 @@ SNIPPET_TOPNAV = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
-CACHE_VER = "v2c"
+CACHE_VER = "v2d"
 
 NS_TO_DIR = {
     0: "pages",
@@ -196,8 +196,29 @@ def rewrite_links(soup: BeautifulSoup, redirect_map: dict, title_index: dict) ->
 
 
 IMAGE_URL_RX = re.compile(
-    r"/(?:wiki/)?images/(?:thumb/)?(?:[0-9a-f]/[0-9a-f]{2}/)?([^/?#]+?)(?:/\d+px-[^/?#]+)?(?:\?[^#]*)?(?:#.*)?$"
+    # Match pf2 wiki image URLs from huijistatic.com or local /wiki/images/ paths.
+    # Captures the base filename out of `/uploads/[thumb/]<a>/<aa>/<file>[/<W>px-<file>]`
+    # OR legacy `/wiki/images/...` (for fallback safety).
+    r"(?:huijistatic\.com)?[^?#]*?/(?:wiki/images|uploads)/(?:thumb/)?(?:[0-9a-f]/[0-9a-f]{2}/)?([^/?#]+?)(?:/\d+px-[^/?#]+)?(?:\?[^#]*)?(?:#.*)?$"
 )
+
+
+def lookup_manifest(manifest: dict, filename: str) -> dict | None:
+    """Try multiple key variants — manifest is keyed by 文件:<spaced-name>."""
+    name_spaced = filename.replace("_", " ")
+    name_underscored = filename.replace(" ", "_")
+    candidates = [
+        filename,
+        name_spaced,
+        name_underscored,
+        f"File:{filename}", f"File:{name_spaced}", f"File:{name_underscored}",
+        f"文件:{filename}", f"文件:{name_spaced}", f"文件:{name_underscored}",
+    ]
+    for k in candidates:
+        e = manifest.get(k)
+        if e:
+            return e
+    return None
 
 
 def rewrite_images(soup: BeautifulSoup, manifest: dict) -> int:
@@ -214,12 +235,7 @@ def rewrite_images(soup: BeautifulSoup, manifest: dict) -> int:
             filename = urllib.parse.unquote(m.group(1))
         except Exception:
             continue
-        # Manifest keys are "File:X" or just "X" depending on how parse.images encoded them
-        entry = (
-            manifest.get(filename)
-            or manifest.get(filename.replace(" ", "_"))
-            or manifest.get(filename.replace("_", " "))
-        )
+        entry = lookup_manifest(manifest, filename)
         if entry and entry.get("local"):
             img["src"] = f"../images/{entry['local']}"
             img["data-original-src"] = src
@@ -351,6 +367,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         f'<script defer src="../assets/theme.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/huiji_tt.js?v={CACHE_VER}"></script>\n'
         f'<script defer src="../assets/external_links.js?v={CACHE_VER}"></script>\n'
+        f'<script defer src="../assets/updater_ui.js?v={CACHE_VER}"></script>\n'
         '</head>\n'
         f'<body class="{body_class}">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
