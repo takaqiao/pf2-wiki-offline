@@ -388,6 +388,17 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     rewrite_images(soup, manifest)
     add_lazy_loading(soup)
 
+    # If this page is just a redirect notice (parse.text = <div class="redirectMsg">...</div>),
+    # extract the target href and emit a meta-refresh so users land at content immediately.
+    redirect_meta_html = ""
+    redirect_msg_a = soup.select_one(".redirectMsg a[href]")
+    if redirect_msg_a:
+        redirect_target = redirect_msg_a.get("href", "").strip()
+        if redirect_target and not redirect_target.startswith("http"):
+            redirect_meta_html = (
+                f'<meta http-equiv="refresh" content="0; url={html_lib.escape(redirect_target)}">\n'
+            )
+
     content_html = str(soup)
     # Ensure mw-parser-output wrapper present
     if 'class="mw-parser-output"' not in content_html:
@@ -421,6 +432,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f'<meta name="description" content="{html_lib.escape(meta_desc)}">\n'
+        f'{redirect_meta_html}'
         f'<link rel="canonical" href="https://pf2.huijiwiki.com/wiki/{urllib.parse.quote(title)}">\n'
         f'<title>{html_lib.escape(display_plain)} — PF2 离线百科</title>\n'
         f'<link rel="stylesheet" href="../assets/style.css?v={CACHE_VER}">\n'

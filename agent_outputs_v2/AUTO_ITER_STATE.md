@@ -198,6 +198,14 @@ Bug fixes in v0.3.4 build:
 - ✅ Fixed: `rewrite_images()` now strips `srcset` attribute (single local `src` is enough)
 - ✅ Console-error count: 2 → 0 on 灵魂纱幕
 
+### Iter 14 — Auto-redirect for in-content redirectMsg pages (2026-05-20, DONE)
+- Bug: 元素使.html and 魂铸者.html (and ~10 other redirect-pages) showed
+  "重定向到：&lt;link&gt;" instead of auto-jumping to actual content.
+- ✅ Fix: build_v2.py detects `.redirectMsg a[href]` and injects
+  `<meta http-equiv="refresh" content="0; url=...">` into `<head>`.
+- ✅ Verified for 元素使 → 元素使职业变体, 魂铸者 → 魂铸者变体.
+- Means classes hub now lands users on real content with one click (not two).
+
 ### Iter 10 — Final status + remaining gaps (2026-05-20, DONE)
 - 10 iterations of bug-find + fix loop completed
 - Releases shipped this auto-loop: v0.3.3, v0.3.4, v0.3.5, v0.3.6
