@@ -1,0 +1,289 @@
+/* ============================================================
+   search_polish.css — typed/grouped search results
+   Used by search.html. Class names are shareable with Agent PC
+   (kind-feat / kind-spell / ...). Honors the dark-mode variables
+   declared in assets/style.css.
+   ============================================================ */
+
+/* ---------- Per-type palette (light) ----------
+   "fg" is the badge text color; "bg" is the badge background; "border" is
+   used for chip outlines and group accents. Hand-tuned for contrast and to
+   coordinate with the existing accent palette in style.css.
+*/
+:root {
+  --k-feat-fg:       #1e5a26;
+  --k-feat-bg:       #d8efd6;
+  --k-feat-border:   #6dbf6d;
+
+  --k-spell-fg:      #4b1e7a;
+  --k-spell-bg:      #e8dcf4;
+  --k-spell-border:  #9c6dd1;
+
+  --k-creature-fg:   #7a1a1a;
+  --k-creature-bg:   #f7d6d4;
+  --k-creature-border:#c87878;
+
+  --k-item-fg:       #5a3a1a;
+  --k-item-bg:       #efe0c8;
+  --k-item-border:   #b08454;
+
+  --k-condition-fg:  #134c7a;
+  --k-condition-bg:  #d3e3f5;
+  --k-condition-border:#6fa4d6;
+
+  --k-ancestry-fg:   #7a4a14;
+  --k-ancestry-bg:   #fadfba;
+  --k-ancestry-border:#d99c4e;
+
+  --k-class-fg:      #5a4308;
+  --k-class-bg:      #f0e0a8;
+  --k-class-border:  #c0a040;
+
+  --k-background-fg: #144a4a;
+  --k-background-bg: #cee9e6;
+  --k-background-border:#5fa5a0;
+
+  --k-location-fg:   #7a2a55;
+  --k-location-bg:   #f0d7e3;
+  --k-location-border:#c879a3;
+
+  --k-deity-fg:      #6d4f04;
+  --k-deity-bg:      #f6e4a4;
+  --k-deity-border:  #c79c2c;
+
+  --k-trait-fg:      #404040;
+  --k-trait-bg:      #e2dfd6;
+  --k-trait-border:  #9c9789;
+
+  --k-stub-fg:       #555;
+  --k-stub-bg:       #ececec;
+  --k-stub-border:   #b8b8b8;
+
+  --k-other-fg:      #404040;
+  --k-other-bg:      #e8e6e0;
+  --k-other-border:  #aaa48f;
+}
+
+/* ---------- Per-type palette (dark) ----------
+   Lower-saturation backgrounds; lighter foregrounds for legibility.
+*/
+body.dark {
+  --k-feat-fg:       #b6e8ad;
+  --k-feat-bg:       #1f3a23;
+  --k-feat-border:   #4d7d4d;
+
+  --k-spell-fg:      #d9c1f3;
+  --k-spell-bg:      #2c1f44;
+  --k-spell-border:  #6a4f96;
+
+  --k-creature-fg:   #f0a7a3;
+  --k-creature-bg:   #3a1818;
+  --k-creature-border:#8a4646;
+
+  --k-item-fg:       #d8b482;
+  --k-item-bg:       #3d2a14;
+  --k-item-border:   #806240;
+
+  --k-condition-fg:  #a6cdf0;
+  --k-condition-bg:  #142a40;
+  --k-condition-border:#3f6a92;
+
+  --k-ancestry-fg:   #f3c98c;
+  --k-ancestry-bg:   #3d2818;
+  --k-ancestry-border:#8a5a2c;
+
+  --k-class-fg:      #ebd87f;
+  --k-class-bg:      #382c10;
+  --k-class-border:  #806b20;
+
+  --k-background-fg: #98dcd5;
+  --k-background-bg: #143230;
+  --k-background-border:#3a7a72;
+
+  --k-location-fg:   #ebb4d0;
+  --k-location-bg:   #3a1c2b;
+  --k-location-border:#8a4e6c;
+
+  --k-deity-fg:      #ecd07a;
+  --k-deity-bg:      #38280a;
+  --k-deity-border:  #8a6a1c;
+
+  --k-trait-fg:      #c7c2b3;
+  --k-trait-bg:      #2a2820;
+  --k-trait-border:  #5a564a;
+
+  --k-stub-fg:       #aaa;
+  --k-stub-bg:       #25241e;
+  --k-stub-border:   #44443c;
+
+  --k-other-fg:      #c4c0b3;
+  --k-other-bg:      #28261e;
+  --k-other-border:  #555040;
+}
+
+/* ---------- Summary line + filter chips ---------- */
+.pf2s-summary {
+  margin: 4px 0 12px;
+  color: var(--fg-mute, var(--muted));
+  font-size: 13px;
+}
+.pf2s-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.pf2s-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong, #bfb59c);
+  background: var(--card, #fff);
+  color: var(--fg, #1f1d18);
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+.pf2s-chip:hover { filter: brightness(0.96); }
+body.dark .pf2s-chip:hover { filter: brightness(1.1); }
+.pf2s-chip.is-active {
+  box-shadow: 0 0 0 2px var(--accent, #7c1f1f) inset;
+  transform: translateY(-1px);
+}
+
+/* ---------- Result groups ---------- */
+.pf2s-group {
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #d4ccb8);
+  border-radius: 6px;
+  margin: 0 0 14px;
+  overflow: hidden;
+}
+.pf2s-group-h {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--bg-alt, #f1ece0);
+  border-bottom: 1px solid var(--border, #d4ccb8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pf2s-group-count {
+  color: var(--fg-mute, var(--muted));
+  font-weight: 500;
+  font-size: 12px;
+}
+.pf2s-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pf2s-r {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #d4ccb8);
+}
+.pf2s-r:last-child { border-bottom: none; }
+.pf2s-r:hover { background: var(--card-alt, #fbf6e9); }
+.pf2s-t {
+  color: var(--link, var(--accent, #7c1f1f));
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pf2s-t:hover .pf2s-title { text-decoration: underline; }
+.pf2s-ex {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--fg-mute, var(--muted));
+  padding-left: 0;
+}
+.pf2s-empty {
+  padding: 14px;
+  color: var(--fg-mute, var(--muted));
+  background: var(--card, #fff);
+  border: 1px dashed var(--border, #d4ccb8);
+  border-radius: 6px;
+  text-align: center;
+}
+
+/* ---------- Generic badge shape ---------- */
+.kind-badge {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  background: var(--badge-bg, transparent);
+  color: var(--badge-fg, inherit);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* ---------- Per-type modifiers ---------- *
+   Each type sets its own badge fg/bg and pipes through to .kind-badge plus
+   the matching .pf2s-chip and the group header accent.
+*/
+.kind-feat       { --badge-fg: var(--k-feat-fg);       --badge-bg: var(--k-feat-bg); }
+.kind-spell      { --badge-fg: var(--k-spell-fg);      --badge-bg: var(--k-spell-bg); }
+.kind-creature   { --badge-fg: var(--k-creature-fg);   --badge-bg: var(--k-creature-bg); }
+.kind-item       { --badge-fg: var(--k-item-fg);       --badge-bg: var(--k-item-bg); }
+.kind-condition  { --badge-fg: var(--k-condition-fg);  --badge-bg: var(--k-condition-bg); }
+.kind-ancestry   { --badge-fg: var(--k-ancestry-fg);   --badge-bg: var(--k-ancestry-bg); }
+.kind-class      { --badge-fg: var(--k-class-fg);      --badge-bg: var(--k-class-bg); }
+.kind-background { --badge-fg: var(--k-background-fg); --badge-bg: var(--k-background-bg); }
+.kind-location   { --badge-fg: var(--k-location-fg);   --badge-bg: var(--k-location-bg); }
+.kind-deity      { --badge-fg: var(--k-deity-fg);      --badge-bg: var(--k-deity-bg); }
+.kind-trait      { --badge-fg: var(--k-trait-fg);      --badge-bg: var(--k-trait-bg); }
+.kind-stub       { --badge-fg: var(--k-stub-fg);       --badge-bg: var(--k-stub-bg); }
+.kind-other      { --badge-fg: var(--k-other-fg);      --badge-bg: var(--k-other-bg); }
+
+/* Chip bodies adopt the same color tokens. */
+.pf2s-chip.kind-feat       { background: var(--k-feat-bg);       color: var(--k-feat-fg);       border-color: var(--k-feat-border); }
+.pf2s-chip.kind-spell      { background: var(--k-spell-bg);      color: var(--k-spell-fg);      border-color: var(--k-spell-border); }
+.pf2s-chip.kind-creature   { background: var(--k-creature-bg);   color: var(--k-creature-fg);   border-color: var(--k-creature-border); }
+.pf2s-chip.kind-item       { background: var(--k-item-bg);       color: var(--k-item-fg);       border-color: var(--k-item-border); }
+.pf2s-chip.kind-condition  { background: var(--k-condition-bg);  color: var(--k-condition-fg);  border-color: var(--k-condition-border); }
+.pf2s-chip.kind-ancestry   { background: var(--k-ancestry-bg);   color: var(--k-ancestry-fg);   border-color: var(--k-ancestry-border); }
+.pf2s-chip.kind-class      { background: var(--k-class-bg);      color: var(--k-class-fg);      border-color: var(--k-class-border); }
+.pf2s-chip.kind-background { background: var(--k-background-bg); color: var(--k-background-fg); border-color: var(--k-background-border); }
+.pf2s-chip.kind-location   { background: var(--k-location-bg);   color: var(--k-location-fg);   border-color: var(--k-location-border); }
+.pf2s-chip.kind-deity      { background: var(--k-deity-bg);      color: var(--k-deity-fg);      border-color: var(--k-deity-border); }
+.pf2s-chip.kind-trait      { background: var(--k-trait-bg);      color: var(--k-trait-fg);      border-color: var(--k-trait-border); }
+.pf2s-chip.kind-stub       { background: var(--k-stub-bg);       color: var(--k-stub-fg);       border-color: var(--k-stub-border); }
+.pf2s-chip.kind-other      { background: var(--k-other-bg);      color: var(--k-other-fg);      border-color: var(--k-other-border); }
+
+/* Group header tint — uses the same variables. */
+.pf2s-group.kind-feat       .pf2s-group-h { border-bottom-color: var(--k-feat-border); }
+.pf2s-group.kind-spell      .pf2s-group-h { border-bottom-color: var(--k-spell-border); }
+.pf2s-group.kind-creature   .pf2s-group-h { border-bottom-color: var(--k-creature-border); }
+.pf2s-group.kind-item       .pf2s-group-h { border-bottom-color: var(--k-item-border); }
+.pf2s-group.kind-condition  .pf2s-group-h { border-bottom-color: var(--k-condition-border); }
+.pf2s-group.kind-ancestry   .pf2s-group-h { border-bottom-color: var(--k-ancestry-border); }
+.pf2s-group.kind-class      .pf2s-group-h { border-bottom-color: var(--k-class-border); }
+.pf2s-group.kind-background .pf2s-group-h { border-bottom-color: var(--k-background-border); }
+.pf2s-group.kind-location   .pf2s-group-h { border-bottom-color: var(--k-location-border); }
+.pf2s-group.kind-deity      .pf2s-group-h { border-bottom-color: var(--k-deity-border); }
+.pf2s-group.kind-trait      .pf2s-group-h { border-bottom-color: var(--k-trait-border); }
+.pf2s-group.kind-stub       .pf2s-group-h { border-bottom-color: var(--k-stub-border); }
+.pf2s-group.kind-other      .pf2s-group-h { border-bottom-color: var(--k-other-border); }
+
+/* The "all" chip is intentionally neutral. */
+.pf2s-chip.kind-all { background: var(--card); color: var(--fg); border-color: var(--border-strong); }
+body.dark .pf2s-chip.kind-all { background: var(--card); color: var(--fg); }
+
+/* Responsive: stack chips wider on small screens. */
+@media (max-width: 480px) {
+  .pf2s-chip { font-size: 12px; padding: 5px 8px; }
+  .pf2s-group-h { font-size: 13px; padding: 7px 10px; }
+  .pf2s-r { padding: 7px 10px; }
+}

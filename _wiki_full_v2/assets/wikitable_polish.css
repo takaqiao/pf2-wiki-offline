@@ -1,0 +1,95 @@
+/* PF2 offline wiki — wikitable polish (Phase 4, Agent CP)
+   Imported from style.css; overrides the Phase 1 beige-tag header
+   with the PF2 red band (--accent-band).
+   --------------------------------------------------------------
+   Selectors use the doubled-class trick (.wikitable.wikitable) to
+   raise specificity above Phase 1's `table.wikitable th` rule
+   without resorting to !important.  On pages tagged body.kind-X
+   (Agent PC), --type-band is defined and we inherit it so feat
+   tables get a green header, spell tables purple, etc. */
+
+table.wikitable.wikitable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.55;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Header band — WT emits header rows as <thead>, a leading <th>
+   row, OR <tr class="wikitable2R"> (its own convention). */
+table.wikitable.wikitable thead th,
+table.wikitable.wikitable tr.wikitable2R th,
+table.wikitable.wikitable tr.wikitable2R td,
+table.wikitable.wikitable tr:first-child th {
+  background: var(--type-band, var(--accent-band));
+  color: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--type-band, var(--accent-band));
+  letter-spacing: 0.02em;
+}
+table.wikitable.wikitable tr.wikitable2R th strong,
+table.wikitable.wikitable tr.wikitable2R td strong,
+table.wikitable.wikitable thead th strong { font-weight: 700; }
+
+table.wikitable.wikitable td {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+
+table.wikitable.wikitable tbody tr:nth-child(even) td,
+table.wikitable.wikitable tr:nth-child(even):not(.wikitable2R) td {
+  background: var(--bg-alt);
+}
+table.wikitable.wikitable tbody tr:hover td,
+table.wikitable.wikitable tr:hover:not(.wikitable2R) td {
+  background: var(--card-alt, var(--bg-alt));
+}
+
+/* Numeric-leading cells (level columns) align tight & tabular */
+table.wikitable.wikitable td:first-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Compact variant for long class-progression tables */
+table.wikitable.wikitable.compact td,
+table.wikitable.wikitable.compact th { padding: 4px 8px; font-size: 13.5px; }
+
+/* Mobile — let large tables scroll horizontally */
+@media (max-width: 600px) {
+  table.wikitable.wikitable {
+    display: block;
+    overflow-x: auto;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  table.wikitable.wikitable td,
+  table.wikitable.wikitable th { white-space: normal; }
+}
+
+/* Dark mode — soften header foreground for AA contrast */
+body.dark table.wikitable.wikitable thead th,
+body.dark table.wikitable.wikitable tr.wikitable2R th,
+body.dark table.wikitable.wikitable tr.wikitable2R td,
+body.dark table.wikitable.wikitable tr:first-child th { color: #fdf3f3; }
+
+/* Print — collapse to clean B&W */
+@media print {
+  table.wikitable.wikitable { box-shadow: none; }
+  table.wikitable.wikitable thead th,
+  table.wikitable.wikitable tr.wikitable2R th,
+  table.wikitable.wikitable tr.wikitable2R td,
+  table.wikitable.wikitable tr:first-child th {
+    background: #000 !important; color: #fff !important;
+    border-color: #000 !important;
+  }
+  table.wikitable.wikitable tr:nth-child(even) td { background: #f3f3f3 !important; }
+}

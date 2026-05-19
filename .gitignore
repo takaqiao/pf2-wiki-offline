@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Rust / Tauri
+src-tauri/target/
+target/
+**/*.rs.bk
+
+# Node
+node_modules/
+
+# Scraper output (large, NOT in git)
+pf2wiki-scraper/out/
+pf2wiki-scraper/out_v2/
+pf2wiki-scraper/.browser-profile/
+pf2wiki-scraper/cookies.json
+
+# Built wiki corpus (regenerated from sources)
+_wiki_full_v2/pages/
+_wiki_full_v2/data/
+_wiki_full_v2/category/
+_wiki_full_v2/project/
+_wiki_full_v2/classes/
+_wiki_full_v2/source/
+_wiki_full_v2/images/
+_wiki_full_v2/index/
+_wiki_full_v2/_native_sample_page.html
+_wiki_full_v2/_native_body_classes.txt
+_wiki_full_v2/browse-*.html
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

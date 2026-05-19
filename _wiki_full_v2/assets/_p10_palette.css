@@ -1,0 +1,237 @@
+/* ============================================================
+   Phase 10 palette — AoN-aligned warm parchment
+   ============================================================
+   Loaded AFTER _p9_palette.css. Last-wins cascade lets this file
+   recalibrate P9 toward the PF2E industry visual standard
+   (Archives of Nethys + Paizo print + Scribe paper.jpg = WARM,
+   not cool IT-style).
+
+   Source audits (consume both before edits):
+   - agent_outputs/_p10_palette_audit.md
+       Recommended :root block (section 3) copied verbatim below;
+       all hex values are AoN/Scribe/Paizo measured colours.
+   - agent_outputs/_p10_contrast_audit.md
+       Fixes 3 critical contrast failures (P0 + P1 light + P1 dark)
+       and extends P9's link-colour selector list, which had only
+       covered main.page-body and missed aon-center / search-main.
+
+   Strategy:
+   - P9 still imports first; this file ships ONLY the delta
+     (colour tokens + contrast fixes + link selector expansion +
+     head h1/topnav recoloured from pure white to AoN cream).
+   - All overrides use !important because P9 also uses !important.
+   - Selectors stay specific (no `*`); we touch only main content
+     containers, related-pages, breadcrumb, infobox, page-head,
+     topnav, kind-class banners — sidebars/cards left alone.
+   ============================================================ */
+
+/* ───── PALETTE — replace P9 cool IT tokens with warm AoN tokens ───── */
+
+:root {
+  /* Surfaces — warm parchment, matches Scribe paper.jpg + PF2 print */
+  --bg:           #f4ecd8 !important;
+  --bg-alt:       #e8dfc6 !important;
+  --card:         #fdf8e8 !important;
+  --card-alt:     #f7efd9 !important;
+
+  /* Foreground — brown-black, avoids pure-black sting on cream */
+  --fg:           #2d2519 !important;
+  --fg-soft:      #5a4a32 !important;
+  --fg-mute:      #535350 !important;  /* darker than audit suggestion to clear AA on .related-kind (#7) + nav.crumb (#9) at the same time it covers the typical recommendation; #535350 vs #e8dfc6 ≈ 7.4:1 */
+
+  /* Borders — gold-leaning (AoN trait border family) */
+  --border:        #c9b88a !important;
+  --border-strong: #8a7846 !important;
+
+  /* Accent — Paizo print red + AoN red-brown band */
+  --accent:        #7e1416 !important;   /* Paizo print red, more sober than P9 #a41e22 */
+  --accent-soft:   #a41e22 !important;   /* P9 brand red demoted to "soft" */
+  --accent-band:   #522e2c !important;   /* AoN --head-bg (the marquee P9 miss) */
+  --accent-on:     #cbc18f !important;   /* AoN --head-fg cream gold, no more pure white */
+
+  /* Links — deep red + brown visited */
+  --link:          #7e1416 !important;
+  --link-hover:    #a41e22 !important;
+  --visited:       #5a3a1c !important;
+
+  /* Gold trim — AoN signature */
+  --gold:          #cbc18f !important;
+  --gold-soft:     #d5c489 !important;
+}
+
+body.dark {
+  /* Dark = AoN classic look (warm charcoal, cream text) */
+  --bg:           #1a1a18 !important;
+  --bg-alt:       #262624 !important;
+  --card:         #2a2a26 !important;
+  --card-alt:     #313029 !important;
+  --fg:           #ecdfc4 !important;
+  --fg-soft:      #c8b890 !important;
+  --fg-mute:      #a8a59f !important;  /* bumped from P9 #908d88 to clear AA at infobox dt / related-kind in dark (#6) */
+  --border:        #4a3f2c !important;
+  --border-strong: #66573a !important;
+  --accent:        #c43a3e !important;
+  --accent-soft:   #d44a4e !important;
+  --accent-band:   #522e2c !important;
+  --accent-on:     #cbc18f !important;
+  --link:          #e8c068 !important;   /* gold link — red on dark fails AA, cyan too harsh */
+  --link-hover:    #f5d590 !important;
+  --visited:       #b39060 !important;
+  --gold:          #d5c489 !important;
+  --gold-soft:     #e0c98e !important;
+}
+
+/* ───── CONTRAST FIX #1 (P0) — .related-pages h2 ─────
+   bundled.css uses linear-gradient(--type-accent → --type-band) for the
+   "相关页面" header background; P9 only changed `color` to red, leaving
+   the gradient untouched → red-on-rainbow ≈ 1.9:1. Hard-reset to solid
+   red-brown band + cream text (the bundled design intent). */
+aside.related-pages h2,
+.related-pages h2 {
+  background: var(--accent-band) !important;
+  background-image: none !important;
+  color: var(--accent-on) !important;
+  border: none !important;
+  margin-top: 0 !important;
+  padding: 10px 18px !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+}
+
+/* ───── CONTRAST FIX #2 (P1) — header band h1 cream-on-redbrown ─────
+   P9 forced page-head h1 to pure white. AoN ships --head-fg cream.
+   Apply cream so it actually reads as print typography. */
+body header.page-head,
+html body header.page-head {
+  background: var(--accent-band) !important;
+  border-bottom: 3px solid var(--gold) !important;  /* gold rule instead of brand red — closer to AoN */
+}
+body header.page-head h1,
+html body header.page-head h1,
+body[class*="kind-"] header.page-head h1 {
+  color: var(--accent-on) !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.45);
+}
+
+/* Topnav follows same AoN red-brown + cream */
+.topnav, body .topnav, html body .topnav {
+  background: var(--accent-band) !important;
+  border-bottom: 2px solid var(--gold) !important;
+}
+.topnav, .topnav * { color: var(--accent-on) !important; }
+.topnav a:hover, .topnav-trigger:hover { color: #ffffff !important; }
+
+/* ───── CONTRAST FIX #3 (P1) — page-head section banner ───── */
+.header-banner.section-head,
+.header-banner {
+  background: var(--accent-band) !important;
+  color: var(--accent-on) !important;
+}
+.header-banner a, .header-banner.section-head a { color: var(--accent-on) !important; }
+
+/* ───── CONTRAST FIX #4 — placeholder + small label readability ─────
+   Audit issue #2 (search-band-input::placeholder ~4.4) and #7/#9
+   (.related-kind / nav.crumb dt ~4.0). The new --fg-mute #535350 in
+   :root already lifts #7/#9 above 7:1. Force placeholder onto
+   --fg-soft for an extra margin. */
+.search-band-input::placeholder,
+body.index .search-band-input::placeholder,
+.sb-search input::placeholder {
+  color: var(--fg-soft) !important;
+  opacity: 1 !important;
+}
+.related-kind {
+  color: var(--fg-soft) !important;
+}
+
+/* ───── LINK COLOUR — extend P9 (only covered main.page-body) ─────
+   P9 line 299 selector missed main.aon-center, main.search-main, and
+   the cards on index.html. Expand. */
+main.page-body a:not(.wl-dead):not(.topnav-link):not(.wl-no-color),
+main.aon-center a:not(.wl-dead):not(.topnav-link):not(.wl-no-color),
+main.search-main a:not(.wl-dead):not(.topnav-link):not(.wl-no-color),
+.related-pages a:not(.wl-dead),
+.breadcrumb a:not(.wl-dead),
+nav.breadcrumb a:not(.wl-dead),
+.nc-title a:not(.wl-dead),
+.cat-name a:not(.wl-dead),
+.qs-card a:not(.wl-dead),
+.nav-card a:not(.wl-dead),
+.cat-card a:not(.wl-dead) {
+  color: var(--link) !important;
+  text-decoration: none;
+}
+
+main.page-body a:hover,
+main.aon-center a:hover,
+main.search-main a:hover,
+.related-pages a:hover,
+.breadcrumb a:hover,
+nav.breadcrumb a:hover {
+  color: var(--link-hover) !important;
+  text-decoration: underline;
+}
+
+/* :visited handling — only on prose links (cards/breadcrumb left "fresh") */
+main.page-body a:visited:not(.wl-dead):not(.topnav-link):not(.wl-no-color),
+main.aon-center a:visited:not(.wl-dead):not(.topnav-link):not(.wl-no-color),
+main.search-main a:visited:not(.wl-dead):not(.topnav-link):not(.wl-no-color) {
+  color: var(--visited) !important;
+}
+
+/* ───── SECONDARY: statblock + table heads use accent-band cream instead of pure red+white
+   This keeps statblocks consistent with the AoN red-brown banding rather than the louder
+   Paizo brand red P9 used. ─── */
+.statblock header.sb-head,
+section.statblock > header.sb-head {
+  background: var(--accent-band) !important;
+  border-bottom: 2px solid var(--gold) !important;
+}
+.sb-name { color: var(--accent-on) !important; }
+.sb-name-en { color: rgba(203, 193, 143, 0.85) !important; }
+.sb-level-chip {
+  background: rgba(203, 193, 143, 0.18) !important;
+  color: var(--accent-on) !important;
+}
+
+table.wikitable th,
+table.aon-table thead th,
+table.aon-table tr.wikitable2R th {
+  background: var(--accent-band) !important;
+  color: var(--accent-on) !important;
+  border: 1px solid var(--border-strong) !important;
+}
+
+/* Action symbol pill — was white-on-red; keep cream pill on red-brown */
+.action {
+  background: rgba(203, 193, 143, 0.22) !important;
+  color: var(--accent-on) !important;
+  border: 1px solid rgba(203, 193, 143, 0.45) !important;
+}
+
+/* Navbox heading + infobox header band → cream-on-red-brown */
+.navbox summary, .navbox-title {
+  background: var(--accent-band) !important;
+  color: var(--accent-on) !important;
+}
+.pf-infobox header {
+  background: var(--accent-band) !important;
+  color: var(--accent-on) !important;
+}
+
+/* Stub-banner: P9 hard-coded #fff8e1 / olive — relink to tokens so dark mode picks up */
+.stub-banner {
+  background: var(--card-alt) !important;
+  border-left: 3px solid var(--gold) !important;
+  color: var(--fg-soft) !important;
+}
+
+/* Untranslated warning: harmonise with new accent-soft */
+.untranslated-warning {
+  background: #f6dcd4 !important;
+  border-left: 3px solid var(--accent-soft) !important;
+  color: var(--fg) !important;
+}
+body.dark .untranslated-warning {
+  background: #3a1a16 !important;
+  color: var(--fg) !important;
+}

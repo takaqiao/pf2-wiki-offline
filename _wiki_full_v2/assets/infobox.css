@@ -1,0 +1,168 @@
+/* PF2 offline wiki — right-rail infobox (Phase 6, Agent INFO).
+   Pathfinderwiki-style at-a-glance summary card.
+
+   Injected at the START of <main class="page-body"> by the integration
+   agent for Data: pages. Floats right; falls back to full-width on
+   narrow screens. Type-color tint reuses --accent-X-* from
+   page_type_theme.css so creature/spell/feat/item/condition all match
+   the rest of the page chrome.
+
+   Loaded by an @import line in assets/style.css.
+   ---------------------------------------------------------------- */
+
+.pf-infobox {
+  float: right;
+  width: 240px;
+  margin: 0 0 16px 20px;
+  padding: 0;
+  background: var(--card, #fbf7eb);
+  border: 1px solid var(--border-strong, #b8a878);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+  font-family: inherit;
+  clear: right;
+  overflow: hidden;          /* keep header band corners crisp */
+  box-sizing: border-box;
+}
+
+/* ---- Header band ---- */
+.pf-infobox > header.ib-title {
+  display: block;
+  background: var(--accent-band, #5b1414);
+  color: #fff;
+  padding: 10px 12px;
+  margin: 0;
+  line-height: 1.25;
+}
+.pf-infobox .ib-icon {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 16px;
+  vertical-align: -1px;
+  opacity: .9;
+}
+.pf-infobox .ib-name {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: .01em;
+}
+.pf-infobox .ib-name-en {
+  display: block;
+  font-style: italic;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .85);
+  margin-top: 2px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* ---- Data list ---- */
+.pf-infobox .ib-data {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 10px 12px 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.pf-infobox .ib-data dt {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg-mute, #6b6055);
+  margin: 0;
+  padding-top: 1px;
+  text-align: right;
+  white-space: nowrap;
+}
+.pf-infobox .ib-data dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg, #1f1d18);
+  word-break: break-word;
+}
+
+/* ---- Trait chips inside dd ---- */
+.pf-infobox .ib-chip {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 0 6px;
+  margin: 1px 4px 1px 0;
+  border-radius: 2px;
+  background: var(--card-alt, #f6efd9);
+  border: 1px solid var(--border, #d8c8a8);
+  color: var(--fg-soft, #534740);
+  white-space: nowrap;
+}
+
+/* ---- Per-type tint ---- */
+.pf-infobox.kind-creature  > header.ib-title { background: var(--accent-creature-band,  #5b1414); }
+.pf-infobox.kind-spell     > header.ib-title { background: var(--accent-spell-band,     #3f1a58); }
+.pf-infobox.kind-feat      > header.ib-title { background: var(--accent-feat-band,      #1f4a2a); }
+.pf-infobox.kind-item      > header.ib-title { background: var(--accent-item-band,      #4a2f10); }
+.pf-infobox.kind-condition > header.ib-title { background: var(--accent-condition-band, #142e4d); }
+.pf-infobox.kind-ancestry  > header.ib-title { background: var(--accent-ancestry-band,  #6e3a10); }
+.pf-infobox.kind-class     > header.ib-title { background: var(--accent-class-band,     #523c10); }
+.pf-infobox.kind-background> header.ib-title { background: var(--accent-background-band,#114848); }
+.pf-infobox.kind-deity     > header.ib-title { background: var(--accent-deity-band,     #6e5310); }
+.pf-infobox.kind-location  > header.ib-title { background: var(--accent-location-band,  #5d3046); }
+
+.pf-infobox.kind-creature  { border-top: 3px solid var(--accent-creature,  #8a1f1f); }
+.pf-infobox.kind-spell     { border-top: 3px solid var(--accent-spell,     #5a2a7a); }
+.pf-infobox.kind-feat      { border-top: 3px solid var(--accent-feat,      #2d6a3d); }
+.pf-infobox.kind-item      { border-top: 3px solid var(--accent-item,      #6b4419); }
+.pf-infobox.kind-condition { border-top: 3px solid var(--accent-condition, #1f4570); }
+.pf-infobox.kind-ancestry  { border-top: 3px solid var(--accent-ancestry,  #a55a1f); }
+.pf-infobox.kind-class     { border-top: 3px solid var(--accent-class,     #7a5a1f); }
+.pf-infobox.kind-background{ border-top: 3px solid var(--accent-background,#1f6a6a); }
+.pf-infobox.kind-deity     { border-top: 3px solid var(--accent-deity,     #a07a1f); }
+.pf-infobox.kind-location  { border-top: 3px solid var(--accent-location,  #8a4a6a); }
+
+/* ---- Mobile / narrow viewport: stack above content ---- */
+@media (max-width: 700px) {
+  .pf-infobox {
+    float: none;
+    width: 100%;
+    margin: 0 0 16px 0;
+  }
+  .pf-infobox .ib-data {
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+/* ---- Dark mode: edge contrast nudge ---- */
+body.dark .pf-infobox {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+
+/* ---- Print: collapse colors & disable float ---- */
+@media print {
+  .pf-infobox {
+    float: none;
+    width: 100%;
+    margin: 0 0 12pt 0;
+    box-shadow: none;
+    border-color: #000 !important;
+  }
+  .pf-infobox > header.ib-title {
+    background: #000 !important;
+    color: #fff !important;
+  }
+  .pf-infobox.kind-creature,
+  .pf-infobox.kind-spell,
+  .pf-infobox.kind-feat,
+  .pf-infobox.kind-item,
+  .pf-infobox.kind-condition,
+  .pf-infobox.kind-ancestry,
+  .pf-infobox.kind-class,
+  .pf-infobox.kind-background,
+  .pf-infobox.kind-deity,
+  .pf-infobox.kind-location { border-top-color: #000 !important; }
+  .pf-infobox .ib-chip {
+    background: #fff !important;
+    border-color: #000 !important;
+    color: #000 !important;
+  }
+}

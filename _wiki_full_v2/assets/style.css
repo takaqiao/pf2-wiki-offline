@@ -1,0 +1,42 @@
+/* ============================================================
+   style.css — v2 entry point.
+
+   Replaces v1's 7-layer cascade (bundled + _chr + infobox + _p7
+   + _p9 + _p10 + _p11) with a minimal 4-file chain aligned to
+   pf2.huijiwiki.com's own visual language.
+
+   Order matters (last wins on selector conflicts):
+
+   1. _v2_palette.css      Brand tokens (colors, fonts, spacing)
+                           Mirrors PF2 wiki: white bg, dark grey
+                           text, brown-red accent, amber gold,
+                           MW-blue link.
+
+   2. wiki_native.css      All CSS pulled live from
+                           pf2.huijiwiki.com/load.php on 2026-05-19.
+                           ~390 KB. Styles all huiji-specific
+                           classes (.huiji-tt, .quote-block,
+                           .statblock, .navbox, .infobox, .pf2icon,
+                           .smwtable, .wikitable, etc.) so content
+                           rendered by action=parse looks exactly
+                           like the original site.
+
+   3. topnav.css           Offline-specific top navigation bar
+                           (mega-menu dropdowns, sticky, theme
+                           toggle, search). Consumes palette
+                           tokens from #1.
+
+   4. _v2_compat.css       Overrides + chrome (page-head,
+                           breadcrumb, layout, page-body, sidebar,
+                           page-foot) plus a few wiki_native.css
+                           leak fixes (e.g., body table-row-group
+                           rule that breaks layout outside iframes).
+
+   Bump cache version (v2a → v2b → ...) when changing any of the
+   above via agent_outputs/inject_cache_buster.py.
+   ============================================================ */
+
+@import url(_v2_palette.css?v=v2b);
+@import url(wiki_native.css?v=v2b);
+@import url(topnav.css?v=v2b);
+@import url(_v2_compat.css?v=v2b);

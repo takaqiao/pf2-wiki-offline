@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>搜索 — PF2 离线百科</title>
+<link rel="stylesheet" href="./assets/style.css?v=v2a">
+<link rel="stylesheet" href="./assets/search_polish.css">
+<link rel="stylesheet" href="./assets/topnav.css?v=v2a">
+<script defer src="./assets/topnav.js?v=v2a"></script>
+<script defer src="./assets/theme.js?v=v2a"></script>
+<style>
+  /* Page-local layout for search.html only — colours come from style.css. */
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header.search-head {
+    background: var(--accent);
+    color: var(--accent-on);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header.search-head h1 { font-size: 18px; margin: 0; flex: 1; }
+  header.search-head a { color: var(--accent-on); text-decoration: none; opacity: 0.9; }
+  header.search-head a:hover { opacity: 1; text-decoration: underline; }
+  header.search-head .theme-toggle {
+    background: transparent; border: 1px solid var(--accent-on);
+    color: var(--accent-on); border-radius: 4px; padding: 4px 8px;
+    cursor: pointer; font: inherit;
+  }
+  main.search-main { max-width: 880px; margin: 0 auto; padding: 24px; }
+  .pf2-search { display: block; }
+  .pf2s-bar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  #pf2s-input {
+    flex: 1; font-size: 18px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card); color: var(--fg); outline: none;
+  }
+  #pf2s-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,31,31,0.18);
+  }
+  #pf2s-status { color: var(--fg-mute); font-size: 13px; min-width: 120px; }
+  .hint { color: var(--fg-mute); font-size: 13px; margin-top: 16px; }
+  .hint code {
+    background: var(--code-bg); padding: 1px 6px; border-radius: 3px;
+    font-family: Consolas, monospace; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<!-- topnav_snippet_root.html — for pages at the wiki root (index.html, browse-*.html, search.html).
+     Hrefs use no prefix. Integration step picks _root vs _sub by output path depth.
+     Phase 6 Agent TOPNAV. -->
+<nav class="topnav" aria-label="主导航">
+  <div class="topnav-inner">
+    <a href="index.html" class="topnav-brand" aria-label="PF2 离线百科 首页">
+      <span class="topnav-brand-mark">P2</span>
+      <span class="topnav-brand-text">PF2 离线百科</span>
+    </a>
+
+    <ul class="topnav-items" role="menubar">
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          玩家选项 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="玩家选项">
+          <li role="none"><a class="topnav-link" role="menuitem" href="classes/index.html">职业 <span class="topnav-count">25</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-ancestries.html">祖先</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-backgrounds.html">背景</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-feats.html">专长</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-archetypes.html">变体</a></li>
+        </ul>
+      </li>
+
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          装备 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="装备">
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items.html">全部物品</a></li>
+          <li role="none"><hr class="topnav-sep"></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-weapons.html">武器</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-armor.html">护甲</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-consumables.html">消耗品</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-worn.html">戴持物品</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-runes.html">符文</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-items-implements.html">法器</a></li>
+        </ul>
+      </li>
+
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          法术 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="法术">
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells.html">全部法术</a></li>
+          <li role="none"><hr class="topnav-sep"></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-arcane.html">奥术</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-divine.html">神术</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-occult.html">异能</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-primal.html">原能</a></li>
+          <li role="none"><hr class="topnav-sep"></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-cantrips.html">戏法</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-spells-focus.html">聚能</a></li>
+        </ul>
+      </li>
+
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          怪物 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="怪物">
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures.html">全部怪物</a></li>
+          <li role="none"><hr class="topnav-sep"></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures-level-0-3.html">低级 <span class="topnav-count">0–3</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures-level-4-7.html">中级 <span class="topnav-count">4–7</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures-level-8-12.html">高级 <span class="topnav-count">8–12</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures-level-13-17.html">顶级 <span class="topnav-count">13–17</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-creatures-level-18-25.html">史诗 <span class="topnav-count">18+</span></a></li>
+        </ul>
+      </li>
+
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          规则 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="规则">
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-other.html">状态特征</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-categories.html">分类页面</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="source/index.html">出版物</a></li>
+        </ul>
+      </li>
+
+      <li class="topnav-item" role="none">
+        <button type="button" class="topnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+          设定 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <ul class="topnav-panel" role="menu" aria-label="设定">
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-deities.html">神祇</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-locations.html">地点</a></li>
+        </ul>
+      </li>
+    </ul>
+
+    <div class="topnav-tools">
+      <form class="topnav-search" action="search.html" method="get" role="search">
+        <input type="search" name="q" class="topnav-search-input" placeholder="搜索条目…" aria-label="搜索条目">
+        <button type="submit" class="topnav-search-go" aria-label="搜索">&#128270;</button>
+      </form>
+      <button type="button" class="topnav-theme" onclick="toggleTheme()" aria-label="切换深色/浅色">&#127769;</button>
+    </div>
+
+    <details class="topnav-hamburger" aria-label="移动导航">
+      <summary aria-label="菜单"></summary>
+      <div class="topnav-mobile-panel">
+        <details class="topnav-mobile-group" open>
+          <summary>玩家选项</summary>
+          <ul>
+            <li><a href="classes/index.html">职业 <span class="topnav-count">25</span></a></li>
+            <li><a href="browse-ancestries.html">祖先</a></li>
+            <li><a href="browse-backgrounds.html">背景</a></li>
+            <li><a href="browse-feats.html">专长</a></li>
+            <li><a href="browse-archetypes.html">变体</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>装备</summary>
+          <ul>
+            <li><a href="browse-items.html">全部物品</a></li>
+            <li><a href="browse-items-weapons.html">武器</a></li>
+            <li><a href="browse-items-armor.html">护甲</a></li>
+            <li><a href="browse-items-consumables.html">消耗品</a></li>
+            <li><a href="browse-items-worn.html">戴持物品</a></li>
+            <li><a href="browse-items-runes.html">符文</a></li>
+            <li><a href="browse-items-implements.html">法器</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>法术</summary>
+          <ul>
+            <li><a href="browse-spells.html">全部法术</a></li>
+            <li><a href="browse-spells-arcane.html">奥术</a></li>
+            <li><a href="browse-spells-divine.html">神术</a></li>
+            <li><a href="browse-spells-occult.html">异能</a></li>
+            <li><a href="browse-spells-primal.html">原能</a></li>
+            <li><a href="browse-spells-cantrips.html">戏法</a></li>
+            <li><a href="browse-spells-focus.html">聚能</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>怪物</summary>
+          <ul>
+            <li><a href="browse-creatures.html">全部怪物</a></li>
+            <li><a href="browse-creatures-level-0-3.html">低级 (0–3)</a></li>
+            <li><a href="browse-creatures-level-4-7.html">中级 (4–7)</a></li>
+            <li><a href="browse-creatures-level-8-12.html">高级 (8–12)</a></li>
+            <li><a href="browse-creatures-level-13-17.html">顶级 (13–17)</a></li>
+            <li><a href="browse-creatures-level-18-25.html">史诗 (18+)</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>规则</summary>
+          <ul>
+            <li><a href="browse-other.html">状态特征</a></li>
+            <li><a href="browse-categories.html">分类页面</a></li>
+            <li><a href="source/index.html">出版物</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>设定</summary>
+          <ul>
+            <li><a href="browse-deities.html">神祇</a></li>
+            <li><a href="browse-locations.html">地点</a></li>
+          </ul>
+        </details>
+        <details class="topnav-mobile-group">
+          <summary>工具</summary>
+          <ul>
+            <li><a href="search.html">搜索</a></li>
+            <li><a href="#" onclick="toggleTheme();return false;">切换深色/浅色</a></li>
+          </ul>
+        </details>
+      </div>
+    </details>
+  </div>
+</nav>
+<!-- end topnav_snippet_root.html -->
+<header class="search-head">
+  <a href="./index.html">← 首页</a>
+  <h1>PF2 离线百科 — 搜索</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换深色/浅色">🌙</button>
+</header>
+<div class="layout">
+<nav class="wiki-sidebar" aria-label="百科导航">
+  <a class="sb-home" href="index.html">&larr; 首页</a>
+
+  <form class="sb-search" role="search" action="search.html" method="get"
+        onsubmit="return (function(f){var q=f.q.value.trim();if(!q)return false;location.href='search.html?q='+encodeURIComponent(q);return false;})(this);">
+    <input type="search" name="q" placeholder="搜索…" aria-label="搜索条目">
+    <button type="submit" aria-label="搜索">搜</button>
+  </form>
+
+  <details class="sb-group" open>
+    <summary>玩家选项</summary>
+    <ul>
+      <li><a href="classes/index.html">职业<span class="sb-count">25</span></a></li>
+      <li><a href="browse-ancestries.html">祖先<span class="sb-count">16</span></a></li>
+      <li><a href="browse-backgrounds.html">背景<span class="sb-count">436</span></a></li>
+      <li><a href="browse-feats.html">专长<span class="sb-count">11,006</span></a></li>
+      <li><a href="browse-archetypes.html">变体<span class="sb-count">~290</span></a></li>
+    </ul>
+  </details>
+
+  <details class="sb-group">
+    <summary>战斗与法术</summary>
+    <ul>
+      <li><a href="browse-spells.html">法术<span class="sb-count">3,241</span></a></li>
+      <li><a href="browse-items.html">物品<span class="sb-count">12,410</span></a></li>
+      <li><a href="browse-creatures.html">怪物<span class="sb-count">2,711</span></a></li>
+      <li><a href="browse-other.html">状态·特征·其他<span class="sb-count">4,400+</span></a></li>
+    </ul>
+  </details>
+
+  <details class="sb-group">
+    <summary>世界</summary>
+    <ul>
+      <li><a href="browse-deities.html">神祉<span class="sb-count">646</span></a></li>
+      <li><a href="browse-locations.html">地点<span class="sb-count">116</span></a></li>
+      <li><a href="browse-categories.html">分类页面<span class="sb-count">349</span></a></li>
+      <li><a href="source/index.html">出版物<span class="sb-count">284</span></a></li>
+    </ul>
+  </details>
+
+  <div class="sb-tools" role="group" aria-label="显示设置">
+    <button type="button" class="sb-theme" onclick="(window.toggleTheme||function(){})()"
+            title="切换深色/浅色主题">主题</button>
+    <span class="sb-fontsize" role="radiogroup" aria-label="字号">
+      <button type="button" data-size="s" aria-pressed="false" title="小字号">A-</button>
+      <button type="button" data-size="m" aria-pressed="true"  title="标准字号">A</button>
+      <button type="button" data-size="l" aria-pressed="false" title="大字号">A+</button>
+    </span>
+  </div>
+
+  <div class="sb-meta">
+    共 35,469 条 &middot; <a href="search.html">搜索</a> &middot; <a href="index.html">首页</a>
+  </div>
+</nav>
+<script>
+/* sidebar font-size toggle. Idempotent. */
+(function () {
+  "use strict";
+  var KEY = "wiki_font_size";
+  var SCALES = { s: 0.9, m: 1, l: 1.15 };
+  function apply(size) {
+    if (!SCALES.hasOwnProperty(size)) size = "m";
+    var root = document.documentElement;
+    root.style.setProperty("--wiki-font-scale", String(SCALES[size]));
+    root.setAttribute("data-wiki-font-size", size);
+    var sb = document.querySelectorAll(".wiki-sidebar");
+    for (var i = 0; i < sb.length; i++) {
+      sb[i].style.setProperty("--sb-font-scale", String(SCALES[size]));
+    }
+    var btns = document.querySelectorAll(".wiki-sidebar .sb-fontsize button[data-size]");
+    for (var j = 0; j < btns.length; j++) {
+      var b = btns[j];
+      b.setAttribute("aria-pressed", b.getAttribute("data-size") === size ? "true" : "false");
+    }
+  }
+  function getStored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function setStored(v) {
+    try { localStorage.setItem(KEY, v); } catch (e) {}
+  }
+  function init() {
+    apply(getStored() || "m");
+    var btns = document.querySelectorAll(".wiki-sidebar .sb-fontsize button[data-size]");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function (ev) {
+        var s = ev.currentTarget.getAttribute("data-size");
+        setStored(s);
+        apply(s);
+      });
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+<main class="search-main">
+  <div id="mount"></div>
+  <p class="hint">
+    支持中英文。中文可输入<strong>部分词</strong>（按二字 bigram 倒排索引匹配，如 <code>黑暗</code> → 黑暗视觉/黑暗领域 …）；英文支持前缀（如 <code>demo</code> → demon, demonstrate …）。结果会按 <strong>专长 / 法术 / 生物 / 物品 / 状态 / 祖先 / 职业 / 背景 / 地点 / 神祇</strong> 等类型分组并加上彩色标签，点击顶部筛选条可只看某一类。
+  </p>
+</main>
+</div>
+<!-- search.js exposes window.PF2Search; data is loaded JSONP-style -->
+<script src="./search.js"></script>
+<script>
+  (function () {
+    PF2Search.init({
+      root: "./index/",            // built by build_search.py (no --preview)
+      onReady: function (info) {
+        document.title = "搜索 (" + info.n_pages + " 页) — PF2 离线百科";
+      },
+      onError: function (e) {
+        document.getElementById("mount").innerHTML =
+          '<p style="color:#b00">索引加载失败：' + e.message
+          + '<br><small>请先运行 build_search.py 生成 ./index/。或访问 preview/ 子目录查看小型示例。</small></p>';
+      }
+    }).then(function () {
+      PF2Search.buildUI({
+        mount: document.getElementById("mount"),
+        pageBase: "",   // pages/ and data/ live one directory up (in _wiki_full/)
+      });
+    }).catch(function () { /* handled by onError */ });
+  })();
+</script>
+</body>
+</html>

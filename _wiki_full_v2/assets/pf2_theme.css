@@ -1,0 +1,696 @@
+/* ============================================================
+   pf2_theme.css — Phase 5, Agent AT
+   Major visual reskin: PF2 publication / Archives of Nethys /
+   scribe.pf2.tools aesthetic.
+
+   Imported FIRST from style.css so this file acts as the token
+   reset. Later imports (page_type_theme, kind_contrast,
+   layout_polish, creature_style, statblock_pf2, base style.css)
+   override individual rules where needed, but base palette and
+   typography tokens defined here flow through to every consumer
+   via var(--*) reference.
+
+   Coordinates with:
+     - Agent KC (kind_contrast.css)  — replaces its old palette;
+                                       per-kind accents still tuned
+                                       there for AA contrast.
+     - Agent PC (page_type_theme.css)— consumes --accent / --bg.
+     - Agent LA (layout_polish.css)  — consumes --accent / --border.
+     - Agent SB (statblock_pf2.css)  — consumes --gold, --accent-*.
+
+   Design references (mental, not fetched):
+     - 2e.aonprd.com   feat/spell/creature card layout
+     - scribe.pf2.tools statblock typography
+     - PF2 hardcover sourcebooks — warm cream stock, black title
+       bars, deep maroon section heads, serif body, gold trim.
+
+   Constraints:
+     - Offline build. No @import url(http...), no external fonts.
+     - Inline @font-face placeholders OK but no remote sources.
+     - HTML untouched — only CSS classes already in the renderer
+       output are styled.
+   ============================================================ */
+
+/* ---------- 0. Palette tokens — LIGHT (parchment) ---------- */
+:root {
+  /* Foreground */
+  --fg:        #2a2520;   /* warm near-black ink */
+  --fg-soft:   #534740;   /* muted body */
+  --fg-mute:   #6b6055;   /* secondary/meta */
+
+  /* Surfaces */
+  --bg:        #f4ecd8;   /* warm parchment */
+  --bg-alt:    #ede2c5;   /* recessed strip / row stripe */
+  --card:      #fbf7eb;   /* raised card / statblock body */
+  --card-alt:  #f6efd9;   /* alt row inside cards */
+
+  /* Borders */
+  --border:        #d8c8a8;   /* hairline */
+  --border-strong: #b8a878;   /* card edge */
+
+  /* Accents — deep maroon (PF2 publication red) */
+  --accent:        #6e1414;
+  --accent-soft:   #8e2a2a;
+  --accent-band:   #5a0e0e;   /* full-bleed band background */
+  --accent-on:     #fbf7eb;   /* text on accent band */
+
+  /* Gold trim — premium / divider hints */
+  --gold:          #b89248;
+  --gold-soft:     #d4b56a;
+
+  /* Links */
+  --link:        #6e1414;
+  --link-hover:  #4a0808;
+
+  /* Trait chip family */
+  --tag-bg:       #ede0bf;
+  --tag-fg:       #4a3b18;
+  --rare-bg:      #d8c6ec;
+  --rare-fg:      #3a1c5a;
+  --uncommon-bg:  #f0d8a8;
+  --uncommon-fg:  #5a3308;
+  --size-bg:      #d5deb8;
+  --size-fg:      #2e3d18;
+
+  /* UI semantics */
+  --code-bg:     #ece3c9;
+  --quote-bg:    #f0e8d2;
+  --warn-bg:     #f6dcd4;
+  --warn-fg:     #5a1408;
+  --warn-border: #b85a44;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(60, 30, 10, 0.10);
+  --shadow-md: 0 2px 8px rgba(60, 30, 10, 0.14);
+
+  /* AoN-style double horizontal rule strokes */
+  --hr-double-top: rgba(110, 20, 20, 0.90);
+  --hr-double-bot: rgba(110, 20, 20, 0.35);
+
+  /* Typography stacks */
+  --font-serif:
+    "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC",
+    "STSong", "Source Han Sans SC", Georgia,
+    "Crimson Text", "Cormorant Garamond", serif;
+
+  --font-sans:
+    "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC",
+    "Microsoft YaHei", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+
+  --font-display: var(--font-serif);
+  --font-body:    var(--font-serif);
+  --font-ui:      var(--font-sans);
+}
+
+/* ---------- 0b. Palette tokens — DARK (rich woodgrain) ---------- */
+body.dark {
+  --fg:       #f0e4cf;
+  --fg-soft:  #cab89a;
+  --fg-mute:  #b5a48b;
+
+  --bg:       #1e1813;
+  --bg-alt:   #29211a;
+  --card:     #2a2218;
+  --card-alt: #322819;
+
+  --border:        #4a3c2a;
+  --border-strong: #6a5638;
+
+  --accent:        #c1453d;
+  --accent-soft:   #d76b62;
+  --accent-band:   #931f1f;
+  --accent-on:     #fbf7eb;
+
+  --gold:      #d4ab5d;
+  --gold-soft: #e6c887;
+
+  --link:        #d76b62;
+  --link-hover:  #ec8d85;
+
+  --tag-bg:       #3d3221;
+  --tag-fg:       #e6d6ab;
+  --rare-bg:      #3d2a4f;
+  --rare-fg:      #e0c8f0;
+  --uncommon-bg:  #4d3818;
+  --uncommon-fg:  #f0d29a;
+  --size-bg:      #2f3923;
+  --size-fg:      #c8d093;
+
+  --code-bg:     #2d2418;
+  --quote-bg:    #2a2418;
+  --warn-bg:     #3a1f1a;
+  --warn-fg:     #f3b6ab;
+  --warn-border: #8a3a30;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.55);
+
+  --hr-double-top: rgba(193, 69, 61, 0.85);
+  --hr-double-bot: rgba(193, 69, 61, 0.28);
+}
+
+/* ---------- 0c. Auto dark (no explicit choice) ---------- */
+@media (prefers-color-scheme: dark) {
+  body:not(.light):not(.dark) {
+    --fg:       #f0e4cf;
+    --fg-soft:  #cab89a;
+    --fg-mute:  #b5a48b;
+    --bg:       #1e1813;
+    --bg-alt:   #29211a;
+    --card:     #2a2218;
+    --card-alt: #322819;
+    --border:        #4a3c2a;
+    --border-strong: #6a5638;
+    --accent:        #c1453d;
+    --accent-soft:   #d76b62;
+    --accent-band:   #931f1f;
+    --accent-on:     #fbf7eb;
+    --gold:      #d4ab5d;
+    --gold-soft: #e6c887;
+    --link:        #d76b62;
+    --link-hover:  #ec8d85;
+    --tag-bg:       #3d3221;
+    --tag-fg:       #e6d6ab;
+    --code-bg:     #2d2418;
+    --quote-bg:    #2a2418;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.55);
+    --hr-double-top: rgba(193, 69, 61, 0.85);
+    --hr-double-bot: rgba(193, 69, 61, 0.28);
+  }
+}
+
+/* ---------- 1. Body — serif body text on parchment ---------- */
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--bg);
+  /* Subtle parchment tone — vellum-like weave via radial wash.
+     No external image; just two thin radial gradients. */
+  background-image:
+    radial-gradient(ellipse at 20% 0%,
+      rgba(184, 146, 72, 0.05) 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 100%,
+      rgba(110, 20, 20, 0.04) 0%, transparent 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body.dark {
+  background-image:
+    radial-gradient(ellipse at 20% 0%,
+      rgba(212, 171, 93, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 100%,
+      rgba(193, 69, 61, 0.06) 0%, transparent 60%);
+}
+
+/* UI chrome that benefits from sans (buttons, badges, header chrome)
+   keeps the sans stack via a class-scoped override below. */
+.theme-toggle,
+header.page-head a,
+header.page-head .search-link,
+nav.wiki-sidebar,
+nav.crumb,
+.tag, .trait-pill,
+.kind-feat, .kind-spell, .kind-creature, .kind-item, .kind-condition,
+.kind-ancestry, .kind-class, .kind-background, .kind-location,
+.kind-deity, .kind-stub, .kind-other,
+.page-type-badge,
+.related-kind,
+.notice .notice-head,
+.header-banner.section-head,
+.search-box, .search-results,
+.action,
+table.wikitable th,
+.dc-type,
+.sb-section-head,
+.sb-ability .ability-label,
+.sb-defenses .def-cell .label,
+.sb-defenses .save-cell .label,
+table.cstats th,
+footer.page-foot,
+.toc-title {
+  font-family: var(--font-ui);
+}
+
+/* ---------- 2. Header band — black/maroon, AoN-style ---------- */
+header.page-head {
+  background:
+    linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.18) 0%, transparent 60%),
+    var(--accent-band);
+  color: var(--accent-on);
+  padding: 14px 24px 12px;
+  /* gold hairline + dark bottom edge for sourcebook chapter feel */
+  border-bottom: 2px solid var(--gold);
+  box-shadow: inset 0 -3px 0 var(--accent-band),
+              0 1px 0 rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+header.page-head::after {
+  /* thin gold sub-band — like a chapter rule under the title strip */
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -5px;
+  height: 3px;
+  background: linear-gradient(to right,
+    transparent 0%, var(--gold) 12%, var(--gold) 88%, transparent 100%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+header.page-head h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--accent-on);
+  margin: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+header.page-head a.home,
+header.page-head .search-link {
+  color: #f5e7c8;
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+}
+header.page-head a.home:hover,
+header.page-head .search-link:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+/* ---------- 3. Headings — deep maroon, serif, restrained ---------- */
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1.25;
+}
+h1 { letter-spacing: 0.3px; }
+h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+h3 { letter-spacing: 0.1px; }
+h4, h5 { color: var(--accent-soft); }
+
+/* page-body headings inherit the same chrome; layout_polish.css
+   already controls sizes, we only fix family + colour to match. */
+main.page-body > h1,
+main.page-body > h2,
+main.page-body > h3,
+main.page-body > h4,
+main.page-body > h5 {
+  font-family: var(--font-display);
+  color: var(--accent);
+}
+main.page-body > h1 {
+  border-bottom: 2px solid var(--gold);
+  padding-bottom: 6px;
+}
+
+/* ---------- 4. Links — maroon underline-on-hover ---------- */
+a, a.wl { color: var(--link); }
+a:hover, a.wl:hover { color: var(--link-hover); }
+a.wl {
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+a.wl:hover { border-bottom-color: var(--link-hover); }
+
+/* ---------- 5. Statblock — AoN/scribe-style red band card ---------- */
+.statblock {
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-top: 0;
+  border-radius: 3px;
+  box-shadow: var(--shadow-md);
+  margin: 18px 0;
+  position: relative;
+  overflow: hidden;
+}
+/* Gold inset trim line under the red band */
+.statblock::before {
+  content: "";
+  display: block;
+  height: 2px;
+  background: linear-gradient(to right,
+    var(--gold-soft), var(--gold) 30%, var(--gold) 70%, var(--gold-soft));
+  opacity: 0.85;
+}
+
+.sb-title {
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 55%),
+    var(--accent-band);
+  color: var(--accent-on);
+  font-family: var(--font-display);
+  font-size: 18.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  line-height: 1.25;
+  border-radius: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.30);
+}
+.sb-level {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbf7eb;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  padding: 2px 10px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sb-tags {
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 16px 4px;
+  margin: 0;
+}
+.statblock > .sb-en {
+  background: var(--bg-alt);
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--fg-soft);
+  padding: 4px 16px 6px;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+
+.sb-body {
+  font-family: var(--font-body);
+  padding: 12px 16px 6px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.sb-body b, .sb-body strong { color: var(--fg); font-weight: 700; }
+.sb-body hr {
+  border: 0;
+  height: 4px;
+  margin: 10px 0;
+  background:
+    linear-gradient(to bottom,
+      var(--hr-double-top) 0,
+      var(--hr-double-top) 1px,
+      transparent 1px,
+      transparent 3px,
+      var(--hr-double-bot) 3px,
+      var(--hr-double-bot) 4px);
+}
+
+.sb-source {
+  background: var(--bg-alt);
+  border-top: 1px dashed var(--border);
+  padding: 7px 16px 9px;
+  margin: 4px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--fg-mute);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- 6. Trait chips — square publication-style ---------- */
+.tag {
+  display: inline-block;
+  background: var(--tag-bg);
+  color: var(--tag-fg);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 9px;
+  margin: 0 4px 4px 0;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.tag.rare      { background: var(--rare-bg);     color: var(--rare-fg); }
+.tag.uncommon  { background: var(--uncommon-bg); color: var(--uncommon-fg); }
+.tag.size      { background: var(--size-bg);     color: var(--size-fg); }
+.tag.alignment { background: #444; color: #f1ecdb; }
+body.dark .tag.alignment { background: #1a1a1a; color: #d4d0c6; }
+
+/* ---------- 7. Action glyph — small maroon chip ---------- */
+.action {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-on);
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 3px;
+  vertical-align: 1px;
+  line-height: 1.4;
+}
+.statblock .action {
+  background: rgba(255, 255, 255, 0.20);
+  color: var(--accent-on);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+}
+
+/* ---------- 8. Page-body baseline ---------- */
+main.page-body, body.index {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 26px 22px 64px;
+}
+main.page-body p {
+  font-family: var(--font-body);
+  line-height: 1.75;
+}
+
+/* Intro / lede paragraph: drop-cap-like emphasis */
+main.page-body > .intro {
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--fg);
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(to right,
+    rgba(110, 20, 20, 0.04), transparent 60%);
+  padding: 8px 14px 8px 14px;
+  border-radius: 0 3px 3px 0;
+}
+
+/* ---------- 9. Section header banner (class pages) ---------- */
+.header-banner.section-head {
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, transparent 55%),
+    var(--accent-band);
+  color: var(--accent-on);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 2px;
+  border-bottom: 2px solid var(--gold);
+  display: inline-block;
+}
+
+/* ---------- 10. Aside / sidebar callout ---------- */
+aside.sidebar,
+.data-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 3px;
+  box-shadow: var(--shadow-sm);
+}
+aside.sidebar strong > big,
+.data-card .dc-name { color: var(--accent); }
+.dc-type {
+  background: var(--accent);
+  color: var(--accent-on);
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+/* ---------- 11. Wikitable — bookplate alternating rows ---------- */
+table.wikitable {
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-collapse: collapse;
+  box-shadow: var(--shadow-sm);
+}
+table.wikitable th {
+  background: var(--accent-band);
+  color: var(--accent-on);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border: 1px solid var(--accent-band);
+  text-align: left;
+}
+table.wikitable td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+}
+table.wikitable tr:nth-child(even) td { background: var(--card-alt); }
+
+/* ---------- 12. Quote block ---------- */
+blockquote.quote {
+  background: var(--quote-bg);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 3px 3px 0;
+  padding: 12px 18px;
+  color: var(--fg-soft);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+blockquote.quote strong, blockquote.quote b {
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* ---------- 13. Untranslated warning ---------- */
+.untranslated-warning {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border: 1px solid var(--warn-border);
+  border-left: 4px solid var(--warn-border);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+}
+
+/* ---------- 14. Crumb ---------- */
+nav.crumb {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--fg-mute);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- 15. Theme toggle pill ---------- */
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--accent-on);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  padding: 5px 10px;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+
+/* ---------- 16. Index / page-list ---------- */
+body.index h1 {
+  color: var(--accent);
+  border-bottom: 2px solid var(--gold);
+  padding-bottom: 8px;
+}
+ul.page-list li {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+}
+ul.page-list a { color: var(--link); font-family: var(--font-body); }
+
+/* ---------- 17. Footer ---------- */
+footer.page-foot {
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border);
+  color: var(--fg-mute);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+/* ---------- 18. Search box ---------- */
+.search-box {
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  font-family: var(--font-ui);
+  color: var(--fg);
+}
+.search-box:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+/* ---------- 19. Related-pages aside ---------- */
+aside.related-pages {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 3px;
+}
+aside.related-pages h2 {
+  background: linear-gradient(to right,
+    var(--accent-band), var(--accent));
+  color: var(--accent-on);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--gold);
+}
+
+/* ---------- 20. Notice block ---------- */
+.notice {
+  background: var(--bg-alt);
+  border-left: 4px solid var(--border-strong);
+  font-family: var(--font-body);
+}
+.notice .notice-head { color: var(--accent); font-family: var(--font-ui); }
+.notice.notice-success {
+  background: var(--quote-bg);
+  border-left-color: var(--accent-soft);
+}
+
+/* ---------- 21. Creature cstats table ---------- */
+table.cstats th {
+  background: var(--bg-alt);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 12px;
+  border-right: 1px solid var(--border);
+}
+table.cstats tr { border-bottom: 1px solid var(--border); }
+
+/* ---------- 22. Print fallback ---------- */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  header.page-head, header.page-head::after { background: #000 !important; }
+  header.page-head h1 { color: #fff !important; text-shadow: none; }
+  .sb-title { background: #000 !important; color: #fff !important; }
+  .statblock::before { background: #000 !important; }
+  h1, h2, h3, h4, h5 { color: #000 !important; }
+  .tag, .trait-pill { background: #eee !important; color: #000 !important; }
+  .action { background: #000 !important; color: #fff !important; }
+}
+
+/* End pf2_theme.css */

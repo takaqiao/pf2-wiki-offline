@@ -1,0 +1,529 @@
+/* ============================================================
+   layout_polish.css — Phase 4, Agent LA
+   Final readability pass for the offline mirror.
+
+   Imported LAST from style.css so these declarations win over the
+   organically-grown Phase 1-3 rules without resorting to !important.
+   Coordinates with:
+     - Agent CP (wikitable_polish.css) — we only touch generic
+       <table> shells, never .wikitable.wikitable internals.
+     - Agent KC (kind_contrast.css)    — we never override color
+       variables, only consume var(--accent), var(--type-accent).
+     - Agent CR (long-lore pages)      — these rules target the
+       average page, lore pages may layer additional spacing.
+   ============================================================ */
+
+/* ---------- 0. Local spacing scale ----------
+   Single rhythm unit so every block uses one of these,
+   never an ad-hoc 13px / 18px / 22px. */
+:root {
+  --rhythm: 1rem;           /* 16px baseline gap */
+  --rhythm-sm: 0.5rem;
+  --rhythm-md: 1rem;
+  --rhythm-lg: 1.5rem;
+  --rhythm-xl: 2rem;
+  --measure: 75ch;          /* readable line length */
+  --radius-card: 8px;
+  --radius-sm: 4px;
+  --aside-pad: 16px;
+}
+
+/* ---------- 1. Vertical rhythm ----------
+   Reset margin collapse and impose a single spacing unit. */
+main.page-body > p,
+main.page-body > .intro,
+main.page-body > blockquote,
+main.page-body > ul,
+main.page-body > ol,
+main.page-body > dl,
+main.page-body > details,
+main.page-body > .data-card,
+main.page-body > .statblock,
+main.page-body > table,
+main.page-body > .untranslated-warning {
+  margin-top: 0;
+  margin-bottom: var(--rhythm);
+}
+/* Heading rhythm */
+main.page-body > h1,
+main.page-body > h2,
+main.page-body > h3,
+main.page-body > h4,
+main.page-body > h5 {
+  margin-bottom: var(--rhythm-sm);
+}
+/* Stray <br> after a block-level child does nothing useful and
+   creates the "&nbsp;-style awkward gap" the brief warns about. */
+main.page-body > br { display: none; }
+/* But preserve in-paragraph and in-statblock line breaks. */
+.sb-body br, p br, .intro br, .sidebar br, blockquote br { display: inline; }
+
+/* ---------- 2. Heading hierarchy ----------
+   Override the Phase 1 sizes so h2 / h3 / h4 are visually distinct. */
+main.page-body > h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--type-accent, var(--accent));
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 6px;
+  margin-top: 1.2em;
+  line-height: 1.25;
+}
+main.page-body > h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--type-accent, var(--accent));
+  margin-top: 1.5em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.3;
+}
+main.page-body > h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--type-accent, var(--accent));
+  margin-top: 1.2em;
+  border-bottom: 0;
+  line-height: 1.35;
+}
+main.page-body > h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-soft);
+  margin-top: 1em;
+  border-bottom: 0;
+  line-height: 1.4;
+}
+main.page-body > h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-mute);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-top: 0.8em;
+}
+/* First heading should not have huge top margin */
+main.page-body > h1:first-child,
+main.page-body > h2:first-child,
+main.page-body > h3:first-child,
+main.page-body > nav.crumb + h1,
+main.page-body > nav.crumb + h2,
+main.page-body > nav.crumb + h3,
+main.page-body > .header-banner + h1,
+main.page-body > .header-banner + h2 {
+  margin-top: 0.2em;
+}
+
+/* ---------- 3. Paragraph readability ----------
+   Cap line length and lift line-height for body prose.
+   We apply max-width to inline text containers only — never to the
+   .page-body root because statblocks / tables / navboxes deserve the
+   full column width. */
+main.page-body > p,
+main.page-body > .intro,
+main.page-body > ul,
+main.page-body > ol,
+main.page-body > dl,
+main.page-body > blockquote {
+  max-width: var(--measure);
+  line-height: 1.75;
+}
+main.page-body > .intro {
+  font-size: 16.5px;
+  color: var(--fg);
+  margin-bottom: var(--rhythm-lg);
+  padding-left: 12px;
+  border-left: 3px solid var(--type-accent, var(--accent-soft));
+}
+
+/* ---------- 4. Dead links (.wl-dead) ----------
+   Long runs of these cluster ugly inside lists. Flatten them so
+   they read as plain grey words, not pseudo-buttons. */
+.wl-dead {
+  color: var(--fg-mute);
+  text-decoration: none;
+  cursor: default;
+  opacity: 0.75;
+  font-style: normal;
+  border-bottom: 1px dotted var(--border);
+  padding: 0 1px;
+  transition: opacity 0.15s;
+}
+.wl-dead:hover { opacity: 1; }
+/* Stripe out the cluster effect inside lists / navboxes */
+li .wl-dead,
+.navbox-list .wl-dead { border-bottom: 0; }
+
+/* ---------- 5. Crumb breadcrumb ----------
+   Tighter, caption-style, sits flush below the header banner. */
+nav.crumb {
+  font-size: 12.5px;
+  color: var(--fg-mute);
+  background: transparent;
+  border-left: 0;
+  padding: 0;
+  margin: 0 0 var(--rhythm-md);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+nav.crumb a.wl,
+nav.crumb a { color: var(--fg-mute); }
+nav.crumb a:hover { color: var(--type-accent, var(--accent)); }
+/* If it ends up floating mid-content (some pages emit it after intro
+   paragraphs), wrap it in a subtle pill so it doesn't look broken. */
+main.page-body > p + nav.crumb,
+main.page-body > h2 + nav.crumb,
+main.page-body > h3 + nav.crumb {
+  display: inline-block;
+  background: var(--bg-alt);
+  padding: 2px 10px;
+  border-radius: 999px;
+  margin: 0 0 var(--rhythm-sm);
+}
+
+/* ---------- 6. Data card (Agent A's {{专长数据}} etc.) ---------- */
+.data-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--type-accent, var(--accent));
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  margin: var(--rhythm) 0;
+  box-shadow: var(--shadow-sm);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.data-card .dc-type {
+  display: inline-block;
+  background: var(--type-accent, var(--accent));
+  color: var(--accent-on);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.05em;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.data-card .dc-name {
+  font-weight: 600;
+  color: var(--link);
+}
+/* class-quote layout (战士 page key-attribute panel) */
+.data-card.class-quote {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 14px 18px;
+}
+.data-card.class-quote .cq-col strong {
+  display: block;
+  color: var(--type-accent, var(--accent));
+  margin-bottom: 4px;
+}
+.data-card.class-quote hr {
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- 7. Aside related pages ---------- */
+aside.related-pages {
+  margin: var(--rhythm-xl) 0 var(--rhythm-lg);
+  padding: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--type-accent, var(--accent));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+aside.related-pages h2 {
+  margin: 0;
+  padding: 10px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-on);
+  background: linear-gradient(
+    to right,
+    var(--type-accent, var(--accent)),
+    var(--type-band, var(--accent-band))
+  );
+  border-bottom: 0;
+  letter-spacing: 0.04em;
+}
+aside.related-pages ul {
+  list-style: none;
+  margin: 0;
+  padding: 8px 18px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 18px;
+  max-width: none;
+}
+aside.related-pages li {
+  margin: 0;
+  padding: 4px 0;
+  border-bottom: 1px dotted var(--border);
+  font-size: 14px;
+  line-height: 1.45;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+aside.related-pages li:last-child { border-bottom: 0; }
+aside.related-pages a {
+  color: var(--link);
+  text-decoration: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+aside.related-pages a:hover { color: var(--link-hover); text-decoration: underline; }
+.related-kind {
+  font-size: 11px;
+  color: var(--fg-mute);
+  background: var(--bg-alt);
+  padding: 1px 7px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* ---------- 8. List indentation ----------
+   Make nested lists clearly deeper than parents. */
+main.page-body > ul,
+main.page-body > ol { padding-left: 26px; }
+main.page-body li > ul,
+main.page-body li > ol { padding-left: 22px; margin: 4px 0 6px; }
+main.page-body li > ul > li > ul,
+main.page-body li > ol > li > ol { padding-left: 20px; }
+main.page-body li { margin: 4px 0; line-height: 1.65; }
+
+/* ---------- 9. Tables (generic) ----------
+   Phase 1 styled .wikitable; Agent CP refined .wikitable.wikitable.
+   We only adjust the generic <table> and wrap oversized tables. */
+main.page-body > table {
+  margin: var(--rhythm) 0;
+  max-width: 100%;
+}
+/* Table captions — small, italic, subdued */
+main.page-body table caption {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--fg-soft);
+  text-align: left;
+  padding: 0 0 6px;
+  caption-side: top;
+}
+/* Horizontal scroll on small screens — only for plain tables, not for
+   Agent CP's .wikitable which has its own responsive rules. */
+@media (max-width: 600px) {
+  main.page-body > table:not(.wikitable):not(.cstats):not(.navbox-body):not(.cstats) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  main.page-body > table:not(.wikitable):not(.cstats):not(.navbox-body) td,
+  main.page-body > table:not(.wikitable):not(.cstats):not(.navbox-body) th {
+    white-space: normal;
+  }
+}
+
+/* ---------- 10. Blockquote ----------
+   Visible left bar, italic text, modest indent, doesn't drift right. */
+blockquote.quote {
+  border-left: 4px solid var(--accent-soft);
+  background: var(--quote-bg);
+  margin: var(--rhythm) 0;
+  padding: 12px 18px 12px 20px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--fg-soft);
+  font-style: italic;
+  line-height: 1.7;
+  max-width: var(--measure);
+}
+blockquote.quote strong,
+blockquote.quote b { font-style: normal; color: var(--fg); }
+blockquote.quote p:first-child { margin-top: 0; }
+blockquote.quote p:last-child  { margin-bottom: 0; }
+blockquote.quote ul,
+blockquote.quote ol { margin: 0.5em 0; padding-left: 22px; }
+
+/* ---------- Adjacent helpers ----------
+   These show up on many pages but were never styled. Give them a
+   sane default so they don't break the rhythm. */
+
+/* Intro lead-in (.intro div from classes pages) — already handled in #3 */
+
+/* Sidebar callout (class initial-proficiency block, etc.) */
+aside.sidebar {
+  background: var(--card-alt, var(--bg-alt));
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--type-accent, var(--accent));
+  border-radius: var(--radius-card);
+  padding: 14px 18px;
+  margin: var(--rhythm) 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+aside.sidebar strong > big { font-size: 1.05em; color: var(--type-accent, var(--accent)); }
+aside.sidebar p { margin: 4px 0 8px; max-width: none; }
+
+/* Section banner ("header-banner section-head" on class pages) */
+.header-banner.section-head {
+  display: inline-block;
+  background: var(--type-accent, var(--accent));
+  color: var(--accent-on);
+  padding: 4px 14px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--rhythm-sm);
+}
+.header-banner.section-head a { color: var(--accent-on); }
+
+/* Notice / callout boxes */
+.notice {
+  margin: var(--rhythm) 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.55;
+  border-left: 4px solid var(--border-strong);
+  background: var(--bg-alt);
+}
+.notice .notice-head {
+  display: inline-block;
+  font-weight: 700;
+  margin-right: 6px;
+  color: var(--type-accent, var(--accent));
+}
+.notice.notice-success {
+  background: var(--quote-bg);
+  border-left-color: var(--accent-soft);
+}
+
+/* Floating tip / quick-card link */
+a.float-tip {
+  display: inline-block;
+  background: var(--bg-alt);
+  border: 1px dashed var(--border);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--link);
+  text-decoration: none;
+  margin: 0 4px 4px 0;
+}
+a.float-tip:hover {
+  background: var(--type-accent, var(--accent));
+  color: var(--accent-on);
+  border-color: var(--type-accent, var(--accent));
+}
+
+/* ---------- Sidebar layout cleanup ----------
+   When .wiki-sidebar wraps main.page-body in a .layout flex, give
+   the main column some breathing room and a comfortable max width. */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.layout > main.page-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 880px;
+  margin: 0;
+  padding: 24px 0 60px;
+}
+.layout > nav.wiki-sidebar {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 12px;
+  padding: 20px 8px 20px 20px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+  }
+  .layout > nav.wiki-sidebar {
+    position: static;
+    flex: 0 0 auto;
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    max-height: none;
+  }
+  .layout > main.page-body {
+    width: 100%;
+    max-width: none;
+    padding: 18px 16px 50px;
+  }
+}
+
+/* ---------- Action chip baseline ----------
+   The Phase 1 .action chip works fine but appears flush against
+   prose; add a hairline gap so it doesn't crowd characters. */
+.action { margin: 0 3px; }
+
+/* ---------- Anchor offset for in-page TOC jumps ----------
+   Agent TC sets this on [id^="sec-"]; mirror it for any heading
+   that gets an id. */
+main.page-body :is(h1,h2,h3,h4,h5)[id] {
+  scroll-margin-top: 24px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  :root { --rhythm: 0.9rem; --measure: 65ch; }
+  main.page-body > h1 { font-size: 24px; }
+  main.page-body > h2 { font-size: 20px; }
+  main.page-body > h3 { font-size: 17px; }
+  main.page-body > h4 { font-size: 15.5px; }
+  .data-card, aside.sidebar { padding: 12px 14px; }
+  aside.related-pages h2 { padding: 8px 14px; font-size: 15px; }
+  aside.related-pages ul { padding: 6px 14px 12px; grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  :root { --measure: none; }
+  main.page-body > p,
+  main.page-body > ul,
+  main.page-body > ol,
+  main.page-body > blockquote { line-height: 1.7; }
+  main.page-body > h1 { font-size: 22px; }
+  main.page-body > h2 { font-size: 18.5px; }
+  main.page-body > h3 { font-size: 16.5px; }
+  aside.related-pages li { white-space: normal; }
+  aside.related-pages a { white-space: normal; }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  aside.related-pages,
+  .data-card { box-shadow: none; }
+  aside.related-pages h2 {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .wl-dead { opacity: 1; color: #555; border-bottom: 0; }
+  main.page-body > h1,
+  main.page-body > h2,
+  main.page-body > h3 { color: #000 !important; }
+}
+
+/* End layout_polish.css */
