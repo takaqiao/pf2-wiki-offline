@@ -25,11 +25,22 @@
   var API_URL = 'https://api.github.com/repos/' + REPO + '/releases/latest';
   var SNOOZE_KEY = 'pf2_updater_snoozed_tag';
 
-  function getCurrentVersion() {
-    var m = document.querySelector('meta[name="app-version"]');
-    return (m && m.content) ? m.content : 'v0.3.7';
+  // Version is read async from /_app_version.json (single source of truth).
+  // Falls back to <meta name="app-version"> for old builds.
+  var CURRENT_VERSION = null;
+  function loadCurrentVersion() {
+    return fetch('/_app_version.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return (j && j.version) ? j.version : null; })
+      .catch(function () { return null; })
+      .then(function (v) {
+        if (v) { CURRENT_VERSION = v; return v; }
+        // Fallback: legacy meta tag
+        var m = document.querySelector('meta[name="app-version"]');
+        CURRENT_VERSION = (m && m.content) ? m.content : 'v0.3.8';
+        return CURRENT_VERSION;
+      });
   }
-  var CURRENT_VERSION = getCurrentVersion();
 
   function parseSemver(s) {
     if (!s) return null;
@@ -133,7 +144,8 @@
     var snoozed = null;
     try { snoozed = localStorage.getItem(SNOOZE_KEY); } catch (e) {}
 
-    fetch(API_URL, { cache: 'no-store' }).then(function (r) {
+    loadCurrentVersion().then(function () {
+    return fetch(API_URL, { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
     }).then(function (latest) {
@@ -152,6 +164,7 @@
       }
     }).catch(function (err) {
       // network failure (offline use case) — silent fail
+    });
     });
   }
 
