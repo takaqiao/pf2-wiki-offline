@@ -199,12 +199,18 @@ Bug fixes in v0.3.4 build:
 - ✅ Console-error count: 2 → 0 on 灵魂纱幕
 
 ### Iter 14 — Auto-redirect for in-content redirectMsg pages (2026-05-20, DONE)
-- Bug: 元素使.html and 魂铸者.html (and ~10 other redirect-pages) showed
+- Bug: 元素使.html and 魂铸者.html (and ~3500 other redirect-pages) showed
   "重定向到：&lt;link&gt;" instead of auto-jumping to actual content.
 - ✅ Fix: build_v2.py detects `.redirectMsg a[href]` and injects
   `<meta http-equiv="refresh" content="0; url=...">` into `<head>`.
 - ✅ Verified for 元素使 → 元素使职业变体, 魂铸者 → 魂铸者变体.
-- Means classes hub now lands users on real content with one click (not two).
+
+### Iter 15 — Audit redirect coverage (2026-05-20, DONE)
+- **Impact bigger than expected**: 3576 pages now have meta-refresh (was just 5
+  built explicit redirect stubs + 3571 in-content redirects from this iter 14 fix).
+- ✅ 0 pages with `.redirectMsg` missing refresh — 100% coverage.
+- This means **~10% of total wiki pages** (37k) were dead-end "重定向到:" pages
+  before this loop. Now they all jump to real content.
 
 ### Iter 10 — Final status + remaining gaps (2026-05-20, DONE)
 - 10 iterations of bug-find + fix loop completed
