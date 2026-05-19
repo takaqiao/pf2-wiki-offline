@@ -41,7 +41,7 @@ SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
 CACHE_VER = "v2h"
-APP_VERSION = "v0.3.8"  # bumped per release; used to populate <meta name="app-version">
+APP_VERSION = "v0.3.9"  # bumped per release; written to _app_version.json (no longer in meta tag)
 
 NS_TO_DIR = {
     0: "pages",
@@ -441,19 +441,18 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<head>\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        f'<meta name="app-version" content="{APP_VERSION}">\n'
         f'<meta name="description" content="{html_lib.escape(meta_desc)}">\n'
         f'{redirect_meta_html}'
         f'<link rel="canonical" href="https://pf2.huijiwiki.com/wiki/{urllib.parse.quote(title)}">\n'
         f'<title>{html_lib.escape(display_plain)} — PF2 离线百科</title>\n'
-        f'<link rel="stylesheet" href="../assets/style.css?v={CACHE_VER}">\n'
-        f'<link rel="icon" href="../assets/favicon.ico">\n'
-        f'<script defer src="../assets/topnav.js?v={CACHE_VER}"></script>\n'
-        f'<script defer src="../assets/theme.js?v={CACHE_VER}"></script>\n'
-        f'<script defer src="../assets/huiji_tt.js?v={CACHE_VER}"></script>\n'
-        f'<script defer src="../assets/external_links.js?v={CACHE_VER}"></script>\n'
-        f'<script defer src="../assets/updater_ui.js?v={CACHE_VER}"></script>\n'
-        f'<script defer src="../assets/mw_collapsible.js?v={CACHE_VER}"></script>\n'
+        '<link rel="stylesheet" href="../assets/style.css">\n'
+        '<link rel="icon" href="../assets/favicon.ico">\n'
+        '<script defer src="../assets/topnav.js"></script>\n'
+        '<script defer src="../assets/theme.js"></script>\n'
+        '<script defer src="../assets/huiji_tt.js"></script>\n'
+        '<script defer src="../assets/external_links.js"></script>\n'
+        '<script defer src="../assets/updater_ui.js"></script>\n'
+        '<script defer src="../assets/mw_collapsible.js"></script>\n'
         '</head>\n'
         f'<body class="{body_class}">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'

@@ -74,6 +74,35 @@ fn serve_static(resource_root: PathBuf, port: u16) {
 
         let full = root.join(&path[1..]);
         if !full.exists() || !full.is_file() {
+            // Friendly 404 fallback: serve _wiki_full_v2/404.html with HTTP
+            // status 404 (so the webview renders our themed "page not found"
+            // shell instead of a bare plain-text response). The 404 page
+            // pre-fills its search box from window.location.pathname, so the
+            // user can immediately retry as a search query. Falls through to
+            // the plain "Not Found" string only if even the fallback file is
+            // missing (e.g. a corrupt install with no _wiki_full_v2/404.html).
+            let fallback = root.join("404.html");
+            if fallback.exists() && fallback.is_file() {
+                if let Ok(bytes) = std::fs::read(&fallback) {
+                    let ct = Header::from_bytes(
+                        &b"Content-Type"[..],
+                        b"text/html; charset=utf-8",
+                    )
+                    .expect("ctype header");
+                    let cc = Header::from_bytes(
+                        &b"Cache-Control"[..],
+                        b"no-cache, must-revalidate",
+                    )
+                    .expect("cache header");
+                    let _ = request.respond(
+                        Response::from_data(bytes)
+                            .with_header(ct)
+                            .with_header(cc)
+                            .with_status_code(404),
+                    );
+                    continue;
+                }
+            }
             let _ = request.respond(Response::from_string("Not Found").with_status_code(404));
             continue;
         }
@@ -89,7 +118,28 @@ fn serve_static(resource_root: PathBuf, port: u16) {
 
         let header = Header::from_bytes(&b"Content-Type"[..], mime.essence_str().as_bytes())
             .expect("ctype header");
-        let _ = request.respond(Response::from_data(bytes).with_header(header));
+        // Per-asset cache policy:
+        // - HTML/CSS/JS/JSON: no-cache + must-revalidate so updates take effect
+        //   on next page load (no stale chrome after applying a patch).
+        // - Images/fonts/media: long-lived cache OK (rarely change, large bytes).
+        let mime_str = mime.essence_str();
+        let cache_value: &[u8] = if mime_str.starts_with("text/")
+            || mime_str.contains("javascript")
+            || mime_str.contains("json")
+            || mime_str.contains("css")
+            || mime_str.contains("html")
+        {
+            b"no-cache, must-revalidate"
+        } else {
+            b"public, max-age=604800"
+        };
+        let cache_header = Header::from_bytes(&b"Cache-Control"[..], cache_value)
+            .expect("cache-control header");
+        let _ = request.respond(
+            Response::from_data(bytes)
+                .with_header(header)
+                .with_header(cache_header),
+        );
     }
 }
 
