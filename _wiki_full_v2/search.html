@@ -363,6 +363,19 @@
         mount: document.getElementById("mount"),
         pageBase: "",   // pages/ and data/ live one directory up (in _wiki_full/)
       });
+      // Auto-trigger search from URL ?q= param (v0.3.5 fix)
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var q = params.get("q");
+        if (q) {
+          var input = document.getElementById("pf2s-input");
+          if (input) {
+            input.value = q;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.focus();
+          }
+        }
+      } catch (e) { /* ignore */ }
     }).catch(function () { /* handled by onError */ });
   })();
 </script>
