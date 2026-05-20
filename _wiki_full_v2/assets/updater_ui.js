@@ -92,14 +92,14 @@
     var btnStyle = 'background:#ffb300;color:#3a1a00;border:0;padding:6px 16px;border-radius:3px;font-weight:600;cursor:pointer;font:inherit';
     var ghostStyle = 'background:transparent;color:#fffbf6;border:1px solid rgba(255,255,255,0.5);padding:6px 12px;border-radius:3px;cursor:pointer;font:inherit';
 
-    // ALWAYS prefer the one-click patch button when a patch exists. We no longer
-    // gate on isTauri() at render time — the click handler falls back gracefully.
-    var primaryBtn;
-    if (patchInfo) {
-      primaryBtn = '<button id="pf2-updater-patch" style="' + btnStyle + '">一键自动更新 (' + Number(patchInfo.size_mb).toFixed(0) + ' MB)</button>';
-    } else {
-      primaryBtn = '<button id="pf2-updater-dl" style="' + btnStyle + '">下载完整版 (1.2 GB)</button>';
-    }
+    // One-click patch button only when a patch exists. The full-download
+    // button is ALWAYS shown exactly once: prominent style when it's the only
+    // option, ghost style when a patch is the primary action. (Previously a
+    // null patchInfo produced TWO "下载完整版" buttons.)
+    var primaryBtn = patchInfo
+      ? '<button id="pf2-updater-patch" style="' + btnStyle + '">一键自动更新 (' + Number(patchInfo.size_mb).toFixed(0) + ' MB)</button>'
+      : '';
+    var fullStyle = patchInfo ? ghostStyle : btnStyle;
 
     banner.innerHTML =
       '<div id="pf2-updater-msg" style="flex:1 1 auto;min-width:200px"><strong>有新版本：</strong> '
@@ -107,7 +107,7 @@
       + (bodyText ? ' — <span style="opacity:0.85">' + escapeHtml(bodyText) + '</span>' : '')
       + '</div>'
       + primaryBtn
-      + '<button id="pf2-updater-full" style="' + ghostStyle + '">下载完整版</button>'
+      + '<button id="pf2-updater-full" style="' + fullStyle + '">下载完整版 (1.2 GB)</button>'
       + '<button id="pf2-updater-page" style="' + ghostStyle + '">看说明</button>'
       + '<button id="pf2-updater-dismiss" style="' + ghostStyle + '">本次忽略</button>';
     document.body.appendChild(banner);
@@ -122,7 +122,6 @@
     });
     on('pf2-updater-full', function () { openExternal(dlUrl); });
     on('pf2-updater-page', function () { openExternal(releaseUrl); });
-    on('pf2-updater-dl', function () { openExternal(dlUrl); });
 
     on('pf2-updater-patch', function () {
       var inv = getInvoke();
@@ -146,10 +145,14 @@
     });
   }
 
-  function fetchPatchesJson(assets) {
-    var a = (assets || []).find(function (x) { return x.name === 'patches.json'; });
-    if (!a) return Promise.resolve(null);
-    return fetch(a.browser_download_url, { cache: 'no-store' })
+  // GitHub release-asset download URLs (github.com/.../releases/download/...)
+  // redirect to objects.githubusercontent.com which sends NO CORS header, so a
+  // browser fetch fails with "TypeError: Failed to fetch". raw.githubusercontent
+  // .com serves with Access-Control-Allow-Origin:* — so we read patches.json
+  // (committed to the repo root) from there instead.
+  function fetchPatchesJson() {
+    var url = 'https://raw.githubusercontent.com/takaqiao/pf2-wiki-offline/main/patches.json?t=' + Date.now();
+    return fetch(url, { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
   }
@@ -165,7 +168,7 @@
         if (!latest || !latest.tag_name) return;
         if (cmpSemver(parseSemver(latest.tag_name), parseSemver(CURRENT_VERSION)) > 0
             && snoozed !== latest.tag_name) {
-          return fetchPatchesJson(latest.assets).then(function (patches) {
+          return fetchPatchesJson().then(function (patches) {
             var patchInfo = (patches && patches.patches && patches.patches[CURRENT_VERSION]) || null;
             showBanner(latest, patchInfo);
           });
