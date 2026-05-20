@@ -1,13 +1,18 @@
-/* updater_ui.js — auto-update via incremental patch (preferred) or full ZIP.
+/* updater_ui.js — chained incremental auto-update.
  *
- * Robust invoke: Tauri 2 exposes invoke at different globals depending on
- * withGlobalTauri + version. We probe all known paths so the buttons work
- * regardless. All banner buttons use onclick→IPC (never bare <a> navigation,
- * which a WebView cannot turn into a file download).
+ * Each release ships ONE patch (previous→current). patches.json (read from
+ * raw.githubusercontent.com, CORS-safe) holds the whole version chain:
+ *   { "latest": "v0.3.20",
+ *     "chain": { "v0.3.18": {to,url,sha256,size_mb}, "v0.3.19": {...}, ... } }
+ * A client N versions behind walks the chain from its current version to
+ * latest, collecting the ordered patch list, and applies them sequentially
+ * via one IPC call ("无数个小更新迭代"). All buttons use onclick→IPC; the
+ * one-click button shows only when a complete chain exists.
  */
 (function () {
   var REPO = 'takaqiao/pf2-wiki-offline';
   var API_URL = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+  var PATCHES_URL = 'https://raw.githubusercontent.com/' + REPO + '/main/patches.json';
   var SNOOZE_KEY = 'pf2_updater_snoozed_tag';
 
   var CURRENT_VERSION = null;
@@ -19,7 +24,7 @@
       .then(function (v) {
         if (v) { CURRENT_VERSION = v; return v; }
         var m = document.querySelector('meta[name="app-version"]');
-        CURRENT_VERSION = (m && m.content) ? m.content : 'v0.3.12';
+        CURRENT_VERSION = (m && m.content) ? m.content : 'v0.3.18';
         return CURRENT_VERSION;
       });
   }
@@ -41,7 +46,6 @@
     });
   }
 
-  // Probe every known Tauri 2 invoke location. Returns a fn(cmd,args)->Promise or null.
   function getInvoke() {
     try {
       if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
@@ -56,9 +60,7 @@
     } catch (e) {}
     return null;
   }
-  function inTauri() { return getInvoke() !== null; }
 
-  // Open a URL in the user's default browser (Tauri) or a new tab (browser).
   function openExternal(url) {
     var inv = getInvoke();
     if (inv) {
@@ -70,14 +72,39 @@
     }
   }
 
-  function showBanner(latest, patchInfo) {
+  function fetchPatchesJson() {
+    return fetch(PATCHES_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  // Walk the chain from `current` to `latestTag`. Returns
+  //   { steps: [{url,sha256,size_mb,to}], totalMb, count }  on a complete chain,
+  //   or null if no chain (or it doesn't reach latest → caller offers full ZIP).
+  function buildChain(patches, current, latestTag) {
+    if (!patches || !patches.chain) return null;
+    var steps = [];
+    var v = current;
+    var guard = 0;
+    while (patches.chain[v] && guard++ < 100) {
+      var step = patches.chain[v];
+      steps.push(step);
+      v = step.to;
+      if (v === latestTag) break;
+    }
+    if (!steps.length || v !== latestTag) return null;
+    var totalMb = steps.reduce(function (s, p) { return s + (Number(p.size_mb) || 0); }, 0);
+    return { steps: steps, totalMb: totalMb, count: steps.length };
+  }
+
+  function showBanner(latest, chain) {
     if (document.getElementById('pf2-updater-banner')) return;
     var releaseUrl = latest.html_url || ('https://github.com/' + REPO + '/releases/latest');
     var portableAsset = (latest.assets || []).find(function (a) {
       return /portable\.zip$/i.test(a.name);
     });
     var dlUrl = portableAsset ? portableAsset.browser_download_url : releaseUrl;
-    var bodyText = (latest.body || '').split('\n')[0].slice(0, 120);
+    var bodyText = (latest.body || '').split('\n')[0].slice(0, 110);
 
     var banner = document.createElement('div');
     banner.id = 'pf2-updater-banner';
@@ -92,14 +119,16 @@
     var btnStyle = 'background:#ffb300;color:#3a1a00;border:0;padding:6px 16px;border-radius:3px;font-weight:600;cursor:pointer;font:inherit';
     var ghostStyle = 'background:transparent;color:#fffbf6;border:1px solid rgba(255,255,255,0.5);padding:6px 12px;border-radius:3px;cursor:pointer;font:inherit';
 
-    // One-click patch button only when a patch exists. The full-download
-    // button is ALWAYS shown exactly once: prominent style when it's the only
-    // option, ghost style when a patch is the primary action. (Previously a
-    // null patchInfo produced TWO "下载完整版" buttons.)
-    var primaryBtn = patchInfo
-      ? '<button id="pf2-updater-patch" style="' + btnStyle + '">一键自动更新 (' + Number(patchInfo.size_mb).toFixed(0) + ' MB)</button>'
+    var patchLabel = '';
+    if (chain) {
+      patchLabel = '一键自动更新 ('
+        + (chain.count > 1 ? chain.count + ' 个补丁 · ' : '')
+        + (chain.totalMb < 1 ? '<1' : chain.totalMb.toFixed(1)) + ' MB)';
+    }
+    var primaryBtn = chain
+      ? '<button id="pf2-updater-patch" style="' + btnStyle + '">' + patchLabel + '</button>'
       : '';
-    var fullStyle = patchInfo ? ghostStyle : btnStyle;
+    var fullStyle = chain ? ghostStyle : btnStyle;
 
     banner.innerHTML =
       '<div id="pf2-updater-msg" style="flex:1 1 auto;min-width:200px"><strong>有新版本：</strong> '
@@ -125,36 +154,22 @@
 
     on('pf2-updater-patch', function () {
       var inv = getInvoke();
-      if (!inv) {
-        // Not in Tauri (or invoke unavailable) → open browser download instead
-        openExternal(patchInfo.url || dlUrl);
-        return;
-      }
+      if (!inv) { openExternal(dlUrl); return; }
       var btn = document.getElementById('pf2-updater-patch');
       btn.disabled = true;
       btn.textContent = '下载中…';
       document.getElementById('pf2-updater-msg').innerHTML =
-        '<strong>正在自动更新到 ' + escapeHtml(latest.tag_name) + '</strong> — 下载 ' + Number(patchInfo.size_mb).toFixed(0) + ' MB，完成后自动重启…';
-      inv('apply_incremental_update', { url: patchInfo.url, expectedSha: patchInfo.sha256 })
+        '<strong>正在更新到 ' + escapeHtml(latest.tag_name) + '</strong> — '
+        + chain.count + ' 个补丁，完成后自动重启…';
+      var payload = chain.steps.map(function (s) { return { url: s.url, sha256: s.sha256 }; });
+      inv('apply_incremental_update', { patches: payload })
         .catch(function (err) {
           btn.disabled = false;
-          btn.textContent = '一键自动更新 (' + Number(patchInfo.size_mb).toFixed(0) + ' MB)';
+          btn.textContent = patchLabel;
           document.getElementById('pf2-updater-msg').innerHTML =
             '<strong style="color:#ffd0d0">自动更新失败</strong>: ' + escapeHtml(String(err)) + ' — 可点「下载完整版」手动升级';
         });
     });
-  }
-
-  // GitHub release-asset download URLs (github.com/.../releases/download/...)
-  // redirect to objects.githubusercontent.com which sends NO CORS header, so a
-  // browser fetch fails with "TypeError: Failed to fetch". raw.githubusercontent
-  // .com serves with Access-Control-Allow-Origin:* — so we read patches.json
-  // (committed to the repo root) from there instead.
-  function fetchPatchesJson() {
-    var url = 'https://raw.githubusercontent.com/takaqiao/pf2-wiki-offline/main/patches.json?t=' + Date.now();
-    return fetch(url, { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
   }
 
   function check() {
@@ -169,8 +184,8 @@
         if (cmpSemver(parseSemver(latest.tag_name), parseSemver(CURRENT_VERSION)) > 0
             && snoozed !== latest.tag_name) {
           return fetchPatchesJson().then(function (patches) {
-            var patchInfo = (patches && patches.patches && patches.patches[CURRENT_VERSION]) || null;
-            showBanner(latest, patchInfo);
+            var chain = buildChain(patches, CURRENT_VERSION, latest.tag_name);
+            showBanner(latest, chain);
           });
         }
       }).catch(function () {});
