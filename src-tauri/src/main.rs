@@ -186,89 +186,123 @@ async fn install_update(
 ///    - relaunches pf2-wiki.exe
 /// 4. Spawn the ps1 detached
 /// 5. app.exit(0)
+/// One step in an update chain: a single patch zip + its sha256.
+#[derive(serde::Deserialize)]
+struct PatchStep {
+    url: String,
+    sha256: String,
+}
+
+/// Apply a CHAIN of incremental patches (v_cur→v+1→…→latest) in order.
+///
+/// Each release ships exactly ONE patch (previous→current). A client that is
+/// several versions behind receives the ordered list of intermediate patches
+/// and applies them sequentially — "无数个小更新迭代". Flow:
+/// 1. Download every patch zip, verify each sha256
+/// 2. Write update.ps1 that, after the app exits, Expand-Archive's each zip in
+///    chain order (later patch assumes the earlier one is already applied),
+///    processes each patch's _remove_these.txt, then relaunches
+/// 3. Spawn ps1 detached, app.exit(0)
 #[tauri::command]
 async fn apply_incremental_update(
     app: AppHandle,
-    url: String,
-    expected_sha: String,
+    patches: Vec<PatchStep>,
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
     use std::fs;
-    use std::io::{Read, Write};
+    use std::io::Read;
     use std::process::Command;
 
-    eprintln!("[pf2-wiki updater] downloading patch from {url}");
-    let resp = ureq::get(&url)
-        .timeout(std::time::Duration::from_secs(120))
-        .call()
-        .map_err(|e| format!("download failed: {e}"))?;
-    let mut buf = Vec::with_capacity(50 * 1024 * 1024);
-    resp.into_reader()
-        .take(500 * 1024 * 1024) // 500 MB hard cap
-        .read_to_end(&mut buf)
-        .map_err(|e| format!("read failed: {e}"))?;
-    eprintln!("[pf2-wiki updater] downloaded {} bytes", buf.len());
-
-    // Verify sha256
-    let mut hasher = Sha256::new();
-    hasher.update(&buf);
-    let actual = format!("{:x}", hasher.finalize());
-    if actual.to_lowercase() != expected_sha.to_lowercase() {
-        return Err(format!(
-            "sha256 mismatch: got {actual}, expected {expected_sha}"
-        ));
+    if patches.is_empty() {
+        return Err("no patches to apply".into());
     }
-    eprintln!("[pf2-wiki updater] sha256 verified");
 
-    // Save patch to temp
     let temp_dir = std::env::temp_dir();
-    let patch_path = temp_dir.join("pf2-wiki-patch.zip");
-    let ps1_path = temp_dir.join("pf2-wiki-update.ps1");
-    fs::write(&patch_path, &buf).map_err(|e| format!("save failed: {e}"))?;
+    let mut zip_paths: Vec<std::path::PathBuf> = Vec::new();
 
-    // Determine install dir
+    for (i, step) in patches.iter().enumerate() {
+        eprintln!(
+            "[pf2-wiki updater] downloading patch {}/{}: {}",
+            i + 1,
+            patches.len(),
+            step.url
+        );
+        let resp = ureq::get(&step.url)
+            .timeout(std::time::Duration::from_secs(180))
+            .call()
+            .map_err(|e| format!("download #{} failed: {e}", i + 1))?;
+        let mut buf = Vec::with_capacity(8 * 1024 * 1024);
+        resp.into_reader()
+            .take(800 * 1024 * 1024)
+            .read_to_end(&mut buf)
+            .map_err(|e| format!("read #{} failed: {e}", i + 1))?;
+        let mut hasher = Sha256::new();
+        hasher.update(&buf);
+        let actual = format!("{:x}", hasher.finalize());
+        if actual.to_lowercase() != step.sha256.to_lowercase() {
+            return Err(format!(
+                "patch #{} sha256 mismatch: got {actual}, expected {}",
+                i + 1,
+                step.sha256
+            ));
+        }
+        let zp = temp_dir.join(format!("pf2-wiki-patch-{i}.zip"));
+        fs::write(&zp, &buf).map_err(|e| format!("save #{} failed: {e}", i + 1))?;
+        zip_paths.push(zp);
+    }
+    eprintln!(
+        "[pf2-wiki updater] {} patch(es) downloaded + verified",
+        patches.len()
+    );
+
     let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
-    let install_dir = exe
-        .parent()
-        .ok_or("no parent dir")?
-        .to_path_buf();
+    let install_dir = exe.parent().ok_or("no parent dir")?.to_path_buf();
+    let ps1_path = temp_dir.join("pf2-wiki-update.ps1");
 
-    // Generate update.ps1
+    // PowerShell array of patch zip paths, in chain order.
+    let zips_ps = zip_paths
+        .iter()
+        .map(|p| format!("'{}'", p.display()))
+        .collect::<Vec<_>>()
+        .join(",");
+
     let ps1 = format!(
         r#"$ErrorActionPreference = 'Continue'
 Start-Sleep -Seconds 2
-$patch = '{patch}'
 $install = '{install}'
 $exe = '{exe}'
+$patches = @({zips})
 try {{
-    Expand-Archive -Path $patch -DestinationPath $install -Force
-    $removeFile = Join-Path $install '_remove_these.txt'
-    if (Test-Path $removeFile) {{
-        Get-Content $removeFile | ForEach-Object {{
-            if ($_ -and $_.Trim()) {{
-                $target = Join-Path $install $_
-                if (Test-Path $target) {{ Remove-Item $target -Force -ErrorAction SilentlyContinue }}
+    foreach ($patch in $patches) {{
+        Expand-Archive -Path $patch -DestinationPath $install -Force
+        $removeFile = Join-Path $install '_remove_these.txt'
+        if (Test-Path $removeFile) {{
+            Get-Content $removeFile | ForEach-Object {{
+                if ($_ -and $_.Trim()) {{
+                    $target = Join-Path $install $_
+                    if (Test-Path $target) {{ Remove-Item $target -Force -ErrorAction SilentlyContinue }}
+                }}
             }}
+            Remove-Item $removeFile -Force -ErrorAction SilentlyContinue
         }}
-        Remove-Item $removeFile -Force -ErrorAction SilentlyContinue
+        $manifestFile = Join-Path $install '_patch_manifest.json'
+        if (Test-Path $manifestFile) {{ Remove-Item $manifestFile -Force -ErrorAction SilentlyContinue }}
+        Remove-Item $patch -Force -ErrorAction SilentlyContinue
     }}
-    $manifestFile = Join-Path $install '_patch_manifest.json'
-    if (Test-Path $manifestFile) {{ Remove-Item $manifestFile -Force -ErrorAction SilentlyContinue }}
-    Remove-Item $patch -Force -ErrorAction SilentlyContinue
     Start-Process -FilePath $exe
 }} catch {{
-    [System.Windows.Forms.MessageBox]::Show("PF2 离线百科更新失败：`n$_", "更新失败", 0, 16)
+    try {{ Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show("PF2 离线百科更新失败：`n$_", "更新失败", 0, 16) }} catch {{}}
+    Start-Process -FilePath $exe
 }}
 Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
 "#,
-        patch = patch_path.display(),
         install = install_dir.display(),
-        exe = exe.display()
+        exe = exe.display(),
+        zips = zips_ps,
     );
     fs::write(&ps1_path, ps1).map_err(|e| format!("ps1 write failed: {e}"))?;
     eprintln!("[pf2-wiki updater] wrote {}", ps1_path.display());
 
-    // Launch detached PowerShell
     Command::new("powershell")
         .args([
             "-ExecutionPolicy",
@@ -282,7 +316,6 @@ Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
         .map_err(|e| format!("spawn powershell: {e}"))?;
 
     eprintln!("[pf2-wiki updater] update launcher spawned, exiting");
-    // Exit so PS can take over install dir
     app.exit(0);
     Ok(())
 }

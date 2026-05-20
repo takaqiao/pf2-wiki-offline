@@ -66,28 +66,42 @@ def sha256_of_zip(path: Path) -> str:
 
 def write_patches_json(patches_json: Path, from_ver: str, to_ver: str,
                        patch_zip: Path, base_url: str) -> None:
-    """Write/merge patches.json — manifest of available patches.
+    """Append one link to the version CHAIN in patches.json.
+
+    Each release ships exactly one patch (previous→current); this records that
+    single hop. The client walks the chain from its own version to `latest`,
+    collecting the ordered list of patches to apply — "无数个小更新迭代".
 
     Schema:
-      {"patches": {"<old_ver>": {"url": "...", "sha256": "...", "size_mb": N}, ...}}
+      {
+        "latest": "v0.3.20",
+        "chain": {
+          "v0.3.18": {"to": "v0.3.19", "url": "...", "sha256": "...", "size_mb": N},
+          "v0.3.19": {"to": "v0.3.20", "url": "...", "sha256": "...", "size_mb": N}
+        }
+      }
 
-    base_url is the GitHub release download URL prefix, e.g.
-      https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.8
+    The chain is cumulative — old hops stay (their patch zips live in their own
+    releases), so a client many versions behind can still chain up to latest.
+    base_url is the NEW release's download URL prefix.
     """
     if patches_json.exists():
         try:
             data = json.loads(patches_json.read_text(encoding='utf-8'))
         except Exception:
-            data = {'patches': {}}
+            data = {}
     else:
-        data = {'patches': {}}
-    data.setdefault('patches', {})
-    data['patches'][from_ver] = {
+        data = {}
+    # Migrate / drop any legacy flat 'patches' map.
+    data.pop('patches', None)
+    data.setdefault('chain', {})
+    data['chain'][from_ver] = {
+        'to': to_ver,
         'url': f'{base_url.rstrip("/")}/{patch_zip.name}',
         'sha256': sha256_of_zip(patch_zip),
         'size_mb': round(patch_zip.stat().st_size / 1024 / 1024, 2),
-        'to_version': to_ver,
     }
+    data['latest'] = to_ver
     patches_json.parent.mkdir(parents=True, exist_ok=True)
     patches_json.write_text(
         json.dumps(data, ensure_ascii=False, indent=2),
