@@ -110,6 +110,19 @@
     }
   }
 
+  // Move the page TOC into .layout as a real third flex column (sticky right
+   // rail) on wide viewports. This reserves physical space so article text can
+   // never overlap it (float+sticky did overlap). Narrow screens leave it
+   // inline as a full-width block.
+  function setupRightToc() {
+    var toc = document.querySelector('.page-toc-v2');
+    var layout = document.querySelector('.layout');
+    if (!toc || !layout) return;
+    if (window.innerWidth <= 900) return;       // narrow: keep inline block
+    if (toc.parentElement === layout) return;    // already a flex column
+    layout.appendChild(toc);
+  }
+
   // Hamburger toggle for mobile (paired with _v2_compat.css .sidebar-hamburger)
   function setupHamburger() {
     if (window.innerWidth > 640) return;
@@ -140,8 +153,9 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () { init(); setupRightToc(); });
   } else {
     init();
+    setupRightToc();
   }
 })();

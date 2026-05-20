@@ -581,37 +581,31 @@ body.dark div.page-categories li a {
 
 /* ---------- 6c. Page-level TOC (v2 builder-injected) ---------- */
 
-/* TOC floats to the RIGHT as a sticky sidebar (like modern doc sites) so it
-   never buries the article at the top. Article text flows down the left.
-   Collapses back to a full-width block on narrow viewports. */
+/* Default state (before JS moves it, and on narrow screens): a normal
+   full-width block. NO float — float+sticky together caused the article text
+   to slide under the TOC and overlap it. */
 div.page-toc-v2 {
-  float: right;
-  clear: right;
-  width: 260px;
-  margin: 4px 0 16px 24px;
+  margin: 12px 0 16px;
   padding: 10px 14px;
   background: var(--bg-alt);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 4px;
   font-size: 13px;
+  max-width: 100%;
+}
+/* When mw_collapsible.js moves the TOC into .layout (wide viewports), it
+   becomes a real third flex column — a sticky right rail that physically
+   reserves its own space, so article text can NEVER overlap it. */
+.layout > div.page-toc-v2 {
+  flex: 0 0 250px;
+  align-self: flex-start;
   position: sticky;
   top: 64px;
-  max-height: calc(100vh - 88px);
+  max-height: calc(100vh - 84px);
   overflow-y: auto;
-  z-index: 1;
+  margin: 16px 0 0;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-@media (max-width: 900px) {
-  div.page-toc-v2 {
-    float: none;
-    clear: both;
-    width: auto;
-    max-width: 100%;
-    position: static;
-    max-height: none;
-    margin: 16px 0;
-  }
 }
 body.dark div.page-toc-v2 {
   background: var(--card);
