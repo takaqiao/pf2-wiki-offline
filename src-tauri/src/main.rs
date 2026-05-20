@@ -5,21 +5,23 @@
 //   2. WebView loads localhost URL via window.location.replace
 //   3. External link clicks intercepted by assets/external_links.js -> IPC
 //      open_external -> open crate launches default browser
-//   4. On startup, async update check vs GitHub Release latest.json:
-//      - If newer version, emit "update-available" event to webview
-//      - Webview's updater_ui.js shows banner; user clicks "更新" -> IPC
-//        install_update -> Rust downloads + installs + restarts
+//   4. Updates are fully client-side: assets/updater_ui.js polls patches.json
+//      (raw.githubusercontent), walks the version chain, and on click invokes
+//      apply_incremental_update -> Rust downloads/verifies/extracts patches and
+//      relaunches. No standard updater plugin (portable build, no latest.json).
+//
+// ACL note: the wiki is served over http://127.0.0.1:<port>, so the webview's
+// IPC origin is REMOTE — capabilities/default.json MUST list those URLs under
+// `remote.urls` or every invoke is rejected with "not allowed by ACL".
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_updater::{Update, UpdaterExt};
+use tauri::{AppHandle, Manager};
 use tiny_http::{Header, Response, Server};
 
 fn pick_free_port() -> u16 {
@@ -143,34 +145,9 @@ fn serve_static(resource_root: PathBuf, port: u16) {
     }
 }
 
-#[derive(Clone, Serialize)]
-struct UpdateInfo {
-    current_version: String,
-    new_version: String,
-    body: Option<String>,
-}
-
-// Holds the latest Update object for the install_update command to use.
-type PendingUpdate = Arc<Mutex<Option<Update>>>;
-
 #[tauri::command]
 fn open_external(url: String) -> Result<(), String> {
     open::that(&url).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn install_update(
-    app: AppHandle,
-    pending: tauri::State<'_, PendingUpdate>,
-) -> Result<(), String> {
-    let update = pending.lock().map_err(|e| e.to_string())?.take();
-    let update = update.ok_or_else(|| "no pending update".to_string())?;
-    update
-        .download_and_install(|_chunk, _total| {}, || {})
-        .await
-        .map_err(|e| e.to_string())?;
-    // Restart the application after install
-    app.restart();
 }
 
 /// Apply incremental patch update for portable distribution.
@@ -300,7 +277,15 @@ Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
         exe = exe.display(),
         zips = zips_ps,
     );
-    fs::write(&ps1_path, ps1).map_err(|e| format!("ps1 write failed: {e}"))?;
+    // Write with a UTF-8 BOM. Windows PowerShell 5.1 decodes a BOM-less .ps1
+    // using the system ANSI code page (GB2312/CP936 on Chinese Windows), which
+    // mangles any non-ASCII install path interpolated below (e.g.
+    // C:\Users\<中文名>\...) into mojibake, breaking Expand-Archive. A BOM forces
+    // correct UTF-8 decoding. (The _remove_these.txt list is read with
+    // `Get-Content -Encoding UTF8` for the same reason.)
+    let mut ps1_bytes = vec![0xEF, 0xBB, 0xBF];
+    ps1_bytes.extend_from_slice(ps1.as_bytes());
+    fs::write(&ps1_path, ps1_bytes).map_err(|e| format!("ps1 write failed: {e}"))?;
     eprintln!("[pf2-wiki updater] wrote {}", ps1_path.display());
 
     Command::new("powershell")
@@ -324,15 +309,10 @@ fn main() {
     let port = pick_free_port();
     let start_url = format!("http://127.0.0.1:{port}/index.html");
 
-    let pending_update: PendingUpdate = Arc::new(Mutex::new(None));
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .manage(pending_update.clone())
         .invoke_handler(tauri::generate_handler![
             open_external,
-            install_update,
             apply_incremental_update
         ])
         .setup(move |app| {
@@ -398,39 +378,9 @@ fn main() {
                 let _ = main.eval(&format!("window.location.replace('{}')", start_url));
             }
 
-            // Async update check; emit "update-available" if newer version exists
-            let handle = app.handle().clone();
-            let pending = pending_update.clone();
-            tauri::async_runtime::spawn(async move {
-                match handle.updater() {
-                    Ok(updater) => match updater.check().await {
-                        Ok(Some(update)) => {
-                            eprintln!(
-                                "[pf2-wiki updater] update available: {} -> {}",
-                                update.current_version, update.version
-                            );
-                            let info = UpdateInfo {
-                                current_version: update.current_version.clone(),
-                                new_version: update.version.clone(),
-                                body: update.body.clone(),
-                            };
-                            if let Ok(mut slot) = pending.lock() {
-                                *slot = Some(update);
-                            }
-                            let _ = handle.emit("update-available", info);
-                        }
-                        Ok(None) => {
-                            eprintln!("[pf2-wiki updater] no update available");
-                        }
-                        Err(e) => {
-                            eprintln!("[pf2-wiki updater] check failed: {}", e);
-                        }
-                    },
-                    Err(e) => {
-                        eprintln!("[pf2-wiki updater] init failed: {}", e);
-                    }
-                }
-            });
+            // Update detection + application is entirely client-side: assets/
+            // updater_ui.js polls patches.json (raw.githubusercontent) and calls
+            // the apply_incremental_update command. No standard updater plugin.
 
             Ok(())
         })

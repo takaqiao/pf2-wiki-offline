@@ -1,12 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window. Grants core APIs + event listen (updater banner), the updater plugin, and shell open. The app's OWN commands (open_external / install_update / apply_incremental_update) are allowed automatically once the window is covered by any capability — they don't take a permission entry.",
+  "description": "Capability for the main window. Grants core APIs + event listen, shell open, and the app's OWN IPC commands (open_external / apply_incremental_update via the allow-ipc permission). CRITICAL: the wiki is served over http://127.0.0.1:<random-port> by tiny_http and the webview navigates there, so its IPC origin is REMOTE, not Local. A capability with only `local: true` grants NOTHING to a remote origin (Origin::matches returns false for (Remote, Local)). The `remote.urls` patterns below extend every permission here to the localhost http origin — without them ALL IPC (external links AND the updater) is rejected with 'not allowed by ACL'. Port is random each launch, so the port component must be the wildcard `*`.",
   "windows": ["main"],
+  "local": true,
+  "remote": {
+    "urls": ["http://127.0.0.1:*", "http://localhost:*"]
+  },
   "permissions": [
     "core:default",
     "core:event:default",
-    "updater:default",
     "shell:allow-open",
     "allow-ipc"
   ]
