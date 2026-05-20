@@ -603,17 +603,35 @@ div.page-toc-v2 summary {
 div.page-toc-v2 summary:hover {
   color: var(--accent);
 }
+/* No list markers — the mixed decimal/lower-alpha markers produced a
+   confusing a-f / 7 / h-ae sequence across flattened levels. Use indentation
+   + a chevron prefix to show hierarchy instead. */
 div.page-toc-v2 ul {
-  margin: 8px 0 4px;
-  padding-left: 24px;
-  list-style: decimal;
+  margin: 6px 0 2px;
+  padding-left: 4px;
+  list-style: none;
 }
 div.page-toc-v2 li {
-  padding: 2px 0;
+  padding: 1px 0;
+  list-style: none;
 }
-div.page-toc-v2 li.toclevel-3 {
-  list-style: lower-alpha;
-  margin-left: 16px;
+div.page-toc-v2 li a::before {
+  content: "› ";
+  color: var(--fg-mute);
+}
+div.page-toc-v2 li.toclevel-2 { padding-left: 0; }
+div.page-toc-v2 li.toclevel-3 { padding-left: 18px; }
+div.page-toc-v2 li.toclevel-4 { padding-left: 36px; }
+div.page-toc-v2 li.toclevel-5 { padding-left: 54px; }
+/* When expanded, cap height so a 30-section page doesn't bury the article. */
+div.page-toc-v2 > details[open] > ul {
+  max-height: 45vh;
+  overflow-y: auto;
+  columns: 2;
+  column-gap: 28px;
+}
+@media (max-width: 700px) {
+  div.page-toc-v2 > details[open] > ul { columns: 1; }
 }
 div.page-toc-v2 a {
   color: var(--link);
