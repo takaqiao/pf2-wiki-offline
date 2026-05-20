@@ -213,6 +213,137 @@ def rewrite_links(soup: BeautifulSoup, redirect_map: dict, title_index: dict) ->
     return n
 
 
+# ---- Inline wikitext rendering for Data: (ns=3500) JSON value cells ----
+# Some Data:* JSON fields store raw, *unparsed* wikitext (action=parse leaves it
+# literal inside <td class="mw-jsonconfig-value">). We do a lightweight pass:
+#   [[A|B]]            -> link to A, label B
+#   [[A]]              -> link to A, label A
+#   {{浮窗|类型|文字}}  -> tooltip span showing 文字 (title=类型)
+#   {{浮窗|文字}}       -> tooltip span showing 文字
+# Any other {{...}} template we can't render is reduced to its visible args
+# (pipe-joined) so no raw braces leak through.
+WIKILINK_RX = re.compile(r"\[\[([^\[\]|]+?)(?:\|([^\[\]]*?))?\]\]")
+TOOLTIP_RX = re.compile(r"\{\{\s*浮窗\s*\|([^{}]*?)\}\}")
+GENERIC_TPL_RX = re.compile(r"\{\{([^{}]*?)\}\}")
+
+
+def _data_link_html(target_title: str, label: str, redirect_map: dict, title_index: dict) -> str:
+    """Build an <a> (relative from data/ dir) for a [[wikilink]] target."""
+    frag = ""
+    if "#" in target_title:
+        target_title, frag = target_title.split("#", 1)
+        frag = "#" + frag
+    target_title = target_title.strip().replace("_", " ")
+    label = (label or target_title).strip()
+    if not target_title:
+        return html_lib.escape(label)
+    resolved = redirect_map.get(target_title, target_title)
+    entry = title_index.get(resolved) or title_index.get(target_title)
+    cls = ""
+    if entry:
+        target_dir, safe_fn = entry
+    else:
+        # Unknown target — guess namespace, mark as dead (.new) like rewrite_links.
+        ns_guess, bare = 0, target_title
+        if ":" in target_title:
+            prefix, rest = target_title.split(":", 1)
+            if prefix in NS_PREFIX:
+                ns_guess, bare = NS_PREFIX[prefix], rest
+        target_dir = NS_TO_DIR.get(ns_guess, "pages")
+        safe_fn = safe_title(bare)
+        cls = ' class="new"'
+    href = f"../{target_dir}/{urllib.parse.quote(safe_fn + '.html')}{frag}"
+    return f'<a href="{href}"{cls}>{html_lib.escape(label)}</a>'
+
+
+def render_wikitext_inline(text: str, redirect_map: dict, title_index: dict) -> str:
+    """Convert literal wikitext fragments to HTML. Input is plain text (not HTML)."""
+    if "[[" not in text and "{{" not in text:
+        return html_lib.escape(text)
+
+    # Tokenize, escaping the plain-text gaps and replacing markup spans.
+    out = []
+    pos = 0
+    # Process [[...]] and {{...}} in left-to-right order.
+    token_rx = re.compile(r"\[\[[^\[\]]*?\]\]|\{\{[^{}]*?\}\}")
+    for m in token_rx.finditer(text):
+        out.append(html_lib.escape(text[pos:m.start()]))
+        tok = m.group(0)
+        if tok.startswith("[["):
+            lm = WIKILINK_RX.match(tok)
+            if lm:
+                out.append(_data_link_html(lm.group(1), lm.group(2), redirect_map, title_index))
+            else:
+                out.append(html_lib.escape(tok[2:-2]))
+        else:  # {{...}}
+            tm = TOOLTIP_RX.match(tok)
+            if tm:
+                parts = [p.strip() for p in tm.group(1).split("|")]
+                if len(parts) >= 2:
+                    typ, txt = parts[0], parts[-1]
+                else:
+                    typ, txt = "", parts[0]
+                title_attr = f' title="{html_lib.escape(typ)}"' if typ else ""
+                out.append(
+                    f'<span class="huiji-tt huiji-tt-rendered"{title_attr}>'
+                    f'{html_lib.escape(txt)}</span>'
+                )
+            else:
+                # Unknown template: show visible args (drop name before first |),
+                # no braces. Args may themselves contain [[wikilinks]] (e.g.
+                # {{quote|...[[X]]...}}), so recurse to render those too. Also
+                # drop any leading key= from each pipe-separated arg.
+                inner = tok[2:-2]
+                args = inner.split("|")[1:] if "|" in inner else [inner]
+                cleaned = []
+                for arg in args:
+                    # strip a leading "key=" prefix (e.g. icon=生物, 标题=...)
+                    if "=" in arg:
+                        k, v = arg.split("=", 1)
+                        if "[[" not in k and "{{" not in k and len(k) <= 12:
+                            arg = v
+                    cleaned.append(arg)
+                joined = " ".join(a for a in cleaned if a.strip())
+                # Recurse to render any [[links]]/{{浮窗}} inside the args.
+                out.append(render_wikitext_inline(joined, redirect_map, title_index))
+        pos = m.end()
+    out.append(html_lib.escape(text[pos:]))
+    return "".join(out)
+
+
+def render_data_value_cells(soup: BeautifulSoup, redirect_map: dict, title_index: dict) -> int:
+    """For Data: pages, render unparsed wikitext inside JSON value cells.
+
+    Most cells are pure text, but some mix already-rendered HTML with stray
+    wikitext, so we walk each cell's descendant NavigableString text nodes and
+    replace any that contain [[ or {{ markup. We skip text inside <a>/<script>/
+    <style> to avoid nesting links or breaking code.
+    """
+    n = 0
+    SKIP_PARENTS = {"a", "script", "style"}
+    for cell in soup.select("td.mw-jsonconfig-value"):
+        if "[[" not in cell.get_text() and "{{" not in cell.get_text():
+            continue
+        # Collect text nodes first (mutating during iteration is unsafe).
+        targets = []
+        for node in cell.descendants:
+            if not isinstance(node, NavigableString):
+                continue
+            s = str(node)
+            if "[[" not in s and "{{" not in s:
+                continue
+            parent = node.parent
+            if parent is not None and parent.name in SKIP_PARENTS:
+                continue
+            targets.append(node)
+        for node in targets:
+            rendered = render_wikitext_inline(str(node), redirect_map, title_index)
+            frag = BeautifulSoup(rendered, "html.parser")
+            node.replace_with(*list(frag.contents))
+            n += 1
+    return n
+
+
 IMAGE_URL_RX = re.compile(
     # Match pf2 wiki image URLs from huijistatic.com or local /wiki/images/ paths.
     # Captures the base filename out of `/uploads/[thumb/]<a>/<aa>/<file>[/<W>px-<file>]`
@@ -453,6 +584,12 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     rewrite_links(soup, redirect_map, title_index)
     rewrite_images(soup, manifest)
     add_lazy_loading(soup)
+
+    # Data: pages store some fields as literal, unparsed wikitext inside JSON
+    # value cells. Convert [[links]] and {{浮窗}} tooltips to HTML so they
+    # render instead of showing raw markup.
+    if ns == 3500:
+        render_data_value_cells(soup, redirect_map, title_index)
 
     # For Category: pages (ns=14), inject auto-generated member list because
     # action=parse doesn't include MediaWiki's dynamic categorymembers listing.
