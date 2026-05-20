@@ -76,12 +76,20 @@
   feats 6625/专长4874(+1753) | spells 2442/法术1761(+681) | items 9469/物品3399(**+6080**) | creatures 1466/生物**2**(几乎全错) | ancestries **1**/族裔245(**漏245**) | backgrounds 474/背景462(+12,最准) | archetypes 2375/变体**0** | classes 4941/职业419(**+4522**,职业专长污染) | deities 96/信仰476(**漏406**) | locations 124/地理1145(**漏1061**) | other **15949**/无锚。
   根因 = 关键词子串(物品/职业/特征 命中海量导航/专长/trait 页)+ title 进 blob + 一页多桶。
   **真锚名(probe 确认,`_ac_probe_results.json`)**:creatures=生物、ancestries=**族裔**(非祖先)、deities=**信仰**(非神祇)、locations=**地理**(非地点)、archetypes=变体。
-  **⚠️ 两个锚本身不是单一 ns0 分类**:生物(仅 2 ns0)、变体(0 ns0)→ creatures/archetypes 不在单一分类,散在来源/类型分类(top50 无怪物类)→ 需数据驱动或分类并集(待 investigate)。
+  **⚠️ 两锚已 investigate 解决(`_anchor_investigation.json`)**:生物(2 ns0,无子分类)→ creatures **真定义=体型分类并集**{小型142,中型611,大型354,巨型206,超大型176}(微型=0/可能叫别名),并集=**1484**(体型是怪物专属,干净);变体(0 ns0)→ archetypes **真分类=变体（特征）=2153**。
+  **物品子类同坑**:武器=2、护甲=5、符文=17 ns0(分类近空)→ weapons/armor/runes 也得**数据驱动**;但 worn=穿戴物品(403)、consumables=消耗品（特征）(1107)、equipment=装备(400) 可分类驱动。
 - **C 功能性失效**(高):17 个子区 stub 全是 `<meta refresh url=browse-{items,spells,creatures}.html>`,**不带任何过滤**,标签仅出现在"正在跳转"文字里 → 6 个法术子区/6 个物品子区/5 个怪物等级**全落到同一张未过滤父表**。子区区分纯装饰。→ 需真实子分类/传统/等级驱动的过滤内容。
 - **C 子类锚名(probe 确认)**:物品子类 weapons=武器、armor=护甲、runes=符文(均存在/已在 B 缓存);worn=**穿戴物品**(407,非「佩戴物品」);consumables=**消耗品（特征）**(1111);**implements=法器 不存在**(0/missing,可能是数据属性);装备(equipment)=408(红链有员)。**⚠️ 法术传统无可用分类**:奥术/神圣/神秘/原初 bare 全 missing;仅 奥术（特征）=110 有员,神圣/神秘/原初（特征）全空 → **传统不是分类驱动,得读每法术的 tradition 数据字段**(ns=3500 data 或 infobox)。creatures 等级分段同理:wiki 无等级分类 → 读 creature level 数据。
 - **B 已验证正确(已结案)**:354 ns=14 分类全量 diff,317 完全一致,37 个差异(97 漏+22 多)经 `analyze_b_findings.py` 逐条根因 = **100% staleness**(94 漏=新增页不在离线语料;22 多+3 漏=remaster 重分类,命匣同时在 missing[2r] 和 extra[2e] 是铁证)。**build_v2.py 无 bug**。修复=P6 release 重抓(注意需跑 title harvest 以发现新增页,否则只重抓旧清单漏掉新页)。
 - **3294/3604 分类被标 missing:true**:红链分类(被引用但无 Category 页),build_v2 不为其生成页(只为 354 ns=14 生成)→ 与 358 数差 4 待查(低优)。
 - **A/C 锚分类真名核实(已部分确认,见 `_anchor_coverage.json`)**:有 ns=14 页且已拉 live 的 14 个=专长/法术/物品/**生物**/背景/变体/职业/**地理**/特征/戏法/聚能/武器/护甲/符文。**关键纠错**:creatures 真分类=**生物**(A 的 keyword 用「怪物」是错的);locations 真分类=**地理**(非「地点」);archetypes=**变体**(非「原型」)。**仍缺 ns=14 页(需 live 探测真名)**:祖先(?族裔)、神祇(?信仰)、消耗品/佩戴物品/法器(疑「(特征)」后缀)、法术传统 奥术/神圣/神秘/原初(疑「(特征)」后缀)。
+
+## P4 设计 — A 改为分类驱动 (替换 classify 关键词)
+**核心**:build_browse_v2.py 弃用 `classify()` 关键词,改建反向索引(同 build_v2 口径,反转 parse.categories),桶 = 指定真分类成员并集(ns=0 内容页),离线可建、无需网络。映射 `BUCKET_CATS`:
+- feats→[专长] | spells→[法术] | items→[物品] | ancestries→[族裔] | backgrounds→[背景] | classes→[职业] | deities→[信仰] | locations→[地理] | archetypes→[变体（特征）] | creatures→[小型,中型,大型,巨型,超大型,微型](体型并集≈1484)
+- other→ **废弃**(或改 conditions→[状态]=43);categories→ 保留(ns=14 全集);browse-all→ 保留(全 ns0 字母表)
+- 校验:改后 `diff_a.py` false_pos/neg 应≈0(staleness 级别)。
+**C 设计**(后做):物品 worn/consumables/equipment 用分类[穿戴物品/消耗品（特征）/装备];weapons/armor/runes + 法术传统 + 怪物等级 **无干净分类 → 读 ns=3500 数据字段**(待查 data schema);stub 改为真过滤内容页或带可用过滤参数。
 
 ## 迭代日志 (每次运行追加一行: 日期 | 本次干了什么 | 下次从哪继续)
 - 2026-05-21 | 建账本骨架 + 自迭代 prompt(本次未动逻辑) | 下次从 P0 开始
