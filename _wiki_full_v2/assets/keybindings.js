@@ -49,13 +49,23 @@
   }
 
   function findSearchInput() {
-    // Prefer topnav search (always present), fallback to any sidebar search input
-    return (
-      document.querySelector('.topnav-search-input') ||
-      document.querySelector('.sidebar .search-input, .sidebar input[type="search"]') ||
-      document.querySelector('input[type="search"]') ||
-      null
-    );
+    // Return the first VISIBLE search input. On mobile the topnav search box is
+    // display:none — focusing it silently fails. Skip hidden inputs
+    // (offsetParent === null) so the caller falls back to navigating to
+    // search.html instead of a no-op.
+    var sels = [
+      '.topnav-search-input',
+      '.sidebar .search-input',
+      '.sidebar input[type="search"]',
+      'input[type="search"]',
+    ];
+    for (var i = 0; i < sels.length; i++) {
+      var els = document.querySelectorAll(sels[i]);
+      for (var j = 0; j < els.length; j++) {
+        if (els[j].offsetParent !== null) return els[j];
+      }
+    }
+    return null;
   }
 
   function gotoSearch() {
