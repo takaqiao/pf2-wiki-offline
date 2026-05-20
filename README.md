@@ -4,10 +4,9 @@ Pathfinder 2nd Edition 中文资料离线镜像 + Tauri Windows 客户端。源�
 
 ## 终端用户
 
-1. 到 [Releases](../../releases) 下载 `PF2 离线百科_0.1.0_x64-setup.exe`（~1 GB）
-2. 双击安装（默认装到 `%LocalAppData%\Programs\pf2-wiki\`，不需要管理员）
-3. Start Menu / 桌面快捷方式启动
-4. 内嵌 HTTP server + WebView2 离线显示
+1. 到 [Releases](../../releases) 下载所需版本的 `x64-portable.zip`。
+2. 解压整个压缩包，保留 `_wiki_full_v2` 目录。
+3. 运行 `pf2-wiki.exe`。程序通过本地 HTTP 服务和 WebView2 显示离线内容。
 
 ## 开发者
 
@@ -24,7 +23,7 @@ Pathfinder 2nd Edition 中文资料离线镜像 + Tauri Windows 客户端。源�
 | F · build HTML | `build_v2.py --redirects` | 7 min | parse.text → HTML + redirect stubs |
 | F.5 · browse 页 | `build_browse_v2.py` + `build_class_hubs_v2.py` | 15 s | 13 buckets + classes/source hubs |
 | G · 搜索索引 | `build_search_v2.py` | 1.5 min | titles.js + bigram + word shards |
-| H · Tauri 打包 | `cargo tauri build` | 5-20 min | NSIS installer ~1 GB |
+| H · 打包发版 | `cargo build --release` + `release.ps1` | 5-20 min | portable ZIP ~1.2 GB（放弃 NSIS：2GB bundle 上游 bug）|
 
 总耗时（curl_cffi 并发版）：~25-35 min 端到端。
 
@@ -41,11 +40,11 @@ cd pf2wiki-scraper
 .\run_v2_pipeline.ps1
 ```
 
-### CI Build (GitHub Actions)
+### CI / 发版
 
-Push to `main` 触发 Windows runner build。如果 Release 里有 `wiki-data.zip`（pre-scraped 1.84 GB 资源包），workflow 会下载它打 NSIS。否则只 build exe。
+CI（GitHub Actions）**仅验证代码能编译**——不产出发布物。语料太大（不入 git）且 CF 反爬过不了无头 runner，**发版一律本地**：`src-tauri\release.ps1 -PrevVer vX -NewVer vY [-RebuildExe]`，产出 portable ZIP + 上传 Release + 更新 `patches.json`。
 
-Tag `v*` 自动上传到 Release。
+**更新机制**：纯客户端驱动——`assets/updater_ui.js` 拉 `patches.json`（raw.githubusercontent）走版本链，调 `apply_incremental_update` 应用增量补丁。**无** Tauri 标准 updater 插件、**无** `latest.json`、**无**签名。
 
 ## 项目结构
 
@@ -55,7 +54,6 @@ pf2-wiki-offline/
 ├── _wiki_full_v2/          Build scripts + CSS/JS/snippets (no built artifacts in git)
 ├── src-tauri/              Rust Tauri shell
 ├── _tauri_placeholder/     Minimal frontendDist (real content served by tiny_http)
-├── agent_outputs_v2/       Iteration log + scout report
 └── .github/workflows/      CI
 ```
 

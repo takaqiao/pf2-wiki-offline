@@ -24,6 +24,14 @@ $sv     = $NewVer.Replace('v','')
 $prevDir = "$base\pf2-wiki-offline_$($PrevVer.Replace('v',''))_x64-portable"
 $newDir  = "$base\pf2-wiki-offline_${sv}_x64-portable"
 
+# 护栏: prevDir 是增量补丁的 diff 基准，必须是【上一发布版未经改动的 portable 文件夹】。
+# 若它缺失或被覆盖（例如本地测试时换过 exe / 改过 _wiki_full_v2），补丁会算错
+# （要么丢失真实改动，要么把全部文件当新增 → 接近完整版大小）。
+if (-not (Test-Path $prevDir -PathType Container)) {
+  Write-Error "prevDir 不存在: $prevDir`n请从 $PrevVer 的 release 下载 portable.zip 解压回此处，确保是干净的已发布版本后再发版。"
+  exit 1
+}
+
 if ($RebuildExe) {
   Write-Host "[*] cargo build ..."
   Push-Location "$fvtt\src-tauri"
