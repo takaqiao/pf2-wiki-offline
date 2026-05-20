@@ -277,7 +277,7 @@ try {{
         Expand-Archive -Path $patch -DestinationPath $install -Force
         $removeFile = Join-Path $install '_remove_these.txt'
         if (Test-Path $removeFile) {{
-            Get-Content $removeFile | ForEach-Object {{
+            Get-Content $removeFile -Encoding UTF8 | ForEach-Object {{
                 if ($_ -and $_.Trim()) {{
                     $target = Join-Path $install $_
                     if (Test-Path $target) {{ Remove-Item $target -Force -ErrorAction SilentlyContinue }}

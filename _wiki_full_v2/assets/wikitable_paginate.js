@@ -427,6 +427,16 @@
       var cls = t.className || '';
       if (cls.indexOf('wikitable') === -1) continue;
       if (t.__wpPagerInit) continue;
+      // Skip tables driven by the wiki's CustomFilter ($CustomFilter), which
+      // owns row visibility via .cf-item display toggling. Two row-visibility
+      // systems fight: CustomFilter's window.load pass forces display='' on all
+      // matching rows, overriding our pagination's display:none — leaving all
+      // 816 rows visible and the pager frozen. CustomFilter already provides
+      // filtering, so pagination is redundant here.
+      if (cls.indexOf('filterable') !== -1 || cls.indexOf('cf-container') !== -1
+          || t.querySelector('.cf-item')) {
+        continue;
+      }
       try {
         var s = build(t);
         if (s) t.__wpPagerInit = true;
