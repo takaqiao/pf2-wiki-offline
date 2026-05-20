@@ -1,0 +1,14 @@
+# Manually-defined permission for the application's OWN IPC commands.
+# tauri-build does not auto-generate permissions for commands declared in
+# main.rs (binary crate), so the capability has nothing to allow and the
+# webview's invoke() is rejected with "not allowed by ACL". This permission
+# explicitly allows them; the capability references it by identifier.
+
+[[permission]]
+identifier = "allow-ipc"
+description = "Allow the app's own IPC commands: open_external, install_update, apply_incremental_update."
+commands.allow = [
+    "open_external",
+    "install_update",
+    "apply_incremental_update",
+]
