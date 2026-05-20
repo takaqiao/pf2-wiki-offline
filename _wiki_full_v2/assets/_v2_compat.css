@@ -1400,6 +1400,40 @@ body.dark .mw-parser-output .cf-item {
   border-color: var(--border, #3a3a3a);
 }
 
+/* ---------- Wikitable click-to-sort headers (wikitable_sort.js) ----------
+   Companion CSS for assets/wikitable_sort.js. The script tags eligible
+   header cells with `.sortable` and toggles `.sorted-asc` / `.sorted-desc`,
+   plus inserts a `<span class="sort-indicator">` for the arrow glyph. */
+.wikitable th.sortable,
+.wikitable tr.wikitable2R th.sortable,
+.wikitable tr.wikitable2R td.sortable,
+.wikitable tr:first-child th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.wikitable th.sortable:hover,
+.wikitable tr.wikitable2R th.sortable:hover,
+.wikitable tr.wikitable2R td.sortable:hover,
+.wikitable tr:first-child th.sortable:hover {
+  filter: brightness(1.08);
+}
+.wikitable .sort-indicator {
+  margin-left: 4px;
+  opacity: 0.4;
+  font-size: 0.9em;
+  display: inline-block;
+}
+.wikitable th.sorted-asc .sort-indicator,
+.wikitable th.sorted-desc .sort-indicator,
+.wikitable tr.wikitable2R th.sorted-asc .sort-indicator,
+.wikitable tr.wikitable2R th.sorted-desc .sort-indicator,
+.wikitable tr.wikitable2R td.sorted-asc .sort-indicator,
+.wikitable tr.wikitable2R td.sorted-desc .sort-indicator,
+.wikitable tr:first-child th.sorted-asc .sort-indicator,
+.wikitable tr:first-child th.sorted-desc .sort-indicator {
+  opacity: 1;
+}
+
 /* ---------- 9. Category member list (ns=14 reverse index) ----------
    build_v2 injects an auto-generated `<div class="mw-category">` listing for
    ns=14 pages because action=parse doesn't include MediaWiki's dynamic
@@ -1434,4 +1468,159 @@ body.dark .mw-parser-output .cf-item {
 body.dark .mw-category-group h3 {
   background: rgba(255,255,255,0.04);
   color: #ffcc66;
+}
+
+/* =========================================================================
+ * Keybind cheat-sheet modal — driven by assets/keybindings.js
+ * Triggered by "?" key, closed via Esc / backdrop click / × button.
+ * ========================================================================= */
+.pf2-keybind-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.66);
+  animation: pf2-keybind-fadein 140ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes pf2-keybind-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.pf2-keybind-modal-panel {
+  position: relative;
+  max-width: 460px;
+  width: calc(100% - 40px);
+  max-height: 86vh;
+  overflow: auto;
+  background: #fffbf3;
+  color: #2a1a08;
+  border-radius: 8px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  padding: 22px 26px 18px;
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+        Helvetica, Arial, "Microsoft YaHei", sans-serif;
+  animation: pf2-keybind-pop 160ms ease-out;
+}
+@keyframes pf2-keybind-pop {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+.pf2-keybind-modal-title {
+  margin: 0 0 14px;
+  padding: 0 32px 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #6d2002;
+  border-bottom: 1px solid rgba(109, 32, 2, 0.18);
+}
+.pf2-keybind-modal-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  column-gap: 18px;
+  row-gap: 8px;
+  align-items: baseline;
+}
+.pf2-keybind-modal-list dt {
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+.pf2-keybind-modal-list dd {
+  margin: 0;
+  color: #4a3826;
+}
+.pf2-keybind-modal-list kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 7px;
+  margin: 0 1px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #fff;
+  color: #2a1a08;
+  font: 600 12.5px/1.2 "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+        monospace;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  vertical-align: middle;
+}
+.pf2-keybind-or {
+  display: inline-block;
+  margin: 0 4px;
+  color: #8a6a48;
+  font-size: 11.5px;
+}
+.pf2-keybind-modal-hint {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(109, 32, 2, 0.12);
+  font-size: 12px;
+  color: #8a6a48;
+  text-align: center;
+}
+.pf2-keybind-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #6d2002;
+  font: 700 22px/1 sans-serif;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.pf2-keybind-modal-close:hover,
+.pf2-keybind-modal-close:focus-visible {
+  background: rgba(109, 32, 2, 0.12);
+  outline: none;
+}
+
+/* Dark theme overrides */
+body.dark .pf2-keybind-modal-panel {
+  background: #1f1a14;
+  color: #f0e3cd;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7);
+}
+body.dark .pf2-keybind-modal-title {
+  color: #ffcc66;
+  border-bottom-color: rgba(255, 204, 102, 0.25);
+}
+body.dark .pf2-keybind-modal-list dd { color: #d6c6aa; }
+body.dark .pf2-keybind-modal-list kbd {
+  background: #2c241b;
+  color: #ffe9bf;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+body.dark .pf2-keybind-or { color: #b89c70; }
+body.dark .pf2-keybind-modal-hint {
+  color: #b89c70;
+  border-top-color: rgba(255, 204, 102, 0.18);
+}
+body.dark .pf2-keybind-modal-close { color: #ffcc66; }
+body.dark .pf2-keybind-modal-close:hover,
+body.dark .pf2-keybind-modal-close:focus-visible {
+  background: rgba(255, 204, 102, 0.16);
+}
+
+@media (max-width: 480px) {
+  .pf2-keybind-modal-list {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+  }
+  .pf2-keybind-modal-list dt { text-align: left; }
+  .pf2-keybind-modal-list dd { margin-bottom: 6px; color: inherit; opacity: 0.85; }
+}
+
+@media print {
+  .pf2-keybind-modal { display: none !important; }
 }
