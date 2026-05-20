@@ -203,7 +203,7 @@ def should_skip(title: str) -> bool:
 
 
 def iter_parsed(limit: int | None = None):
-    """Yield (ns, pageid, title, body_text, excerpt, categories) from parsed JSON."""
+    """Yield (ns, pageid, title, body_text, excerpt, categories, links) from parsed JSON."""
     n = 0
     for sub in sorted(PARSED_DIR.iterdir()):
         if not sub.is_dir() or sub.name.startswith("_"):
@@ -231,26 +231,79 @@ def iter_parsed(limit: int | None = None):
             body_text = WHITESPACE_RE.sub(" ", body_text)
             excerpt = make_excerpt(body_text, 100)
             categories = parse.get("categories", []) or []
-            yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt, categories
+            links = parse.get("links", []) or []
+            yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt, categories, links
             n += 1
             if limit and n >= limit:
                 return
+
+
+def compute_inlinks(limit: int | None = None) -> dict[str, int]:
+    """Pass 1: scan all parsed JSON and tally how often each title is linked-to.
+
+    Uses parse.links (MediaWiki's resolved internal-link list) so anchors,
+    redirects, and templated links all count. Only links with exists=True
+    in indexable namespaces (0/14/102/3500) are counted; template/file links
+    are ignored. The returned dict maps page title -> inbound-link count.
+    """
+    counts: dict[str, int] = {}
+    allowed_ns = {0, 14, 102, 3500}
+    n = 0
+    for sub in sorted(PARSED_DIR.iterdir()):
+        if not sub.is_dir() or sub.name.startswith("_"):
+            continue
+        for f in sorted(sub.iterdir()):
+            if not f.name.endswith(".json"):
+                continue
+            try:
+                doc = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if should_skip(doc.get("title", "")):
+                continue
+            parse = doc.get("parse", {})
+            for link in parse.get("links", []) or []:
+                if not isinstance(link, dict):
+                    continue
+                if not link.get("exists"):
+                    continue
+                if link.get("ns") not in allowed_ns:
+                    continue
+                t = link.get("title", "")
+                if not t or should_skip(t):
+                    continue
+                counts[t] = counts.get(t, 0) + 1
+            n += 1
+            if limit and n >= limit:
+                return counts
+    return counts
 
 
 def build(out_dir: Path, limit: int | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     SHARDS_DIR.mkdir(exist_ok=True)
 
+    # Pass 1: inbound-link tally so popularity is available before titles are
+    # written. Each page contributes its parse.links targets once per occurrence;
+    # the resulting count approximates "how many other wiki pages reference me",
+    # which we use as a tiebreaker when two results share a relevance score.
+    print("[1/2] computing inbound-link popularity …")
+    t_pop = time.time()
+    inlinks = compute_inlinks(limit=limit)
+    print(f"      {len(inlinks)} distinct titles linked, {time.time()-t_pop:.1f}s")
+
     titles: list[dict] = []
     bigram_posts: dict[str, list[int]] = {}
     word_posts: dict[str, list[int]] = {}
     type_codes: list[str] = []  # one char per title, aligned to titles[i]
+    popularity: list[int] = []  # inbound-link count, aligned to titles[i]
 
     t0 = time.time()
     seen_id = 0
     stub_count = 0
+    print("[2/2] tokenising titles + bodies …")
 
-    for ns, pageid, title, body, excerpt, categories in iter_parsed(limit=limit):
+    for ns, pageid, title, body, excerpt, categories, _links in iter_parsed(limit=limit):
         href = page_href(ns, title)
         kind = "d" if ns == 3500 else ("c" if ns == 14 else "p")
         is_stub = len(body) < STUB_BODY_THRESHOLD
@@ -261,6 +314,7 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         seen_id += 1
         titles.append({"i": entry_id, "t": title, "h": href, "k": kind, "e": excerpt})
         type_codes.append(infer_type(categories, is_stub=is_stub))
+        popularity.append(inlinks.get(title, 0))
 
         # Index sources: title + first 600 chars of body (skip body for stubs)
         token_text = title + (" \n " + body[:600] if not is_stub else "")
@@ -292,7 +346,11 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         word_shards.setdefault(b, {})[w] = ids
 
     # Write titles.js (v1-compatible JSONP — search.js expects __PF2_TITLES.items)
-    titles_payload = {"v": 2, "items": titles}
+    # `pop` is a parallel array of inbound-link counts (one int per item, same
+    # ordering as items[i]); search.js consults it as a secondary sort key when
+    # multiple results share a relevance score, so "战士" beats "战士专长(2e)"
+    # because the bare class page is linked to far more often.
+    titles_payload = {"v": 2, "items": titles, "pop": popularity}
     titles_js = "window.__PF2_TITLES = " + json.dumps(titles_payload, ensure_ascii=False, separators=(",", ":")) + ";"
     (out_dir / "titles.js").write_text(titles_js, encoding="utf-8")
 
@@ -364,10 +422,20 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         for c, n in sorted(type_dist.items(), key=lambda x: -x[1])
     )
 
+    # Popularity stats — useful sanity check that inbound-link counts landed.
+    pop_max = max(popularity) if popularity else 0
+    pop_nz = sum(1 for p in popularity if p > 0)
+    top_pop = sorted(
+        ((p, titles[i]["t"]) for i, p in enumerate(popularity) if p > 0),
+        reverse=True,
+    )[:5]
+    top_pop_str = ", ".join(f"{t}({p})" for p, t in top_pop) if top_pop else "(none)"
+
     print(f"\n[done] {len(titles)} pages, {stub_count} stubs, {len(bigram_posts)} bigrams, {len(word_posts)} words")
     print(f"       titles.js: {sizes['titles.js']/1024/1024:.1f} MB")
     print(f"       shards total: {sizes['shards_total']/1024/1024:.1f} MB ({len(bg_shard_files)}b + {len(w_shard_files)}w)")
     print(f"       types.js distribution: {dist_pretty}")
+    print(f"       popularity: {pop_nz}/{len(titles)} pages linked-to, max={pop_max}; top: {top_pop_str}")
     print(f"       built in {elapsed:.1f}s")
     return sizes
 

@@ -267,11 +267,180 @@ div.page-categories li a:hover {
   border-color: var(--accent);
 }
 
-/* ---------- 4b. Huiji tooltip — visual hint that title attr present ---------- */
+/* ---------- 4b. Huiji tooltip — visual hint + rich popup ---------- */
 
 span.huiji-tt.huiji-tt-rendered {
   border-bottom: 1px dotted var(--accent-soft);
   cursor: help;
+}
+
+/* Rich popup (.pf2-tt-popup) — see assets/huiji_tt.js.
+   z-index 50 keeps it under the sticky topnav (z=100) so it never
+   covers the banner / topbar chrome. */
+.pf2-tt-popup {
+  position: absolute;
+  z-index: 50;
+  max-width: 360px;
+  min-width: 200px;
+  background: var(--card, #fbf7eb);
+  color: var(--fg, #222);
+  border: 1px solid var(--border-strong, #b8a878);
+  border-radius: 6px;
+  padding: 10px 12px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(2px);
+  animation: pf2-tt-fade-in 0.12s ease-out forwards;
+}
+@keyframes pf2-tt-fade-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+.pf2-tt-popup .pf2-tt-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent-band, #5b1414);
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--accent-soft, #8e2a2a);
+  padding-bottom: 4px;
+}
+.pf2-tt-popup .pf2-tt-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.pf2-tt-popup .pf2-tt-title a:hover {
+  text-decoration: underline;
+}
+.pf2-tt-popup .pf2-tt-tags {
+  font-size: 12px;
+  color: var(--fg-mute, #6a6256);
+  margin-bottom: 4px;
+}
+.pf2-tt-popup .pf2-tt-tmpl {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--fg-mute, #6a6256);
+  opacity: 0.7;
+}
+.pf2-tt-popup .pf2-tt-text {
+  font-size: 12.5px;
+  color: var(--fg, #222);
+}
+.pf2-tt-popup .pf2-tt-card {
+  font-size: 12.5px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pf2-tt-popup .pf2-tt-card .flex-1 {
+  display: block;
+  margin: 2px 0;
+}
+.pf2-tt-popup .pf2-tt-card hr {
+  border: 0;
+  border-top: 1px solid var(--border, #d9d2c1);
+  margin: 6px 0;
+}
+.pf2-tt-popup .pf2-tt-card .tag {
+  display: inline-block;
+  background: var(--bg-alt, #f0eadb);
+  padding: 1px 6px;
+  margin: 0 3px 2px 0;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.pf2-tt-popup .pf2-tt-card a {
+  color: var(--link, #6a1d00);
+  text-decoration: none;
+  pointer-events: none; /* nested links inside preview are non-interactive */
+}
+.pf2-tt-popup .pf2-tt-card .aonlink,
+.pf2-tt-popup .pf2-tt-card .mw-editsection {
+  display: none;
+}
+.pf2-tt-popup .pf2-tt-err,
+.pf2-tt-popup .pf2-tt-empty {
+  font-size: 12px;
+  color: var(--fg-mute, #6a6256);
+  font-style: italic;
+}
+.pf2-tt-popup.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--accent-soft, #8e2a2a);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: pf2-tt-spin 0.8s linear infinite;
+}
+@keyframes pf2-tt-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Arrow (small triangle pointing at anchor) */
+.pf2-tt-popup .pf2-tt-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border: 1px solid var(--border-strong, #b8a878);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.pf2-tt-popup.pf2-tt-below .pf2-tt-arrow {
+  top: -7px;
+  border-right: none;
+  border-bottom: none;
+}
+.pf2-tt-popup.pf2-tt-above .pf2-tt-arrow {
+  bottom: -7px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Dark mode adaptation */
+body.dark .pf2-tt-popup {
+  background: var(--card, #1d1d1d);
+  color: var(--fg, #e6e1d3);
+  border-color: var(--border, #3a3a3a);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.55);
+}
+body.dark .pf2-tt-popup .pf2-tt-title {
+  color: var(--gold, #d4b56a);
+  border-bottom-color: var(--accent-soft, #8e2a2a);
+}
+body.dark .pf2-tt-popup .pf2-tt-tags,
+body.dark .pf2-tt-popup .pf2-tt-tmpl,
+body.dark .pf2-tt-popup .pf2-tt-err,
+body.dark .pf2-tt-popup .pf2-tt-empty {
+  color: var(--fg-mute, #b8b3a0);
+}
+body.dark .pf2-tt-popup .pf2-tt-card .tag {
+  background: var(--bg-alt, #2a2a2a);
+  color: var(--fg, #e6e1d3);
+}
+body.dark .pf2-tt-popup .pf2-tt-card a {
+  color: var(--gold, #d4b56a);
+}
+body.dark .pf2-tt-popup .pf2-tt-arrow {
+  border-color: var(--border, #3a3a3a);
+}
+
+/* Hide tooltip in print */
+@media print {
+  .pf2-tt-popup { display: none !important; }
+}
+/* Touch-only: tooltip JS falls back to native title attr, no popup */
+@media (hover: none) {
+  .pf2-tt-popup { display: none !important; }
 }
 
 /* ---------- 5. mw-parser-output content tweaks ---------- */
@@ -393,7 +562,10 @@ body.dark .thumbcaption {
 body.dark .mw-parser-output a {
   color: var(--link);
 }
-body.dark .mw-parser-output a.new {
+body.dark .mw-parser-output a.new,
+body.dark a.new:link,
+body.dark p a.new:link,
+body.dark .mw-parser-output a.new:link {
   color: #ff7575 !important;
 }
 
@@ -652,3 +824,614 @@ body.dark a.external, body.dark .mw-parser-output a.external {
   margin-bottom: 0.4em;
 }
 
+/* Dark mode for in-article .sidebar (its light bg was set above
+   to #f8f8f8 and stuck on dark pages) */
+body.dark .mw-parser-output .sidebar {
+  background: var(--card, #2a2a2a) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border-color: var(--border, #3a3a3a) !important;
+}
+body.dark .mw-parser-output .sidebar a,
+body.dark .mw-parser-output .sidebar a:link {
+  color: #6cb6ff !important;
+}
+body.dark .mw-parser-output .sidebar a.mw-redirect:link,
+body.dark .mw-parser-output .sidebar a.external:link {
+  color: #ffc857 !important;
+}
+
+/* ============================================================
+   Dark-mode element sweep — Playwright audit of 战士.html scanned
+   842 elements and found 12 unique contrast bugs across ~170
+   instances. Root cause: wiki_native.css + huijiwiki load.php
+   external stylesheet force `body { background: #fff }` without
+   `!important`, and various wiki widgets carry inline styles
+   that don't read from CSS vars. These rules use `!important`
+   to defeat the cascading wiki literals.
+   ============================================================ */
+
+/* --- Body / main shell — defeat external load.php white bg --- */
+body.dark,
+body.dark main.page-body,
+body.dark #mw-content-text,
+body.dark .mw-parser-output {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+}
+
+/* --- Link colors: must beat wiki_native's `p a { color: #b36600 }`
+   rule (specificity 0,0,2). Using `:link` pseudo-class adds an
+   extra (0,1,0) bump so `body.dark p a:link` totals (0,2,2)
+   which decisively wins. --- */
+
+/* Sidebar links — top nav + in-page sidebar + bookmark list +
+   recent list (both ul.sb-bm-list and ul.sb-rc-list). Cover :link
+   AND :visited explicitly because :visited has special UA priority
+   and wiki_native's `a:visited { color: ... }` can win otherwise. */
+body.dark nav.wiki-sidebar a,
+body.dark nav.wiki-sidebar a:link,
+body.dark nav.wiki-sidebar a:visited,
+body.dark nav.wiki-sidebar .sb-home,
+body.dark nav.wiki-sidebar .sb-home:link,
+body.dark nav.wiki-sidebar .sb-home:visited,
+body.dark nav.wiki-sidebar details.sb-group a,
+body.dark nav.wiki-sidebar details.sb-group a:link,
+body.dark nav.wiki-sidebar details.sb-group a:visited,
+body.dark nav.wiki-sidebar li a,
+body.dark nav.wiki-sidebar li a:link,
+body.dark nav.wiki-sidebar li a:visited,
+body.dark nav.wiki-sidebar ul.sb-bm-list a:visited,
+body.dark nav.wiki-sidebar ul.sb-rc-list a:visited {
+  color: #6cb6ff !important;
+}
+body.dark nav.wiki-sidebar a:hover {
+  color: #a0d0ff !important;
+}
+
+/* mw-selflink (current-page marker — wiki_native sets
+   `color: inherit` which inherits parent dark grey = invisible) */
+body.dark a.mw-selflink,
+body.dark a.mw-selflink:link,
+body.dark a.selflink,
+body.dark .mw-parser-output a.mw-selflink,
+body.dark .mw-parser-output a.mw-selflink:link {
+  color: var(--gold, #ffb300) !important;
+  font-weight: 600 !important;
+}
+
+/* In-content links inside <p> — wiki_native has `p a { color:#b36600 }`
+   which only gives ~3.3:1 on dark bg. Use :link to bump specificity
+   beyond `p a`. */
+body.dark p a:link,
+body.dark main.page-body p a:link,
+body.dark .mw-parser-output p a:link {
+  color: #6cb6ff !important;
+}
+
+/* External / redirect — keep amber but brighter, with :link bump */
+body.dark a.external,
+body.dark a.external:link,
+body.dark a.external.text,
+body.dark a.external.text:link,
+body.dark p a.external:link,
+body.dark p a.external.text:link,
+body.dark .mw-parser-output a.external:link {
+  color: #ffc857 !important;
+}
+body.dark a.mw-redirect,
+body.dark a.mw-redirect:link,
+body.dark p a.mw-redirect:link,
+body.dark .mw-parser-output a.mw-redirect:link {
+  color: #6cb6ff !important;
+}
+
+/* --- div.intro: server uses inline style="color:rgb(0,42,23)";
+   the inline win beats class rules, so use !important + a more
+   specific selector. --- */
+body.dark div.intro,
+body.dark .mw-parser-output div.intro,
+body.dark .intro[style] {
+  color: var(--gold, #d4b56a) !important;
+  border-bottom-color: var(--gold-soft, #b8a878) !important;
+  background: transparent !important;
+}
+
+/* --- well / quote-primary: Bootstrap-style flavor-text panel
+   that ships with bg #e9ded0 light parchment --- */
+body.dark div.well,
+body.dark .well,
+body.dark .well.quote-primary {
+  background: var(--card, #2a2a2a) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border-color: var(--border, #3a3a3a) !important;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.4);
+}
+
+/* --- <code>, <pre>, <kbd>, <samp>, <tt> code surfaces --- */
+body.dark code,
+body.dark pre,
+body.dark tt,
+body.dark kbd,
+body.dark samp,
+body.dark .mw-parser-output code,
+body.dark .mw-parser-output pre {
+  background: #1f1f1f !important;
+  color: #d4d4d4 !important;
+  border: 1px solid #3a3a3a !important;
+}
+body.dark pre {
+  padding: 10px 12px;
+}
+body.dark kbd {
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.5);
+}
+
+/* --- <blockquote> (no current usage but defensive) --- */
+body.dark blockquote,
+body.dark .mw-parser-output blockquote {
+  background: var(--bg-alt, #242424) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border-left: 4px solid var(--accent-band, #6d2002) !important;
+  padding: 8px 14px;
+  margin: 12px 0;
+}
+
+/* --- <hr> dividers (default = #ccc on light, becomes invisible
+   on dark) --- */
+body.dark hr,
+body.dark .mw-parser-output hr {
+  border-color: var(--border, #3a3a3a) !important;
+  background: var(--border, #3a3a3a) !important;
+  color: var(--border, #3a3a3a) !important;
+}
+
+/* --- <mark> highlight --- */
+body.dark mark,
+body.dark .mw-parser-output mark {
+  background: #5b4700 !important;
+  color: #ffe9a3 !important;
+}
+
+/* --- Form controls: <input>, <textarea>, <select>, <button>,
+   <fieldset>, <legend> --- */
+body.dark input,
+body.dark input[type="text"],
+body.dark input[type="search"],
+body.dark input[type="email"],
+body.dark input[type="number"],
+body.dark textarea,
+body.dark select {
+  background: var(--card, #2a2a2a) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border: 1px solid var(--border, #3a3a3a) !important;
+}
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: var(--fg-mute, #808080) !important;
+}
+body.dark input:focus,
+body.dark textarea:focus,
+body.dark select:focus {
+  outline: none;
+  border-color: var(--accent, #c43a3e) !important;
+  box-shadow: 0 0 0 2px rgba(196,58,62,.25);
+}
+body.dark button {
+  background: var(--card, #2a2a2a) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border: 1px solid var(--border, #3a3a3a) !important;
+}
+body.dark button:hover {
+  background: var(--card-alt, #303030) !important;
+  border-color: var(--border-strong, #555) !important;
+}
+body.dark fieldset {
+  border-color: var(--border, #3a3a3a) !important;
+}
+body.dark legend {
+  color: var(--fg, #e3e3e3) !important;
+}
+
+/* --- <details> / <summary> collapsible (used by sidebar groups,
+   page-toc, sometimes in-content disclosures) --- */
+body.dark details,
+body.dark .mw-parser-output details {
+  border-color: var(--border, #3a3a3a) !important;
+}
+body.dark summary,
+body.dark .mw-parser-output summary {
+  color: var(--fg, #e3e3e3) !important;
+}
+body.dark summary:hover {
+  color: var(--accent-soft, #d96666) !important;
+}
+
+/* --- Tooltip flavors (huiji-tt span + smwttcontent + tippy) --- */
+body.dark .tippy-tooltip,
+body.dark .tippy-box,
+body.dark .huiji-tt,
+body.dark span.huiji-tt.huiji-tt-rendered,
+body.dark .smwttcontent,
+body.dark .smwttinline,
+body.dark .smwttpersist {
+  background: var(--card, #2a2a2a) !important;
+  color: var(--fg, #e3e3e3) !important;
+  border: 1px solid var(--border-strong, #555) !important;
+}
+body.dark span.huiji-tt.huiji-tt-rendered {
+  border: 0 !important;
+  border-bottom: 1px dotted var(--accent-soft, #d96666) !important;
+}
+
+/* --- Generic <table> outside .wikitable / .infobox (catches
+   bare <table> used as layout grids) --- */
+body.dark table,
+body.dark .mw-parser-output table {
+  background: transparent !important;
+  color: var(--fg, #e3e3e3) !important;
+}
+body.dark table:not(.wikitable):not(.infobox):not(.statblock) tr:nth-child(even) td {
+  background: var(--bg-alt, #242424) !important;
+}
+
+/* --- .category span / <b> inside statblock — gray text label
+   needs lighter on dark card --- */
+body.dark .statblock .category,
+body.dark .quote-block .category,
+body.dark span.category {
+  color: var(--fg-soft, #b8b8b8) !important;
+}
+
+/* --- nav.breadcrumb mute color too dim on dark (3.93:1, below AA) --- */
+body.dark nav.breadcrumb {
+  background: var(--bg-alt, #242424) !important;
+  color: var(--fg-soft, #b8b8b8) !important;
+  border-bottom-color: var(--border, #3a3a3a) !important;
+}
+body.dark nav.breadcrumb .current {
+  color: var(--fg, #e3e3e3) !important;
+}
+body.dark nav.breadcrumb .sep {
+  color: var(--border-strong, #555) !important;
+}
+
+/* --- footer + page-categories label/values bump --- */
+body.dark footer.page-foot,
+body.dark div.page-categories {
+  color: var(--fg-soft, #b8b8b8) !important;
+}
+body.dark div.page-categories .label {
+  color: var(--fg, #e3e3e3) !important;
+}
+
+/* ---------- Print styles ---------- */
+@media print {
+  /* Hide offline chrome — sidebar, topnav, banner, footer, etc. */
+  .topnav,
+  .wiki-sidebar,
+  .breadcrumb,
+  #pf2-updater-banner,
+  .page-foot,
+  .sidebar-hamburger,
+  .skip-link {
+    display: none !important;
+  }
+
+  /* Clean background + black text for ink */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Let content flow full width */
+  div.layout {
+    display: block !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+  main.page-body,
+  .page-body {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Print links black + show URL after.
+     Includes body.dark + .mw-parser-output qualified selectors so the
+     dark-mode link colors (defined later in this file) don't win. */
+  a, a:link, a:visited,
+  body.dark a, body.dark a:link, body.dark a:visited,
+  body.dark .mw-parser-output a,
+  body.dark .mw-parser-output a:visited,
+  .mw-parser-output a {
+    color: black !important;
+    text-decoration: underline !important;
+  }
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    font-weight: normal;
+  }
+  /* Don't print URL for in-page anchors, javascript:, or empty hrefs */
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after,
+  a[href=""]::after,
+  a:not([href])::after {
+    content: "";
+  }
+
+  /* Statblocks — keep visual frame but drop shadow */
+  .statblock,
+  .pf2-stat,
+  .pf2-creature-header,
+  .pf2-h1,
+  .pf2-h2,
+  .pf2-h3 {
+    box-shadow: none !important;
+  }
+
+  /* Images — keep on page, don't overflow */
+  img {
+    max-width: 80% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+  }
+
+  /* Page-break hints */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  table,
+  .statblock,
+  .pf2-stat {
+    page-break-inside: avoid;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Image lightbox (image_lightbox.js)
+ * Click an <img> inside .mw-parser-output → fullscreen overlay with the image
+ * enlarged. Click overlay, click [×], or press ESC to dismiss.
+ * ------------------------------------------------------------------------- */
+.pf2-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+  -webkit-tap-highlight-color: transparent;
+  animation: pf2-lightbox-fadein 120ms ease-out;
+}
+
+@keyframes pf2-lightbox-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pf2-lightbox .pf2-lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+  background: #111;
+  border-radius: 4px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.pf2-lightbox .pf2-lightbox-close {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.78);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.pf2-lightbox .pf2-lightbox-close:hover,
+.pf2-lightbox .pf2-lightbox-close:focus-visible {
+  background: rgba(60, 60, 60, 0.95);
+  transform: scale(1.08);
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Hint that content images are zoomable. */
+.mw-parser-output img {
+  cursor: zoom-in;
+}
+
+@media print {
+  .pf2-lightbox { display: none !important; }
+}
+
+/* ---------- 8. Wiki HTML utility shim ----------
+   CSS Class Audit Agent 发现 wiki HTML 大量使用 Tailwind atomic utility
+   classes (e.g. flex-1 154k 用例, pl-2 24k, w-1/10 24k, my-2 10k…),
+   以及 wiki 自身的 navbox/aon/tbui/cf/filter/refs 类。这一节给它们
+   提供最小可用的 fallback，避免布局错乱。原则：覆盖足够常见的，不
+   重写已有页面样式。 */
+
+/* ---- 8a. Tailwind atomic utilities ---- */
+.mw-parser-output .flex-1 { flex: 1 1 0%; }
+.mw-parser-output .flex-col { flex-direction: column; }
+.mw-parser-output .items-center { align-items: center; }
+.mw-parser-output .justify-between { justify-content: space-between; }
+.mw-parser-output .gap-1 { gap: 0.25rem; }
+.mw-parser-output .my-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.mw-parser-output .ml-4 { margin-left: 1rem; }
+.mw-parser-output .pl-2 { padding-left: 0.5rem; }
+.mw-parser-output .w-full { width: 100%; }
+.mw-parser-output .w-1\/10 { width: 10%; }
+
+/* ---- 8b. Navbox/list whitespace ---- */
+.mw-parser-output .nowraplinks { white-space: nowrap; }
+.mw-parser-output .nowraplinks li { display: inline; }
+
+/* ---- 8c. Wiki link variants ---- */
+.mw-parser-output a.aonlink::after,
+.mw-parser-output .aonlink a.external::after {
+  content: "\2197"; /* ↗ */
+  font-size: 0.85em;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+.mw-parser-output a.selflink,
+.mw-parser-output .selflink {
+  font-weight: 700;
+  color: inherit;
+  cursor: default;
+  text-decoration: none;
+}
+
+/* ---- 8d. Statblock colour variants ----
+   按类型给左边一条色带：专长=青灰 / 法术=紫红 / 动作=琥珀。 */
+.mw-parser-output .statblock-专长 { border-left: 4px solid #4a7d8f; }
+.mw-parser-output .statblock-法术 { border-left: 4px solid #8f4a7d; }
+.mw-parser-output .statblock-动作 { border-left: 4px solid #d97706; }
+
+/* ---- 8e. MediaWiki collapsible default-state ----
+   原 MediaWiki 用 JS 切 .mw-collapsed → 把 .mw-collapsible-content 隐藏。
+   离线版没那段 JS，必须让 uncollapsed/autocollapse 默认可见。 */
+.mw-parser-output .mw-uncollapsed,
+.mw-parser-output .mw-uncollapsed > .mw-collapsible-content,
+.mw-parser-output .mw-autocollapse,
+.mw-parser-output .mw-autocollapse > .mw-collapsible-content {
+  display: block;
+  visibility: visible;
+}
+
+/* ---- 8f. Toolbox UI (tbui-*) ---- */
+.mw-parser-output .tbui-iconcontainer {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+.mw-parser-output .tbui-goldborder {
+  border: 2px solid #c5a572;
+  border-radius: 4px;
+  padding: 2px;
+}
+.mw-parser-output .tbui-icon {
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 1.4em;
+}
+
+/* ---- 8g. Compact-filter UI (cf-*) ---- */
+.mw-parser-output .cf-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.mw-parser-output .cf-item {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-alt, transparent);
+}
+.mw-parser-output .cf-header {
+  font-weight: 600;
+  padding: 4px 8px;
+}
+.mw-parser-output .cf-button-group {
+  display: flex;
+  gap: 4px;
+}
+
+/* ---- 8h. Filterable rows ---- */
+.mw-parser-output .filterable { display: block; }
+.mw-parser-output .filterable-head {
+  background: var(--accent-band);
+  color: var(--accent-on);
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+/* ---- 8i. References / footnotes ---- */
+.mw-parser-output .mw-references-wrap {
+  columns: 2;
+  column-gap: 20px;
+  font-size: 0.92em;
+  margin: 12px 0;
+}
+.mw-parser-output .mw-references-wrap ol { margin: 0; }
+.mw-parser-output .references-small { font-size: 0.88em; }
+.mw-parser-output .reference-text { font-size: inherit; }
+.mw-parser-output .mw-cite-backlink {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+
+/* ---- 8j. Narrow viewport: collapse refs to single column ---- */
+@media (max-width: 640px) {
+  .mw-parser-output .mw-references-wrap { columns: 1; }
+}
+
+/* ---- 8k. Dark-mode variants ---- */
+body.dark .mw-parser-output .statblock-专长 { border-left-color: #6fa3b6; }
+body.dark .mw-parser-output .statblock-法术 { border-left-color: #b66fa3; }
+body.dark .mw-parser-output .statblock-动作 { border-left-color: #f59e0b; }
+body.dark .mw-parser-output .tbui-goldborder { border-color: #d4b56a; }
+body.dark .mw-parser-output .cf-item {
+  background: var(--card, #1d1d1d);
+  border-color: var(--border, #3a3a3a);
+}
+
+/* ---------- 9. Category member list (ns=14 reverse index) ----------
+   build_v2 injects an auto-generated `<div class="mw-category">` listing for
+   ns=14 pages because action=parse doesn't include MediaWiki's dynamic
+   categorymembers section. Style as multi-column grouped lists. */
+.mw-category { margin: 16px 0; }
+.mw-category-group {
+  margin: 12px 0;
+  break-inside: avoid;
+}
+.mw-category-group h3 {
+  margin: 4px 0 6px;
+  padding: 4px 8px;
+  background: var(--bg-alt);
+  color: var(--accent);
+  font-size: 1.15em;
+  border-left: 3px solid var(--accent-band, #6d2002);
+  font-weight: 700;
+}
+.mw-category-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  columns: 3;
+  column-gap: 20px;
+}
+@media (max-width: 900px) { .mw-category-group ul { columns: 2; } }
+@media (max-width: 500px) { .mw-category-group ul { columns: 1; } }
+.mw-category-group li {
+  padding: 2px 0;
+  break-inside: avoid;
+}
+body.dark .mw-category-group h3 {
+  background: rgba(255,255,255,0.04);
+  color: #ffcc66;
+}

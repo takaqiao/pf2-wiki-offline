@@ -36,7 +36,7 @@
    above via agent_outputs/inject_cache_buster.py.
    ============================================================ */
 
-@import url(_v2_palette.css?v=v2b);
-@import url(wiki_native.css?v=v2b);
-@import url(topnav.css?v=v2b);
-@import url(_v2_compat.css?v=v2b);
+@import url(_v2_palette.css?v=v2d-darkfix2);
+@import url(wiki_native.css?v=v2d-darkfix2);
+@import url(topnav.css?v=v2d-darkfix2);
+@import url(_v2_compat.css?v=v2d-darkfix2);

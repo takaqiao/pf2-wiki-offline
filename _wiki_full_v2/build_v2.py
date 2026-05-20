@@ -41,7 +41,7 @@ SNIPPET_SIDEBAR = ROOT / "_snippets" / "sidebar_sub.html"
 
 # ----- Constants -----
 CACHE_VER = "v2h"
-APP_VERSION = "v0.3.9"  # bumped per release; written to _app_version.json (no longer in meta tag)
+APP_VERSION = "v0.3.10"  # bumped per release; written to _app_version.json (no longer in meta tag)
 
 NS_TO_DIR = {
     0: "pages",
@@ -376,7 +376,63 @@ def build_section_toc(sections: list, page_word_count: int) -> str:
     )
 
 
-def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, title_index: dict, manifest: dict) -> tuple[str, str, str]:
+def render_category_members(cat_title: str, members: list[tuple[str, int, str]],
+                            title_index: dict) -> str:
+    """Render member list for a Category page (ns=14).
+
+    members: list of (sortkey, ns, member_title) tuples. Grouped by first
+    char (CJK / A-Z / other) and laid out as multi-column lists matching
+    MediaWiki's standard mw-category appearance.
+    """
+    if not members:
+        return ""
+    # Group by first character bucket
+    from collections import defaultdict
+    buckets: dict[str, list[tuple[str, int, str]]] = defaultdict(list)
+    for sortkey, ns, mt in members:
+        key = (sortkey or mt).strip()
+        if not key:
+            buckets["_"].append((sortkey, ns, mt))
+            continue
+        c = key[0]
+        if "a" <= c.lower() <= "z":
+            buckets[c.upper()].append((sortkey, ns, mt))
+        else:
+            cp = ord(c)
+            if (0x3400 <= cp <= 0x4DBF) or (0x4E00 <= cp <= 0x9FFF):
+                # Use first CJK char as bucket
+                buckets[c].append((sortkey, ns, mt))
+            else:
+                buckets["_"].append((sortkey, ns, mt))
+
+    # Sort buckets: A-Z first, then CJK by codepoint, then _
+    def bucket_key(b):
+        if len(b) == 1 and "A" <= b <= "Z":
+            return (0, ord(b))
+        if b == "_":
+            return (2, 0)
+        return (1, ord(b[0]))
+
+    out = [f'<div class="mw-category">']
+    out.append(f'<p>该分类共有 <strong>{len(members)}</strong> 个页面。</p>')
+    for b in sorted(buckets.keys(), key=bucket_key):
+        out.append('<div class="mw-category-group">')
+        out.append(f'<h3>{html_lib.escape(b)}</h3>')
+        out.append('<ul>')
+        for sortkey, ns, mt in sorted(buckets[b], key=lambda x: (x[0] or x[2]).lower()):
+            entry = title_index.get(mt)
+            if entry:
+                td, sfn = entry
+                href = f"../{td}/{urllib.parse.quote(sfn + '.html')}"
+            else:
+                href = f"../pages/{urllib.parse.quote(safe_title(mt) + '.html')}"
+            out.append(f'<li><a href="{href}">{html_lib.escape(mt)}</a></li>')
+        out.append('</ul></div>')
+    out.append('</div>')
+    return "\n".join(out)
+
+
+def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, title_index: dict, manifest: dict, category_members: dict | None = None) -> tuple[str, str, str]:
     """Returns (target_dir, safe_filename_with_ext, full_html)."""
     parse = doc.get("parse", {})
     ns = doc.get("ns", 0)
@@ -397,6 +453,29 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     rewrite_links(soup, redirect_map, title_index)
     rewrite_images(soup, manifest)
     add_lazy_loading(soup)
+
+    # For Category: pages (ns=14), inject auto-generated member list because
+    # action=parse doesn't include MediaWiki's dynamic categorymembers listing.
+    if ns == 14 and category_members:
+        # Title in metadata is e.g. "Category:法术" or "分类:法术"
+        cat_name = title
+        for prefix in ("Category:", "分类:"):
+            if cat_name.startswith(prefix):
+                cat_name = cat_name[len(prefix):]
+                break
+        members = category_members.get(cat_name, [])
+        if members:
+            members_html = render_category_members(cat_name, members, title_index)
+            # Append to soup at end of mw-parser-output
+            from bs4 import BeautifulSoup as _BS
+            extra = _BS(members_html, "html.parser")
+            container = soup.find(class_="mw-parser-output")
+            if container:
+                container.append(extra)
+            else:
+                # No parser-output wrapper — append at top level
+                for el in extra.contents:
+                    soup.append(el)
 
     # If this page is just a redirect notice (parse.text = <div class="redirectMsg">...</div>),
     # extract the target href and emit a meta-refresh so users land at content immediately.
@@ -453,6 +532,8 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<script defer src="../assets/external_links.js"></script>\n'
         '<script defer src="../assets/updater_ui.js"></script>\n'
         '<script defer src="../assets/mw_collapsible.js"></script>\n'
+        '<script defer src="../assets/image_lightbox.js"></script>\n'
+        '<script defer src="../assets/bookmark.js"></script>\n'
         '</head>\n'
         f'<body class="{body_class}">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
@@ -482,27 +563,119 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     return target_dir, f"{safe_fn}.html", full_html
 
 
-def build_redirect_stub(src_title: str, target_title: str, redirect_map: dict, title_index: dict) -> tuple[str, str, str] | None:
-    """Build a tiny HTML redirect stub. Returns (dir, filename, html) or None."""
-    # Resolve final target through any chain
-    seen = set()
-    cur = target_title
-    while cur in redirect_map and cur not in seen:
+# Redirect-source disambiguator-suffix matcher.
+# Handles aliases like "偏转（特征）" → base "偏转", "Cleric (class)" → base "Cleric".
+REDIRECT_SUFFIX_RX = re.compile(
+    r"^(?P<base>.+?)"
+    r"(?:（(?:特征|trait|德鲁伊聚能|聚能|动作|action|法术|spell|羁绊|印记|伙伴|companion|"
+    r"传承|heritage|背景|background|职业|class|阵营|deity|神祇|遗物|relic|奇物|wondrous|装备|"
+    r"item|武器|weapon|护甲|armor|盾牌|shield|区域|region|地点|location|组织|organization|"
+    r"势力|faction|国家|nation|城市|city|术语|term)）"
+    r"|\s*\((?:trait|action|spell|class|deity|item|weapon|armor|shield|location|region|"
+    r"organization|term|companion|heritage|background)\))$"
+)
+BRACKET_TRAILING_RX = re.compile(r"[（(][^（()）]*[)）]\s*$")
+
+
+def _resolve_redirect_target(
+    src_title: str,
+    target_title: str,
+    redirect_map: dict,
+    title_index: dict,
+) -> str | None:
+    """Find the canonical wiki title a redirect source should land on.
+
+    Strategy:
+      1. Follow target chain through redirect_map (handles A→B→C).
+      2. If the chain produces a non-empty title that exists in title_index, use it.
+      3. Empty/unresolvable target → try heuristic fallbacks based on src_title:
+         a. Strip parenthetical disambiguator suffix (e.g. "X（特征）" → try "X",
+            "X特征", "X 特征", and a handful of common kind tags).
+         b. For slash titles ("A/B"), try left segment, right segment, joined.
+         c. Strip any trailing parenthetical block as a generic fallback.
+      4. Identity check: if a candidate equals src_title itself, skip — a self
+         redirect is useless (the source page already lives at that filename).
+    """
+    seen: set[str] = set()
+    cur = (target_title or "").strip()
+    while cur and cur in redirect_map and cur not in seen:
         seen.add(cur)
         nxt = redirect_map[cur]
         if not nxt:
             break
         cur = nxt
-    final = cur or target_title
+
+    candidates: list[str] = []
+    if cur:
+        candidates.append(cur)
+        if "_" in cur:
+            candidates.append(cur.replace("_", " "))
+
+    m = REDIRECT_SUFFIX_RX.match(src_title)
+    if m:
+        base = m.group("base").strip()
+        if base:
+            candidates.append(base)
+            for kind in ("特征", "动作", "法术", "传承", "背景", "职业", "区域", "地点", "组织", "聚能"):
+                candidates.append(f"{base}{kind}")
+                candidates.append(f"{base} {kind}")
+
+    if "/" in src_title:
+        left, _, right = src_title.partition("/")
+        left, right = left.strip(), right.strip()
+        if left:
+            candidates.append(left)
+        if right:
+            candidates.append(right)
+        if left and right:
+            candidates.append(f"{left}{right}")
+            candidates.append(f"{left} {right}")
+
+    bare = BRACKET_TRAILING_RX.sub("", src_title).strip()
+    if bare and bare != src_title:
+        candidates.append(bare)
+
+    seen_c: set[str] = set()
+    for c in candidates:
+        if not c or c == src_title or c in seen_c:
+            continue
+        seen_c.add(c)
+        if c in title_index:
+            return c
+        spaced = c.replace("_", " ")
+        if spaced != c and spaced in title_index:
+            return spaced
+    return None
+
+
+def build_redirect_stub(
+    src_title: str,
+    target_title: str,
+    redirect_map: dict,
+    title_index: dict,
+    existing_titles: set | None = None,
+) -> tuple[str, str, str] | None:
+    """Build a tiny HTML redirect stub. Returns (dir, filename, html) or None.
+
+    Skip cases:
+      - src_title is itself a rendered page (would clobber real content).
+      - No target resolvable (no chain target + no heuristic match).
+      - Target resolves to the source itself (self-redirect is useless).
+    """
+    if existing_titles is not None and src_title in existing_titles:
+        return None
+
+    final = _resolve_redirect_target(src_title, target_title, redirect_map, title_index)
     if not final:
         return None
     entry = title_index.get(final) or title_index.get(final.replace("_", " "))
     if not entry:
         return None
     target_dir, safe_fn = entry
-    # Redirect stub lives in same dir as source ns
     src_safe = safe_title(src_title)
-    # Heuristic: stubs go in pages/ (most aliases are ns=0)
+    # Self-referential stub (same dir + same filename) → skip
+    if target_dir == "pages" and safe_fn == src_safe:
+        return None
     stub_dir = "pages"
     redirect_url = f"../{target_dir}/{urllib.parse.quote(safe_fn + '.html')}"
     html = (
@@ -551,7 +724,38 @@ def main(argv: list[str]) -> int:
 
     print(f"  meta: {len(meta.get('pages', []))} pages, {len(redirect_map)} redirects, manifest {len(manifest)}, topnav {len(topnav)} chars")
 
-    print("[2/4] enumerate parsed JSON files")
+    # Pre-pass: scan all parsed JSON to build reverse-index of category members.
+    # MediaWiki's action=parse doesn't include the dynamic categorymembers list
+    # for ns=14 pages, but every page's parse.categories tells us which
+    # categories it belongs to. So we invert that to populate category pages.
+    print("[2/4] build category reverse-index")
+    category_members: dict[str, list[tuple[str, int, str]]] = {}
+    tcat0 = time.time()
+    cat_scan_files = list(PARSED_DIR.rglob("*.json"))
+    for pf in cat_scan_files:
+        if pf.name.startswith("_"):
+            continue
+        try:
+            d = json.loads(pf.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        page_title = d.get("title", "")
+        page_ns = d.get("ns", 0)
+        if not page_title:
+            continue
+        for c in (d.get("parse", {}) or {}).get("categories", []) or []:
+            if not isinstance(c, dict):
+                continue
+            cat = c.get("category", "")
+            sortkey = c.get("sortkey", "") or page_title
+            if not cat:
+                continue
+            cat = cat.replace("_", " ")
+            category_members.setdefault(cat, []).append((sortkey, page_ns, page_title))
+    print(f"  scanned {len(cat_scan_files)} parsed files in {time.time()-tcat0:.1f}s, "
+          f"populated {len(category_members)} categories")
+
+    print("[3/4] enumerate parsed JSON files")
     parsed_files = [p for p in PARSED_DIR.rglob("*.json") if not p.name.startswith("_")]
     if args.ns >= 0:
         # filter by ns later when reading file
@@ -560,7 +764,7 @@ def main(argv: list[str]) -> int:
         parsed_files = parsed_files[: args.limit]
     print(f"  found {len(parsed_files)} parsed JSON files")
 
-    print("[3/4] render pages")
+    print("[4/4] render pages")
     t0 = time.time()
     n_ok = 0
     n_fail = 0
@@ -575,7 +779,7 @@ def main(argv: list[str]) -> int:
         if args.ns >= 0 and doc.get("ns") != args.ns:
             continue
         try:
-            target_dir, fname, html = render_page_html(doc, topnav, sidebar, redirect_map, title_index, manifest)
+            target_dir, fname, html = render_page_html(doc, topnav, sidebar, redirect_map, title_index, manifest, category_members)
         except Exception as e:
             title = doc.get("title", "?")
             print(f"  [{i}] render fail '{title.encode('ascii','replace').decode()[:40]}': {type(e).__name__}: {e}")
@@ -596,17 +800,39 @@ def main(argv: list[str]) -> int:
 
     if args.redirects:
         print("\n[5/5] redirect stubs")
+        # Titles that were rendered as real pages — never overwrite them with a stub.
+        existing_titles: set[str] = {p.get("title", "") for p in meta.get("pages", [])}
         n_redir = 0
+        n_skipped_real = 0
+        n_unresolved = 0
+        n_self = 0
         for src, tgt in redirect_map.items():
-            if not tgt:
+            # Source-as-real-page already serves the redirect target; counts as covered.
+            if src in existing_titles:
+                n_skipped_real += 1
                 continue
-            stub = build_redirect_stub(src, tgt, redirect_map, title_index)
+            stub = build_redirect_stub(src, tgt, redirect_map, title_index, existing_titles)
             if not stub:
+                # Either no resolvable target or self-referential
+                final = _resolve_redirect_target(src, tgt, redirect_map, title_index)
+                if final is None:
+                    n_unresolved += 1
+                else:
+                    n_self += 1
                 continue
             sd, sf, sh = stub
-            (ROOT / sd / sf).write_text(sh, encoding="utf-8")
+            out_path = ROOT / sd / sf
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(sh, encoding="utf-8")
             n_redir += 1
-        print(f"    +{n_redir} redirect stubs")
+        covered = n_redir + n_skipped_real
+        total = len(redirect_map)
+        pct = (covered / total * 100.0) if total else 0.0
+        print(f"    +{n_redir} redirect stubs written")
+        print(f"    {n_skipped_real} sources already exist as full pages (no stub needed)")
+        print(f"    {n_self} sources are self-referential (target == source)")
+        print(f"    {n_unresolved} sources could not be resolved")
+        print(f"    coverage: {covered}/{total} = {pct:.2f}%")
 
     return 0
 
