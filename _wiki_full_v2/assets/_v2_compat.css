@@ -626,17 +626,35 @@ div.page-toc-v2 a:hover {
 
 /* ---------- 6d. Infobox aliases (huiji PHP-rendered substitutes) ----------
    huiji wiki replaced classical MediaWiki .infobox templates with custom
-   classes: .statblock (creature/NPC stat cards), .quote-block (sidebars
-   with flavor text), .sidebar.aside-box (generic right-rail aside cards).
-   Server-rendered HTML therefore never has bare .infobox, so any v2
-   styling keyed off .infobox missed these. Re-skin them to mimic an
-   infobox: float right, capped width, light card background, border,
-   padding. On narrow viewports collapse to full-width block.
-   (Bare `.sidebar` in-article boxes already handled later via
-   `.mw-parser-output .sidebar`; here we target the aside-box variant.) */
+   classes. IMPORTANT distinction:
+     • .statblock / .quote-block  → PF2 stat cards (creature, spell, feat,
+       archetype). On huiji these are the page's PRIMARY content — full-width
+       attribute cards, NOT right-rail sidebars. They must occupy the main
+       content column (display:block; width:100%). Confirmed against live
+       huijiwiki (computed float:none, width == content width, fills 100%).
+     • .sidebar.aside-box → genuine right-rail flavor/aside cards (capped
+       width, float right). Kept separate below.
+   We give the stat cards a light infobox-style frame (border, background,
+   padding, accent-bar headings) WITHOUT constraining width or floating.
+   (Bare `.sidebar` in-article boxes handled later via
+   `.mw-parser-output .sidebar`.) */
 
+/* PF2 stat cards — full-width main content */
 .statblock,
-.quote-block,
+.quote-block {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: var(--card, #fbf7eb);
+  border: 1px solid var(--border-strong, #b8a878);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+  box-sizing: border-box;
+  line-height: 1.55;
+}
+
+/* Genuine right-rail aside cards (flavor boxes) */
 .sidebar.aside-box {
   float: right;
   clear: right;
@@ -697,8 +715,8 @@ div.page-toc-v2 a:hover {
 }
 
 @media (max-width: 768px) {
-  .statblock,
-  .quote-block,
+  /* collapse the floating aside card to full-width on narrow viewports;
+     .statblock / .quote-block are already full-width block at all sizes */
   .sidebar.aside-box {
     float: none;
     clear: none;

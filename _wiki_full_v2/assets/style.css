@@ -41,3 +41,5 @@
 @import url(topnav.css?v=v2d-darkfix2);
 @import url(_v2_compat.css?v=v2d-darkfix2);
 @import url(wikitable_polish.css?v=v2d-darkfix2);
+@import url(_fmt_navbox.css?v=v2e-navbox);
+@import url(_fmt_tables.css?v=v2e-tables);

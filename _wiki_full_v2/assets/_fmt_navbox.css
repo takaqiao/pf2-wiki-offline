@@ -1,0 +1,203 @@
+/* ============================================================
+   _fmt_navbox.css — navbox (页面底部导航框) 横竖排版修复
+   ------------------------------------------------------------
+   作用对象：MediaWiki 原生 navbox 标记
+     table.navbox
+       > td > table.nowraplinks.mw-collapsible.mw-autocollapse.navbox-inner
+           > tr > th.navbox-title[colspan=2]
+           > tr > th.navbox-group + td.navbox-list(.navbox-odd/even).hlist
+
+   这些类的基础视觉来自 wiki_native.css（灰机线上 CSS）。本文件只
+   修排版错乱，不重写配色——必须在 style.css 里 **最后** @import，
+   以便覆盖 _v2_compat.css 第 8e 节。不修改 _v2_compat.css。
+
+   —— 发现的问题（本地 vs 规范对照，1280/2560 视口实测）——
+   1. 致命：_v2_compat.css 8e 把 .mw-autocollapse / .mw-uncollapsed
+      统一设为 display:block，而 navbox 的内层 <table> 正好带
+      .mw-autocollapse，于是内层表退化成 block，表格布局失效。
+      展开时链接列 (td.navbox-list) 不再受表格宽度约束，整张
+      navbox 撑到 ~3892px，横向溢出页面。
+   2. 标题栏 th.navbox-title 行内 style="background:#004416"（深绿）
+      但文字仍是默认深灰 #333 —— 深底深字，几乎不可读。
+   3. 链接列分隔与换行：保证组内链接横向排列、按需在链接之间换行，
+      但单个链接内部不断行（.nowraplinks 的本意）。
+
+   Bump cache version 时同步 style.css 里的 ?v= 串。
+   ============================================================ */
+
+/* ---- 1. 还原内层表的表格布局（覆盖 _v2_compat.css 8e）----
+   只要内层是 <table>，无论它带 mw-autocollapse 还是 mw-uncollapsed，
+   都必须保持 display:table，否则横向撑爆。注意：不要动真正的
+   .mw-collapsible-content（那是 div，需要保持 block）。 */
+.mw-parser-output table.navbox-inner.mw-autocollapse,
+.mw-parser-output table.navbox-inner.mw-uncollapsed,
+.mw-parser-output table.navbox.mw-autocollapse,
+.mw-parser-output table.navbox.mw-uncollapsed {
+  display: table !important;
+  width: 100%;
+}
+
+/* ---- 2. navbox 整体：宽度受限、居中、不溢出 ---- */
+.mw-parser-output table.navbox {
+  width: 100%;
+  max-width: 100%;
+  margin: 1em auto 0.5em;
+  clear: both;
+  box-sizing: border-box;
+}
+.mw-parser-output table.navbox,
+.mw-parser-output table.navbox table.navbox-inner {
+  border-collapse: collapse;
+}
+/* 内层表撑满外层、不再有意外的 block 宽度 */
+.mw-parser-output table.navbox-inner,
+.mw-parser-output table.navbox-subgroup {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ---- 3. 标题栏：横向居中 + 文字在深色底上可读 ----
+   行内 style 给了深色 background 但没给 color；这里补浅色字。
+   用模板色（深绿等）做底时文字必须发亮。 */
+.mw-parser-output .navbox .navbox-title,
+.mw-parser-output .navbox th.navbox-title {
+  text-align: center;
+  font-weight: 700;
+  padding: 0.3em 1em;
+  line-height: 1.5;
+  color: #fffbf6;            /* 浅奶白，压过 wiki_native 的默认深灰 */
+}
+.mw-parser-output .navbox .navbox-title a,
+.mw-parser-output .navbox .navbox-title a.new,
+.mw-parser-output .navbox .navbox-title abbr {
+  color: #fffbf6;
+}
+.mw-parser-output .navbox .navbox-title a:hover {
+  color: #ffe9cf;
+}
+/* 标题里的「查看模板」小图标条 (tnavbar) 浮左、占一点宽度，
+   不要把居中的标题文字挤偏太多 */
+.mw-parser-output .navbox .navbox-title .tnavbar {
+  float: left;
+  font-size: 80%;
+  margin-right: 0.5em;
+}
+.mw-parser-output .navbox .navbox-title .tnavbar .fa {
+  color: #fffbf6;
+}
+
+/* ---- 4. 行：分组标签(竖排成列) vs 链接区(横排) ----
+   th.navbox-group 在左侧窄列、右对齐、不换行；
+   td.navbox-list 占满剩余宽度、左对齐、内部链接横向流动。 */
+.mw-parser-output .navbox th.navbox-group {
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.25em 0.75em;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.mw-parser-output .navbox td.navbox-list {
+  text-align: left;
+  vertical-align: middle;
+  width: 100%;            /* 吃掉除分组列以外的全部宽度 */
+  padding: 0.25em 0.75em;
+  line-height: 1.6;
+}
+/* 链接区里那层包裹 div (style="padding:0 0.25em") 正常横向流动 */
+.mw-parser-output .navbox td.navbox-list > div {
+  text-align: left;
+}
+
+/* ---- 5. 链接横排 + 不在链接内部断行 ----
+   两种标记都覆盖：
+   (a) 纯文本「a | a | a」管道分隔（最常见）；
+   (b) .hlist 里的 <ul><li>，分隔符由 wiki_native 的 li:after 提供。
+   关键：列表整体可在链接「之间」换行(white-space:normal)，
+   但单个链接文字不被拆开(.nowraplinks a / hlist li nowrap)。 */
+.mw-parser-output .navbox td.navbox-list,
+.mw-parser-output .navbox .nowraplinks,
+.mw-parser-output .navbox .navbox-list.hlist {
+  white-space: normal;
+}
+.mw-parser-output .navbox .nowraplinks a,
+.mw-parser-output .navbox td.navbox-list a,
+.mw-parser-output .navbox .hlist li a,
+.mw-parser-output .navbox .hlist dd a,
+.mw-parser-output .navbox .hlist dt a {
+  white-space: nowrap;     /* 单链接不断行 */
+}
+/* hlist 横排兜底（wiki_native 已有，这里防被其他规则改竖） */
+.mw-parser-output .navbox .hlist ul,
+.mw-parser-output .navbox .hlist ol,
+.mw-parser-output .navbox .hlist dl {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+.mw-parser-output .navbox .hlist li,
+.mw-parser-output .navbox .hlist dd,
+.mw-parser-output .navbox .hlist dt {
+  display: inline;
+  margin: 0;
+}
+
+/* ---- 6. 嵌套子表格 (navbox-subgroup) 对齐 ---- */
+.mw-parser-output .navbox table.navbox-subgroup th.navbox-group {
+  white-space: nowrap;
+  text-align: right;
+}
+.mw-parser-output .navbox table.navbox-subgroup td.navbox-list {
+  text-align: left;
+  width: 100%;
+}
+
+/* ---- 7. 间隔行 (style="height:5px" 的空行) 不要塌成 0 ---- */
+.mw-parser-output .navbox tr > td[colspan]:empty {
+  padding: 0;
+  line-height: 0;
+}
+
+/* ============================================================
+   暗黑模式 —— 补 _v2_compat.css 已有的 body.dark .navbox 系列。
+   那边已设 navbox 底 #1a1a1a / title 底 #4a1500 / 链接金色；
+   这里只补内层表、分组列底色、边框、标题字色，保证整体一致。
+   ============================================================ */
+body.dark .mw-parser-output table.navbox-inner,
+body.dark .mw-parser-output table.navbox-subgroup {
+  background-color: transparent !important;
+  color: #ddd !important;
+}
+body.dark .mw-parser-output .navbox th.navbox-group {
+  background-color: #2a2a2a !important;
+  color: #ddd !important;
+  border-color: #000 !important;
+}
+body.dark .mw-parser-output .navbox td.navbox-list {
+  color: #ddd !important;
+  border-color: #000 !important;
+}
+body.dark .mw-parser-output .navbox .navbox-title,
+body.dark .mw-parser-output .navbox .navbox-title a,
+body.dark .mw-parser-output .navbox .navbox-title .fa {
+  color: #fffbf6 !important;
+}
+
+/* ---- 移动端：分组列与链接列各自占整行（竖排堆叠）---- */
+@media (max-width: 560px) {
+  .mw-parser-output .navbox th.navbox-group,
+  .mw-parser-output .navbox td.navbox-list {
+    display: block;
+    width: auto;
+    text-align: left;
+    white-space: normal;
+  }
+  .mw-parser-output .navbox th.navbox-group {
+    padding-bottom: 0;
+  }
+}
+
+/* ---- 打印：navbox 尽量不跨页断开 ---- */
+@media print {
+  .mw-parser-output table.navbox { break-inside: avoid; }
+}
