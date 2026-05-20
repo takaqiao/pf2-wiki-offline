@@ -1,59 +1,199 @@
-"""Build 17 nav-stub redirect pages — fixes ~80% of dead links.
+"""Build the 17 sub-zone browse pages as REAL filtered content (v3).
 
-Each generated stub is a meta-refresh that jumps to its parent browse hub
-(browse-items.html / browse-spells.html / browse-creatures.html). These
-sub-categories never had dedicated landing pages in the corpus but ~74,112 of
-the wiki's category/nav links target them, so users used to hit 404s. After
-this script, all 17 targets resolve.
+Previously these were meta-refresh stubs that jumped to the UNFILTERED parent
+(browse-items/spells/creatures.html) — so every spell tradition / item subtype /
+creature level band landed on the same full list (cosmetic only). Now each
+sub-zone is a real browse page whose members are derived from the ns=3500 Data:
+pages (mw-jsonconfig tables), joined to ns=0 articles by their 中文 field:
 
-Run: .venv\\Scripts\\python.exe build_nav_stubs.py
+  spells   -> 根源 (tradition: 奥术/神术/异能/原能) + 法术分类 (戏法 cantrip / 聚能 focus)
+  creatures-> 等级 (level bands)
+  items    -> 物品分类 (item category, curated groups)
+
+Reuses render_browse_html / page_href from build_browse_v2.py. Run AFTER
+build_browse_v2.py (same dir):
+    .venv\\Scripts\\python.exe build_nav_stubs.py
 """
+from __future__ import annotations
+
+import json
+import re
+import sys
+from collections import defaultdict
 from pathlib import Path
 
+from build_browse_v2 import (
+    PARSED_DIR, SNIPPET_TOPNAV_SUB, SNIPPET_SIDEBAR_SUB,
+    render_browse_html, page_href,
+)
+
 ROOT = Path(__file__).resolve().parent
-STUBS = {
-    'browse-items-weapons': ('browse-items.html', '武器'),
-    'browse-items-armor': ('browse-items.html', '护甲'),
-    'browse-items-consumables': ('browse-items.html', '消耗品'),
-    'browse-items-worn': ('browse-items.html', '佩戴物品'),
-    'browse-items-runes': ('browse-items.html', '符文'),
-    'browse-items-implements': ('browse-items.html', '法器'),
-    'browse-spells-arcane': ('browse-spells.html', '奥术'),
-    'browse-spells-divine': ('browse-spells.html', '神圣'),
-    'browse-spells-occult': ('browse-spells.html', '神秘'),
-    'browse-spells-primal': ('browse-spells.html', '原初'),
-    'browse-spells-cantrips': ('browse-spells.html', '戏法'),
-    'browse-spells-focus': ('browse-spells.html', '专注'),
-    'browse-creatures-level-0-3': ('browse-creatures.html', '0-3 级'),
-    'browse-creatures-level-4-7': ('browse-creatures.html', '4-7 级'),
-    'browse-creatures-level-8-12': ('browse-creatures.html', '8-12 级'),
-    'browse-creatures-level-13-17': ('browse-creatures.html', '13-17 级'),
-    'browse-creatures-level-18-25': ('browse-creatures.html', '18-25 级'),
+
+ROW_RX = re.compile(r"<th>(.*?)</th><td class=\"mw-jsonconfig-value\">(.*?)</td>", re.S)
+TAG_RX = re.compile(r"<[^>]+>")
+
+
+def clean(s: str) -> str:
+    return TAG_RX.sub("", s).replace("&amp;", "&").strip()
+
+
+def parse_table(text: str) -> dict:
+    return {clean(a): clean(b) for a, b in ROW_RX.findall(text or "")}
+
+
+def toks(v: str):
+    return [x.strip() for x in re.split(r"[,，、/]", v or "") if x.strip()]
+
+
+def to_int(v: str):
+    try:
+        return int(str(v).strip())
+    except Exception:
+        return None
+
+
+# --- sub-zone specs: slug -> (label, predicate(rec)->bool, display_field) ---
+# rec carries: _type (Spells/Creatures/Items), plus parsed table fields.
+ITEM_GROUPS = {
+    "weapons":     {"特殊魔法武器", "珍贵材料武器", "魔兽枪"},
+    "armor":       {"特殊魔法护甲", "珍贵材料护甲"},
+    "runes":       {"武器性能符文", "护甲性能符文", "配件符文"},
+    "worn":        {"穿戴物品"},
+    "consumables": {"药水", "油", "炼金灵药", "炼金毒素", "炼金炸弹", "炼金食物",
+                    "炼金药物", "炼金弹药", "其他消耗品", "消耗品", "茶", "魔法弹药",
+                    "永久炼金物品", "瓶装气息", "瓶装怪物", "炼金工具", "圈套"},
+    "implements":  {"咒心"},
 }
 
-TEMPLATE = '''<!DOCTYPE html>
-<html lang="zh-Hans">
-<head>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url={target}">
-<title>{label} — 跳转中</title>
-</head>
-<body>
-<p>正在跳转到 <a href="{target}">{label}（{parent}）</a>...</p>
-</body>
-</html>
-'''
 
-def main():
-    count = 0
-    for slug, (target, label) in STUBS.items():
-        out = ROOT / f'{slug}.html'
-        out.write_text(
-            TEMPLATE.format(target=target, label=label, parent=target.replace('.html', '')),
-            encoding='utf-8'
-        )
-        count += 1
-    print(f'wrote {count} nav stubs')
+def spell_root(rec, t):
+    return rec["_type"] == "Spells" and t in toks(rec.get("根源", ""))
 
-if __name__ == '__main__':
-    main()
+
+def spell_class(rec, c):
+    return rec["_type"] == "Spells" and rec.get("法术分类", "") == c
+
+
+def creature_band(rec, lo, hi):
+    if rec["_type"] != "Creatures":
+        return False
+    lv = to_int(rec.get("等级", ""))
+    return lv is not None and lo <= lv <= hi
+
+
+def item_group(rec, key):
+    if rec["_type"] != "Items":
+        return False
+    return any(t in ITEM_GROUPS[key] for t in toks(rec.get("物品分类", "")))
+
+
+# Parent bucket categories (must match build_browse_v2.BUCKET_CATS) — used to
+# intersect each subzone with its parent so subzones stay a strict subset.
+SIZE_CATS = {"微型", "小型", "中型", "大型", "巨型", "超大型"}
+PARENT_OF_FAMILY = {"spells": "spells", "creatures": "creatures", "items": "items"}
+
+
+def family_of(slug: str) -> str:
+    if "spells" in slug:
+        return "spells"
+    if "creatures" in slug:
+        return "creatures"
+    return "items"
+
+
+SUBZONES = [
+    ("browse-spells-arcane",  "奥术法术", lambda r: spell_root(r, "奥术"), "根源"),
+    ("browse-spells-divine",  "神术法术", lambda r: spell_root(r, "神术"), "根源"),
+    ("browse-spells-occult",  "异能法术", lambda r: spell_root(r, "异能"), "根源"),
+    ("browse-spells-primal",  "原能法术", lambda r: spell_root(r, "原能"), "根源"),
+    ("browse-spells-cantrips", "戏法",    lambda r: spell_class(r, "戏法"), "环级"),
+    ("browse-spells-focus",   "聚能法术", lambda r: spell_class(r, "聚能"), "环级"),
+    ("browse-creatures-level-0-3",   "0-3 级生物",   lambda r: creature_band(r, -99, 3),  "等级"),
+    ("browse-creatures-level-4-7",   "4-7 级生物",   lambda r: creature_band(r, 4, 7),    "等级"),
+    ("browse-creatures-level-8-12",  "8-12 级生物",  lambda r: creature_band(r, 8, 12),   "等级"),
+    ("browse-creatures-level-13-17", "13-17 级生物", lambda r: creature_band(r, 13, 17),  "等级"),
+    ("browse-creatures-level-18-25", "18-25 级生物", lambda r: creature_band(r, 18, 99),  "等级"),
+    ("browse-items-weapons",     "武器",     lambda r: item_group(r, "weapons"),     "物品分类"),
+    ("browse-items-armor",       "护甲",     lambda r: item_group(r, "armor"),       "物品分类"),
+    ("browse-items-consumables", "消耗品",   lambda r: item_group(r, "consumables"), "物品分类"),
+    ("browse-items-worn",        "穿戴物品", lambda r: item_group(r, "worn"),        "物品分类"),
+    ("browse-items-runes",       "符文",     lambda r: item_group(r, "runes"),       "物品分类"),
+    ("browse-items-implements",  "法器",     lambda r: item_group(r, "implements"),  "物品分类"),
+]
+
+
+def main() -> int:
+    # one pass: ns=0 parent-bucket membership (for subset intersection) +
+    # ns=3500 data records.
+    parent = {"spells": set(), "creatures": set(), "items": set()}
+    records = []
+    for sub in PARSED_DIR.iterdir():
+        if not sub.is_dir() or sub.name.startswith("_"):
+            continue
+        for f in sub.iterdir():
+            if not f.name.endswith(".json"):
+                continue
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            ns = d.get("ns", 0)
+            if ns == 0:
+                t = d.get("title", "")
+                cats = {c.get("category", "").replace("_", " ")
+                        for c in (d.get("parse", {}) or {}).get("categories", [])
+                        if isinstance(c, dict)}
+                if "法术" in cats:
+                    parent["spells"].add(t)
+                if cats & SIZE_CATS:
+                    parent["creatures"].add(t)
+                if "物品" in cats:
+                    parent["items"].add(t)
+            elif ns == 3500:
+                m = re.match(r"Data:([A-Za-z]+)-", d.get("title", ""))
+                if not m:
+                    continue
+                rec = parse_table(d.get("parse", {}).get("text", ""))
+                rec["_type"] = m.group(1)
+                records.append(rec)
+    print(f"  scanned: parents spells={len(parent['spells'])} "
+          f"creatures={len(parent['creatures'])} items={len(parent['items'])}, "
+          f"{len(records)} data records")
+
+    topnav_sub = SNIPPET_TOPNAV_SUB.read_text(encoding="utf-8")
+    topnav_root = topnav_sub.replace('href="../', 'href="')
+    sidebar_sub = SNIPPET_SIDEBAR_SUB.read_text(encoding="utf-8")
+    sidebar_root = sidebar_sub.replace('href="../', 'href="').replace('action="../', 'action="')
+
+    written = 0
+    for slug, label, pred, disp in SUBZONES:
+        pset = parent[family_of(slug)]   # intersect with parent -> strict subset
+        seen = set()
+        entries = []
+        skipped = 0
+        for rec in records:
+            if not pred(rec):
+                continue
+            name = rec.get("中文", "")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            if name not in pset:
+                skipped += 1
+                continue  # not in parent bucket -> exclude (keeps subzone ⊆ parent)
+            entries.append({
+                "ns": 0, "ns_label": "条目", "title": name,
+                "href": page_href(0, name), "cats": [rec.get(disp, "")],
+            })
+        entries.sort(key=lambda e: e["title"].lower())
+        html = render_browse_html(slug, entries, topnav_root, sidebar_root, label=label)
+        (ROOT / f"{slug}.html").write_text(html, encoding="utf-8")
+        note = f"  (excluded {skipped} not-in-parent)" if skipped else ""
+        print(f"  {slug}.html: {len(entries):,} entries{note}")
+        written += 1
+    print(f"wrote {written} real sub-zone pages")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
