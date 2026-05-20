@@ -88,6 +88,7 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
         '<script defer src="../assets/external_links.js"></script>\n'
         '<script defer src="../assets/mw_collapsible.js"></script>\n'
         '<script defer src="../assets/updater_ui.js"></script>\n'
+        '<script defer src="../assets/bookmark.js"></script>\n'
         '</head>\n<body class="mediawiki ltr sitedir-ltr action-view skin--responsive">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
         f'{topnav}\n'
