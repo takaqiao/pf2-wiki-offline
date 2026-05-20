@@ -1,19 +1,36 @@
-/* updater_ui.js — chained incremental auto-update.
+/* updater_ui.js — chained incremental auto-update (client-driven).
  *
  * Each release ships ONE patch (previous→current). patches.json (read from
  * raw.githubusercontent.com, CORS-safe) holds the whole version chain:
- *   { "latest": "v0.3.20",
+ *   { "latest": "v0.3.22",
  *     "chain": { "v0.3.18": {to,url,sha256,size_mb}, "v0.3.19": {...}, ... } }
  * A client N versions behind walks the chain from its current version to
  * latest, collecting the ordered patch list, and applies them sequentially
- * via one IPC call ("无数个小更新迭代"). All buttons use onclick→IPC; the
- * one-click button shows only when a complete chain exists.
+ * via one IPC call ("无数个小更新迭代").
+ *
+ * Detection AND the chain both come from patches.json. The GitHub REST API is
+ * intentionally NOT used: it is rate-limited (60 req/h unauth — blown fast by
+ * per-page-load checks) and often blocked/throttled behind the GFW, which would
+ * silently kill update detection. Banner URLs are derived from the release
+ * naming convention instead. Network is throttled and patches.json is cached so
+ * the banner still shows between checks.
  */
 (function () {
   var REPO = 'takaqiao/pf2-wiki-offline';
-  var API_URL = 'https://api.github.com/repos/' + REPO + '/releases/latest';
   var PATCHES_URL = 'https://raw.githubusercontent.com/' + REPO + '/main/patches.json';
   var SNOOZE_KEY = 'pf2_updater_snoozed_tag';
+  var THROTTLE_KEY = 'pf2_updater_last_check';
+  var PATCHES_CACHE_KEY = 'pf2_updater_patches_cache';
+  var THROTTLE_MS = 6 * 60 * 60 * 1000; // re-hit network at most every 6h
+
+  function fullZipUrl(tag) {
+    var ver = String(tag).replace(/^v/, '');
+    return 'https://github.com/' + REPO + '/releases/download/' + tag
+      + '/pf2-wiki-offline_' + ver + '_x64-portable.zip';
+  }
+  function releasePageUrl(tag) {
+    return 'https://github.com/' + REPO + '/releases/tag/' + tag;
+  }
 
   var CURRENT_VERSION = null;
   function loadCurrentVersion() {
@@ -97,14 +114,11 @@
     return { steps: steps, totalMb: totalMb, count: steps.length };
   }
 
-  function showBanner(latest, chain) {
+  // latestTag: string like "v0.3.22". chain: result of buildChain or null.
+  function showBanner(latestTag, chain) {
     if (document.getElementById('pf2-updater-banner')) return;
-    var releaseUrl = latest.html_url || ('https://github.com/' + REPO + '/releases/latest');
-    var portableAsset = (latest.assets || []).find(function (a) {
-      return /portable\.zip$/i.test(a.name);
-    });
-    var dlUrl = portableAsset ? portableAsset.browser_download_url : releaseUrl;
-    var bodyText = (latest.body || '').split('\n')[0].slice(0, 110);
+    var releaseUrl = releasePageUrl(latestTag);
+    var dlUrl = fullZipUrl(latestTag);
 
     var banner = document.createElement('div');
     banner.id = 'pf2-updater-banner';
@@ -132,8 +146,7 @@
 
     banner.innerHTML =
       '<div id="pf2-updater-msg" style="flex:1 1 auto;min-width:200px"><strong>有新版本：</strong> '
-      + escapeHtml(CURRENT_VERSION || '?') + ' → ' + escapeHtml(latest.tag_name)
-      + (bodyText ? ' — <span style="opacity:0.85">' + escapeHtml(bodyText) + '</span>' : '')
+      + escapeHtml(CURRENT_VERSION || '?') + ' → ' + escapeHtml(latestTag)
       + '</div>'
       + primaryBtn
       + '<button id="pf2-updater-full" style="' + fullStyle + '">下载完整版 (1.2 GB)</button>'
@@ -146,7 +159,7 @@
       if (el) el.addEventListener('click', fn);
     }
     on('pf2-updater-dismiss', function () {
-      try { localStorage.setItem(SNOOZE_KEY, latest.tag_name); } catch (e) {}
+      try { localStorage.setItem(SNOOZE_KEY, latestTag); } catch (e) {}
       banner.remove();
     });
     on('pf2-updater-full', function () { openExternal(dlUrl); });
@@ -159,7 +172,7 @@
       btn.disabled = true;
       btn.textContent = '下载中…';
       document.getElementById('pf2-updater-msg').innerHTML =
-        '<strong>正在更新到 ' + escapeHtml(latest.tag_name) + '</strong> — '
+        '<strong>正在更新到 ' + escapeHtml(latestTag) + '</strong> — '
         + chain.count + ' 个补丁，完成后自动重启…';
       var payload = chain.steps.map(function (s) { return { url: s.url, sha256: s.sha256 }; });
       inv('apply_incremental_update', { patches: payload })
@@ -172,23 +185,37 @@
     });
   }
 
-  function check() {
+  function decide(patches) {
+    if (!patches || !patches.latest) return;
+    var latestTag = patches.latest;
     var snoozed = null;
     try { snoozed = localStorage.getItem(SNOOZE_KEY); } catch (e) {}
+    if (cmpSemver(parseSemver(latestTag), parseSemver(CURRENT_VERSION)) > 0
+        && snoozed !== latestTag) {
+      showBanner(latestTag, buildChain(patches, CURRENT_VERSION, latestTag));
+    }
+  }
+
+  function check() {
     loadCurrentVersion().then(function () {
-      return fetch(API_URL, { cache: 'no-store' }).then(function (r) {
-        if (!r.ok) throw new Error('http ' + r.status);
-        return r.json();
-      }).then(function (latest) {
-        if (!latest || !latest.tag_name) return;
-        if (cmpSemver(parseSemver(latest.tag_name), parseSemver(CURRENT_VERSION)) > 0
-            && snoozed !== latest.tag_name) {
-          return fetchPatchesJson().then(function (patches) {
-            var chain = buildChain(patches, CURRENT_VERSION, latest.tag_name);
-            showBanner(latest, chain);
-          });
+      var last = 0, cached = null;
+      try { last = +(localStorage.getItem(THROTTLE_KEY) || 0); } catch (e) {}
+      try { cached = JSON.parse(localStorage.getItem(PATCHES_CACHE_KEY) || 'null'); } catch (e) {}
+
+      // Within the throttle window: decide from cache, no network call.
+      if (cached && (Date.now() - last) < THROTTLE_MS) { decide(cached); return; }
+
+      fetchPatchesJson().then(function (patches) {
+        if (patches) {
+          try {
+            localStorage.setItem(THROTTLE_KEY, String(Date.now()));
+            localStorage.setItem(PATCHES_CACHE_KEY, JSON.stringify(patches));
+          } catch (e) {}
+        } else {
+          patches = cached; // network failed → fall back to last cached chain
         }
-      }).catch(function () {});
+        decide(patches);
+      });
     });
   }
 

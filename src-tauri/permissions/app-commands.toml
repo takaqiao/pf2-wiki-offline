@@ -6,9 +6,8 @@
 
 [[permission]]
 identifier = "allow-ipc"
-description = "Allow the app's own IPC commands: open_external, install_update, apply_incremental_update."
+description = "Allow the app's own IPC commands: open_external, apply_incremental_update."
 commands.allow = [
     "open_external",
-    "install_update",
     "apply_incremental_update",
 ]
