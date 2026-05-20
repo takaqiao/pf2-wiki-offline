@@ -36,7 +36,7 @@
 - [x] **P1 枚举宇宙**: DONE(2026-05-21)。全集已枚举入 WORKLIST。离线 B 真值索引已建(3604 distinct cat,其中 3294 被标 `missing:true`=红链分类无 Category 页;仅 354 有 ns=14 页 → 358 html 多出 4 待查)。A 的 BUCKETS 关键词字典、C 的 STUBS 映射、class hubs 已读全。
 - [~] **P2 拉基准**: **B-part DONE**(354 全拉,0 失败,缓存 `out_v2/_cat_audit/_live/`,info_size 全对齐)。**A/C-part TODO**: A 的锚分类**多数已在 B 缓存里**(专长/法术/物品/生物/背景/变体/职业/地理/特征/戏法/聚能/武器/护甲/符文 共 14 个都是 ns=14,已拉)→ **无需再拉**;仅需补:缺失锚的真名(祖先?族裔? 神祇?信仰? — live 探测确认)+ C 的法术传统(奥术/神圣/神秘/原初,疑「(特征)」后缀)+ 物品子类(消耗品/佩戴物品/法器,疑「(特征)」后缀)。
 - [~] **P3 diff + 定位**: **B DONE**(正确/staleness)。**A 已量化**(`diff_a.py`:每桶大错配,真锚名已 probe 确认;creatures/archetypes 锚非单一分类,待 investigate)。**C 子类锚名已 probe**(见 FINDINGS);法术传统/怪物等级需数据驱动。剩:creatures/archetypes 锚 investigate + C 数据驱动方案。
-- [ ] **P4 修复**: TODO。B 无需改码(staleness 由 P6 重抓解决)。**重点 = A+C**:按根因改 build_browse_v2.py(关键词→真实分类驱动)+ build_nav_stubs.py(装饰 stub→真实子类过滤内容);改一类、重生成、复核 diff 归零。
+- [~] **P4 修复**: **A-part DONE**(build_browse_v2.py→`BUCKET_CATS` 分类驱动,`verify_a.py` 实测全 staleness 级、0 关键词污染,已重生成 13 browse 页)。B 无需改码。**C-part TODO**:build_nav_stubs.py 装饰 stub→真实子类过滤内容(worn/consumables/equipment 用分类;weapons/armor/runes/法术传统/怪物等级 用 ns=3500 数据字段)。
 - [ ] **P5 整体重建 + 验证**: TODO。全量重跑 build_*.py;抽样+全量 diff 0 残留;`diagnostics/acl_probe.mjs`;死链复查。
 - [ ] **P6 发版(仅此时 bump)**: TODO。见铁律。
 
@@ -45,7 +45,9 @@
 - [x] 354 个 ns=14 分类 | B | **DONE/已验证正确** | 全量 diff(hosted-ns {0,4,14,102,3500}):**317/354 完全一致**;37 个有差(97 漏+22 多)**全部=staleness**(94 漏=2026-05-19 后新增页:健康腰带/冒烟之剑/冰川巨锤/风暴战锤/《地狱破灭》/《幽暗地脉》等约 13 物品+8 出版物;22 多+3 漏=remaster 重分类,如 命匣 同时出现在 missing[2r 标签] 与 extra[2e 标签])。**build_v2.py 反转 parse.categories 逻辑正确,无需改码**。报告:`_b_diff_report.json`/`_b_findings_analysis.json`。
 - [ ] 358-354=4 个多出的 category html | B | TODO(低优) | 来源未知(疑 build_dead_stubs/redirect)。次要;B 已在 354 真分类上验证正确。
 
-### A — 12 关键词桶(browse_v2.classify 启发式)
+### A — 12 桶 ✅ **DONE(分类驱动,verify_a 实测全 staleness 级)**
+> build_browse_v2.py 用 `BUCKET_CATS` 替换 `classify()` 关键词;`verify_a.py` 实测 offline vs live ns0 全部 false+≤2/false-≤10:feats 4872/4874、spells 1761/1761、items 3391/3399、creatures 1484/1484(体型并集)、ancestries 245/245、backgrounds 462/462、archetypes 2153/2153、classes 419/419、deities 474/476、locations 1145/1145、other(状态) 43/43。**0 关键词污染**。browse-all 保持全 ns 字母表不变。下列原 TODO 已全部被覆盖:
+### A — 原关键词桶(历史 TODO,已被上面覆盖)
 - [ ] feats | A | TODO | 关键词 [专长,feat];拟锚定 live `Category:专长`(仅 ns0)。
 - [ ] spells | A | TODO | 关键词 [法术,spell,戏法,聚能];拟锚 `Category:法术`。**已知污染**:含"法术"子串的 feat 误入。
 - [ ] items | A | TODO | 关键词 [物品,装备,武器,护甲,消耗品,戴持物品,符文,法器,item];拟锚 `Category:物品`。
@@ -95,4 +97,5 @@
 - 2026-05-21 | 建账本骨架 + 自迭代 prompt(本次未动逻辑) | 下次从 P0 开始
 - 2026-05-21(iter2) | P0 DONE(读全状态+CF 探针实测过+路径/产物/工具记录)+ P1 DONE(全集枚举入 WORKLIST,建离线真值索引 3604cat,读全 A/B/C 脚本,导出 354 B 目标)+ 建 3 个 cat_audit 工具+预备发现(A 关键词脏/C 子区装饰/B 小 staleness)| 下次从 **P2**:跑 `dump_live_catmembers.py _b_category_targets.txt` 拉 354 B 分类 live 成员(headed ~5-10min),再拉 A 锚分类+C 传统分类(先核实名称),然后 P3 diff B。
 - 2026-05-21(iter2 续) | **P2-B + P3-B DONE**:拉全 354 B 分类 live(0 失败)→ `diff_b.py` → `analyze_b_findings.py`。**B 结案=正确,119 差异全 staleness,build_v2 无 bug**(命匣 2e→2r remaster 为铁证)。建 diff_b.py/analyze_b_findings.py 工具。锚覆盖核实:creatures 真名=**生物**(非怪物)、locations=**地理**、archetypes=**变体**。| 下次从 **P3-A**。
-- 2026-05-21(iter3) | **P3-A 量化 + A/C 锚名 probe**:补拉 28 候选锚(`_ac_probe_targets.txt`)→ 确认 ancestries=**族裔**(非祖先)、deities=**信仰**(非神祇);法术传统无分类(仅奥术(特征)110,余空)→ 须数据驱动。`diff_a.py`:每桶大错配(items+6080、classes+4522、archetypes+2375 误含;locations 漏1061、deities 漏406、ancestries 漏245)。建 diff_a.py。**A 是用户「对不上」主因,实锤**。| 下次:investigate creatures/archetypes 真锚(生物=2/变体=0 ns0,需查这些页实际分类)→ 定 A 的 P4 映射 → 改 build_browse_v2.py(分类驱动)→ 重建复核;再处理 C(物品子类用分类、传统/等级用数据字段)。
+- 2026-05-21(iter3) | **P3-A 量化 + A/C 锚名 probe**:补拉 28 候选锚(`_ac_probe_targets.txt`)→ 确认 ancestries=**族裔**(非祖先)、deities=**信仰**(非神祇);法术传统无分类(仅奥术(特征)110,余空)→ 须数据驱动。`diff_a.py`:每桶大错配(items+6080、classes+4522、archetypes+2375 误含;locations 漏1061、deities 漏406、ancestries 漏245)。建 diff_a.py。**A 是用户「对不上」主因,实锤**。| 下次:investigate creatures/archetypes 真锚 → 定 A 的 P4 映射 → 改 build_browse_v2.py(分类驱动)→ 重建复核;再处理 C。
+- 2026-05-21(iter4) | **P4-A DONE + 验证**:investigate_anchors 定 creatures=体型并集/archetypes=变体（特征）;补拉 5 验证锚;**重写 build_browse_v2.py 为 BUCKET_CATS 分类驱动**(弃 classify 关键词),重生成 13 browse 页;建 verify_a.py 实测 offline-bucket vs live-cat 全 staleness 级(false+≤2/false-≤10,0 污染)。建 investigate_anchors.py/verify_a.py。| 下次 **C(P3+P4)**:① 物品 worn/consumables/equipment 子区改真实分类过滤(穿戴物品/消耗品（特征）/装备);② weapons/armor/runes + 法术传统(奥术/神圣/神秘/原初)+ 怪物等级 → 查 ns=3500 data schema(看 data/*.json.html 或 parsed ns=3500 结构)用数据字段驱动;③ 改 build_nav_stubs.py:stub 不再空跳父页,而是生成带真实成员的子区页(或父页支持可用过滤参数)。先看一个 ns=3500 法术 data 页确认有 tradition 字段。

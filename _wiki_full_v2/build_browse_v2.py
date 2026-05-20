@@ -1,7 +1,16 @@
 """Phase F.5: build browse-*.html landing pages.
 
-Classifies pages by their categories (from parsed JSON) into well-known browse
-buckets, then emits sorted tables to _wiki_full_v2/browse-<bucket>.html.
+CATEGORY-DRIVEN (v3): each browse bucket = the members of specific REAL wiki
+categories (inverted from every page's parse.categories — same data build_v2.py
+uses for category/ pages), restricted to ns=0 content. This replaces the old
+keyword-substring classify() heuristic, which did not correspond to wiki
+categories (e.g. "物品" substring swept ~9.5k pages incl. nav/maintenance; "特征"
+swept ~16k into "other"). See src-tauri/CATEGORY_FIX_PROGRESS.md.
+
+Anchor categories were verified against live pf2.huijiwiki.com (list=categorymembers):
+creatures has no flat category -> union of SIZE categories (size is creature-exclusive);
+archetypes = 变体（特征）; ancestries = 族裔 (not 祖先); deities = 信仰 (not 神祇);
+locations = 地理 (not 地点).
 
 Run:
     .venv\\Scripts\\python.exe build_browse_v2.py
@@ -26,27 +35,30 @@ SNIPPET_TOPNAV_ROOT = ROOT / "_snippets" / "topnav_root.html"
 SNIPPET_TOPNAV_SUB = ROOT / "_snippets" / "topnav_sub.html"
 SNIPPET_SIDEBAR_SUB = ROOT / "_snippets" / "sidebar_sub.html"
 
-CACHE_VER = "v2h"
+CACHE_VER = "v3"
 
-# Browse bucket definitions: bucket_name -> set of category keywords (any match)
-BUCKETS = {
-    "feats":        ["专长", "feat"],
-    "spells":       ["法术", "spell", "戏法", "聚能"],
-    "items":        ["物品", "装备", "武器", "护甲", "消耗品", "戴持物品", "符文", "法器", "item"],
-    "creatures":    ["怪物", "creature", "monster"],
-    "ancestries":   ["祖先", "ancestry"],
-    "backgrounds":  ["背景", "background"],
-    "archetypes":   ["变体", "archetype"],
-    "classes":      ["职业", "class"],
-    "deities":      ["神祇", "deity"],
-    "locations":    ["地点", "location", "城市", "国家", "区域"],
-    "other":        ["状态", "特征", "trait", "condition"],
+# Browse bucket -> list of REAL wiki categories whose ns=0 members make the bucket.
+# A page in several of a bucket's categories appears once (union, deduped by title).
+BUCKET_CATS = {
+    "feats":        ["专长"],
+    "spells":       ["法术"],
+    "items":        ["物品"],
+    # creatures: 生物 is near-empty; size is creature-exclusive -> union of sizes.
+    "creatures":    ["微型", "小型", "中型", "大型", "巨型", "超大型"],
+    "ancestries":   ["族裔"],
+    "backgrounds":  ["背景"],
+    "archetypes":   ["变体（特征）"],
+    "classes":      ["职业"],
+    "deities":      ["信仰"],
+    "locations":    ["地理"],
+    # "other" historically a keyword grab-bag (~16k); redefine to conditions/状态.
+    "other":        ["状态"],
 }
 
 BUCKET_LABELS = {
     "feats": "专长", "spells": "法术", "items": "物品", "creatures": "怪物",
-    "ancestries": "祖先", "backgrounds": "背景", "archetypes": "变体",
-    "classes": "职业", "deities": "神祇", "locations": "地点", "other": "状态/特征",
+    "ancestries": "族裔", "backgrounds": "背景", "archetypes": "变体",
+    "classes": "职业", "deities": "信仰", "locations": "地理", "other": "异常状态",
     "categories": "分类页面", "all": "全部条目",
 }
 
@@ -98,18 +110,6 @@ def iter_parsed_with_cats():
                 cats,
                 parse.get("displaytitle") or doc.get("title", ""),
             )
-
-
-def classify(cats: list[str], title: str) -> set[str]:
-    """Return all buckets a page falls into (a page can be in multiple)."""
-    cat_blob = (" ".join(cats) + " " + title).lower()
-    out: set[str] = set()
-    for bucket, keys in BUCKETS.items():
-        for k in keys:
-            if k.lower() in cat_blob:
-                out.add(bucket)
-                break
-    return out
 
 
 def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: str) -> str:
@@ -211,27 +211,24 @@ def main() -> int:
     if not META_FILE.exists():
         print(f"ERROR: {META_FILE} missing")
         return 1
-    meta = json.loads(META_FILE.read_text(encoding="utf-8"))
+    json.loads(META_FILE.read_text(encoding="utf-8"))  # validate present
 
-    # Determine topnav: browse-*.html lives at root, so use root-prefix topnav
-    # We don't have topnav_root.html so we'll generate from topnav_sub.html by stripping "../"
     topnav_sub = SNIPPET_TOPNAV_SUB.read_text(encoding="utf-8")
     topnav_root = topnav_sub.replace('href="../', 'href="')
     sidebar_sub = SNIPPET_SIDEBAR_SUB.read_text(encoding="utf-8")
     sidebar_root = sidebar_sub.replace('href="../', 'href="').replace('action="../', 'action="')
 
-    print("[1/3] scanning parsed corpus + classifying ...")
+    print("[1/3] scanning parsed corpus + building category index (ns=0) ...")
     t0 = time.time()
-    bucket_entries: dict[str, list[dict]] = defaultdict(list)
+    cat_to_entries: dict[str, list[dict]] = defaultdict(list)
+    cat_seen: dict[str, set] = defaultdict(set)   # dedup per category by title
     all_entries: list[dict] = []
-    cat_pages_index: dict[str, set] = defaultdict(set)  # category title -> pageids
-    seen = 0
+    ns14_entries: list[dict] = []
     for ns, pid, title, cats, display in iter_parsed_with_cats():
         if ns not in (0, 102, 14, 3500):
             continue
         href = page_href(ns, title)
         ns_label = {0: "条目", 14: "分类", 102: "资源", 3500: "数据"}.get(ns, "")
-        # Pretty-strip namespace prefix from display
         bare = title
         for prefix in ("Category:", "分类:", "Data:", "数据:"):
             if bare.startswith(prefix):
@@ -241,36 +238,43 @@ def main() -> int:
             "title": bare, "href": href, "cats": cats,
         }
         all_entries.append(entry)
-        for c in cats:
-            cat_pages_index[c].add(pid)
-        # categories namespace becomes its own bucket
         if ns == 14:
-            bucket_entries["categories"].append(entry)
+            ns14_entries.append(entry)
             continue
-        # classify by category keywords
-        buckets = classify(cats, title)
-        if not buckets:
-            continue
-        for b in buckets:
-            bucket_entries[b].append(entry)
-        seen += 1
-    print(f"  classified {seen} pages into {len(bucket_entries)} buckets in {time.time()-t0:.1f}s")
+        if ns == 0:
+            for c in cats:
+                cc = c.replace("_", " ")
+                if title not in cat_seen[cc]:
+                    cat_seen[cc].add(title)
+                    cat_to_entries[cc].append(entry)
+    print(f"  indexed {len(cat_to_entries)} ns0 categories in {time.time()-t0:.1f}s")
 
-    # Sort each bucket alphabetically
+    # Assemble buckets from BUCKET_CATS (union of mapped categories, deduped by title)
+    bucket_entries: dict[str, list[dict]] = {}
+    for bucket, catlist in BUCKET_CATS.items():
+        seen: set = set()
+        members: list[dict] = []
+        for c in catlist:
+            for e in cat_to_entries.get(c, []):
+                if e["title"] not in seen:
+                    seen.add(e["title"])
+                    members.append(e)
+        bucket_entries[bucket] = members
+    bucket_entries["categories"] = ns14_entries  # ns=14 category pages bucket
+
     print("[2/3] writing browse-*.html files ...")
     written = 0
     for bucket, entries in bucket_entries.items():
         entries.sort(key=lambda e: e["title"].lower())
         html = render_browse_html(bucket, entries, topnav_root, sidebar_root)
-        out_path = ROOT / f"browse-{bucket}.html"
-        out_path.write_text(html, encoding="utf-8")
+        (ROOT / f"browse-{bucket}.html").write_text(html, encoding="utf-8")
         print(f"  browse-{bucket}.html: {len(entries):,} entries")
         written += 1
 
-    # Also build browse-all alphabetical
+    # browse-all alphabetical (all hosted namespaces — unchanged behavior)
     all_entries.sort(key=lambda e: e["title"].lower())
-    html = render_browse_html("all", all_entries, topnav_root, sidebar_root)
-    (ROOT / "browse-all.html").write_text(html, encoding="utf-8")
+    (ROOT / "browse-all.html").write_text(
+        render_browse_html("all", all_entries, topnav_root, sidebar_root), encoding="utf-8")
     print(f"  browse-all.html: {len(all_entries):,} entries")
     written += 1
 
