@@ -34,16 +34,16 @@
 ## PHASES (状态机:TODO / DOING / DONE)
 - [x] **P0 准备**: DONE(2026-05-21)。读全 3 文件;scraper 过 CF 实测通过(headed 持久 profile 自动清 CF,无需人工);`categorymembers`+continue 全量枚举验证(member_count==categoryinfo.size)。路径/产物清单/工具已记录(见上)。
 - [x] **P1 枚举宇宙**: DONE(2026-05-21)。全集已枚举入 WORKLIST。离线 B 真值索引已建(3604 distinct cat,其中 3294 被标 `missing:true`=红链分类无 Category 页;仅 354 有 ns=14 页 → 358 html 多出 4 待查)。A 的 BUCKETS 关键词字典、C 的 STUBS 映射、class hubs 已读全。
-- [ ] **P2 拉基准**: TODO ← **下次从这里**。先跑 B:`dump_live_catmembers.py out_v2/_cat_audit/_b_category_targets.txt`(354 个,headed,约 5-10min)。再拉 A 的 12 个锚分类 + C 的子区/传统分类(名称需先在 live 核实存在,见 FINDINGS 的"待核实映射")。
-- [ ] **P3 diff + 定位**: TODO。逐项 diff 离线 vs live → FINDINGS,标 A/B/C + 根因。
-- [ ] **P4 修复**: TODO。按根因改 build_*.py / 数据,真实 wiki 分类驱动取代关键词启发式;改一类、重生成、复核 diff 归零。
+- [~] **P2 拉基准**: **B-part DONE**(354 全拉,0 失败,缓存 `out_v2/_cat_audit/_live/`,info_size 全对齐)。**A/C-part TODO**: A 的锚分类**多数已在 B 缓存里**(专长/法术/物品/生物/背景/变体/职业/地理/特征/戏法/聚能/武器/护甲/符文 共 14 个都是 ns=14,已拉)→ **无需再拉**;仅需补:缺失锚的真名(祖先?族裔? 神祇?信仰? — live 探测确认)+ C 的法术传统(奥术/神圣/神秘/原初,疑「(特征)」后缀)+ 物品子类(消耗品/佩戴物品/法器,疑「(特征)」后缀)。
+- [~] **P3 diff + 定位**: **B-part DONE**(见 FINDINGS:B 机制正确,119 差异全为 staleness,0 逻辑 bug)。**A/C-part TODO**。
+- [ ] **P4 修复**: TODO。B 无需改码(staleness 由 P6 重抓解决)。**重点 = A+C**:按根因改 build_browse_v2.py(关键词→真实分类驱动)+ build_nav_stubs.py(装饰 stub→真实子类过滤内容);改一类、重生成、复核 diff 归零。
 - [ ] **P5 整体重建 + 验证**: TODO。全量重跑 build_*.py;抽样+全量 diff 0 残留;`diagnostics/acl_probe.mjs`;死链复查。
 - [ ] **P6 发版(仅此时 bump)**: TODO。见铁律。
 
 ## WORKLIST (每项: 名称 | 机制 | 状态 | 备注)
 ### B — 358 category/ 页(354 ns=14 + 4 待查)
-- [ ] 354 个 ns=14 分类 | B | TODO | 目标名见 `_b_category_targets.txt`;离线成员=`_offline_cat_index.json`;P2 拉 live 全量 diff。含大量维护/模板类(Infobox/Mbox/Huiji template/GM帷幕…)与内容类。
-- [ ] 358-354=4 个多出的 category html | B | TODO | 来源未知(疑 build_dead_stubs / redirect)。P3 列出具体 4 个文件名定位。
+- [x] 354 个 ns=14 分类 | B | **DONE/已验证正确** | 全量 diff(hosted-ns {0,4,14,102,3500}):**317/354 完全一致**;37 个有差(97 漏+22 多)**全部=staleness**(94 漏=2026-05-19 后新增页:健康腰带/冒烟之剑/冰川巨锤/风暴战锤/《地狱破灭》/《幽暗地脉》等约 13 物品+8 出版物;22 多+3 漏=remaster 重分类,如 命匣 同时出现在 missing[2r 标签] 与 extra[2e 标签])。**build_v2.py 反转 parse.categories 逻辑正确,无需改码**。报告:`_b_diff_report.json`/`_b_findings_analysis.json`。
+- [ ] 358-354=4 个多出的 category html | B | TODO(低优) | 来源未知(疑 build_dead_stubs/redirect)。次要;B 已在 354 真分类上验证正确。
 
 ### A — 12 关键词桶(browse_v2.classify 启发式)
 - [ ] feats | A | TODO | 关键词 [专长,feat];拟锚定 live `Category:专长`(仅 ns0)。
@@ -73,10 +73,11 @@
 ### 预备发现(P0/P1 已观察,P3 量化确认)
 - **A 本质缺陷**(高):browse 桶 = 关键词子串 any-match,非 wiki 分类。`特征` 命中所有 trait 页(罕见/魔法/变体/常见…(特征)共数千)灌进 `other`;`法术` 子串把 feat 拉进 spells;title 也进 blob;一页多桶。→ 必须改为真实分类驱动。
 - **C 功能性失效**(高):17 个子区 stub 全是 `<meta refresh url=browse-{items,spells,creatures}.html>`,**不带任何过滤**,标签仅出现在"正在跳转"文字里 → 6 个法术子区/6 个物品子区/5 个怪物等级**全落到同一张未过滤父表**。子区区分纯装饰。→ 需真实子分类/传统/等级驱动的过滤内容。
-- **B 构造上忠实 live**:成员=反转 parse.categories,理论=live 每页分类盒。P0 探针实测小差(离线略少于 live):法术 1761 vs live 1765(+4)、专长 4872 vs 4875(+3)、魔法(特征) 2405 vs 2423(+18)。疑 scrape 略陈旧/个别页未抓全。P3 比对成员名单定位是 staleness 还是漏抓。
-- **3294/3604 分类被标 missing:true**:红链分类(被引用但无 Category 页),build_v2 不为其生成页(只为 354 ns=14 生成)→ 与 358 数差 4 待查。
-- **待核实映射**(P2 必做):A/C 拟锚定的 live 分类名(怪物/祖先/背景/变体/神祇/地理 + 法术传统 奥术/神圣/神秘/原初)是否存在、确切中文名 → 用 `dump_live_catmembers.py` 探测确认后再定 P4 映射表。
+- **B 已验证正确(已结案)**:354 ns=14 分类全量 diff,317 完全一致,37 个差异(97 漏+22 多)经 `analyze_b_findings.py` 逐条根因 = **100% staleness**(94 漏=新增页不在离线语料;22 多+3 漏=remaster 重分类,命匣同时在 missing[2r] 和 extra[2e] 是铁证)。**build_v2.py 无 bug**。修复=P6 release 重抓(注意需跑 title harvest 以发现新增页,否则只重抓旧清单漏掉新页)。
+- **3294/3604 分类被标 missing:true**:红链分类(被引用但无 Category 页),build_v2 不为其生成页(只为 354 ns=14 生成)→ 与 358 数差 4 待查(低优)。
+- **A/C 锚分类真名核实(已部分确认,见 `_anchor_coverage.json`)**:有 ns=14 页且已拉 live 的 14 个=专长/法术/物品/**生物**/背景/变体/职业/**地理**/特征/戏法/聚能/武器/护甲/符文。**关键纠错**:creatures 真分类=**生物**(A 的 keyword 用「怪物」是错的);locations 真分类=**地理**(非「地点」);archetypes=**变体**(非「原型」)。**仍缺 ns=14 页(需 live 探测真名)**:祖先(?族裔)、神祇(?信仰)、消耗品/佩戴物品/法器(疑「(特征)」后缀)、法术传统 奥术/神圣/神秘/原初(疑「(特征)」后缀)。
 
 ## 迭代日志 (每次运行追加一行: 日期 | 本次干了什么 | 下次从哪继续)
 - 2026-05-21 | 建账本骨架 + 自迭代 prompt(本次未动逻辑) | 下次从 P0 开始
 - 2026-05-21(iter2) | P0 DONE(读全状态+CF 探针实测过+路径/产物/工具记录)+ P1 DONE(全集枚举入 WORKLIST,建离线真值索引 3604cat,读全 A/B/C 脚本,导出 354 B 目标)+ 建 3 个 cat_audit 工具+预备发现(A 关键词脏/C 子区装饰/B 小 staleness)| 下次从 **P2**:跑 `dump_live_catmembers.py _b_category_targets.txt` 拉 354 B 分类 live 成员(headed ~5-10min),再拉 A 锚分类+C 传统分类(先核实名称),然后 P3 diff B。
+- 2026-05-21(iter2 续) | **P2-B + P3-B DONE**:拉全 354 B 分类 live(0 失败)→ `diff_b.py` → `analyze_b_findings.py`。**B 结案=正确,119 差异全 staleness,build_v2 无 bug**(命匣 2e→2r remaster 为铁证)。建 diff_b.py/analyze_b_findings.py 工具。锚覆盖核实:creatures 真名=**生物**(非怪物)、locations=**地理**、archetypes=**变体**。| 下次从 **P3-A**:A 的 14 个锚分类 live **已在 B 缓存**,无需再拉 → 直接抽取当前 browse 桶成员(重跑 classify 或解析 browse-*.html)与对应真分类 diff;同时补拉缺名锚(祖先/神祇/传统/物品子类,用 `dump_live_catmembers.py` 候选名探 page_missing)。再做 C。然后 P4 改 build_browse_v2.py + build_nav_stubs.py。
