@@ -439,16 +439,16 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     title = doc.get("title", "")
     target_dir, bare_title = determine_target_dir(ns, title)
 
-    # Resolve final HTML body content
+    # Resolve final HTML body content.
+    # IMPORTANT: use html.parser, NOT lxml. lxml silently DROPS the value of any
+    # attribute whose NAME contains non-ASCII chars (e.g. the wiki's CustomFilter
+    # widgets emit data-filter-环级="法术1"). That breaks every filterable list
+    # page (法术列表 / 生物总表 / etc.) — rows render but filters have no values.
+    # html.parser preserves these attributes and (bonus) doesn't wrap fragments
+    # in <html><body>, so no drill-down is needed.
     raw_text = parse.get("text", "") or ""
     raw_text = clean_parse_text(raw_text)
-    soup = BeautifulSoup(raw_text, "lxml")
-
-    # If lxml wrapped in <html><body>, drill down to body's children
-    body_tag = soup.body
-    if body_tag is not None:
-        inner = "".join(str(c) for c in body_tag.children)
-        soup = BeautifulSoup(inner, "html.parser")
+    soup = BeautifulSoup(raw_text, "html.parser")
 
     rewrite_links(soup, redirect_map, title_index)
     rewrite_images(soup, manifest)
@@ -532,8 +532,11 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<script defer src="../assets/external_links.js"></script>\n'
         '<script defer src="../assets/updater_ui.js"></script>\n'
         '<script defer src="../assets/mw_collapsible.js"></script>\n'
+        '<script defer src="../assets/wikitable_sort.js"></script>\n'
+        '<script defer src="../assets/wikitable_paginate.js"></script>\n'
         '<script defer src="../assets/image_lightbox.js"></script>\n'
         '<script defer src="../assets/bookmark.js"></script>\n'
+        '<script defer src="../assets/keybindings.js"></script>\n'
         '</head>\n'
         f'<body class="{body_class}">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'

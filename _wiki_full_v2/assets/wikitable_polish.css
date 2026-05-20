@@ -93,3 +93,144 @@ body.dark table.wikitable.wikitable tr:first-child th { color: #fdf3f3; }
   }
   table.wikitable.wikitable tr:nth-child(even) td { background: #f3f3f3 !important; }
 }
+
+/* --------------------------------------------------------------
+   wikitable_paginate.js — pagination + search control bar
+   Engages when a wikitable has >= 100 rows.
+   -------------------------------------------------------------- */
+.wikitable-paginate-ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #d8d4cc);
+  background: var(--card, #fafaf7);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.wikitable-paginate-ctrl .wp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.wikitable-paginate-ctrl .wp-row-top { row-gap: 6px; }
+
+.wikitable-paginate-ctrl .wp-search,
+.wikitable-paginate-ctrl .wp-size,
+.wikitable-paginate-ctrl .wp-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wikitable-paginate-ctrl .wp-search { flex: 1 1 220px; min-width: 180px; }
+
+.wikitable-paginate-ctrl .wp-search-lbl,
+.wikitable-paginate-ctrl .wp-size-lbl,
+.wikitable-paginate-ctrl .wp-jump-lbl {
+  color: var(--muted, #6a665e);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wikitable-paginate-ctrl .wp-search-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 4px 8px;
+  border: 1px solid var(--border, #d8d4cc);
+  border-radius: 4px;
+  font: inherit;
+  background: var(--bg, #fff);
+  color: inherit;
+}
+
+.wikitable-paginate-ctrl .wp-size-select {
+  padding: 3px 6px;
+  border: 1px solid var(--border, #d8d4cc);
+  border-radius: 4px;
+  font: inherit;
+  background: var(--bg, #fff);
+  color: inherit;
+}
+
+.wikitable-paginate-ctrl .wp-counter {
+  margin-left: auto;
+  color: var(--muted, #6a665e);
+  white-space: nowrap;
+}
+
+.wikitable-paginate-ctrl .wp-pages {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.wikitable-paginate-ctrl .wp-pager-btn,
+.wikitable-paginate-ctrl .wp-page-btn,
+.wikitable-paginate-ctrl .wp-jump-btn {
+  min-width: 28px;
+  padding: 3px 9px;
+  border: 1px solid var(--border, #d8d4cc);
+  background: var(--bg, #fff);
+  color: inherit;
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.wikitable-paginate-ctrl .wp-pager-btn:hover:not(:disabled),
+.wikitable-paginate-ctrl .wp-page-btn:hover,
+.wikitable-paginate-ctrl .wp-jump-btn:hover {
+  background: var(--hover, #f0ece2);
+  border-color: var(--accent-band, #8a1f1f);
+}
+
+.wikitable-paginate-ctrl .wp-pager-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wikitable-paginate-ctrl .wp-page-btn.wp-current {
+  background: var(--accent-band, #8a1f1f);
+  border-color: var(--accent-band, #8a1f1f);
+  color: #fff;
+  font-weight: 700;
+  cursor: default;
+}
+
+.wikitable-paginate-ctrl .wp-ellipsis {
+  padding: 0 4px;
+  color: var(--muted, #6a665e);
+  user-select: none;
+}
+
+.wikitable-paginate-ctrl .wp-jump-input {
+  width: 64px;
+  padding: 3px 6px;
+  border: 1px solid var(--border, #d8d4cc);
+  border-radius: 4px;
+  font: inherit;
+  background: var(--bg, #fff);
+  color: inherit;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .wikitable-paginate-ctrl { font-size: 12.5px; }
+  .wikitable-paginate-ctrl .wp-counter { margin-left: 0; }
+  .wikitable-paginate-ctrl .wp-row-top { flex-direction: column; align-items: stretch; }
+  .wikitable-paginate-ctrl .wp-search { width: 100%; }
+}
+
+@media print {
+  .wikitable-paginate-ctrl { display: none; }
+  /* Show every paginated row when printing. */
+  tr.wp-paginated-out { display: table-row !important; }
+}
