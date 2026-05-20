@@ -16,14 +16,30 @@
     return true;
   }
 
+  // Probe all known Tauri 2 invoke locations (withGlobalTauri or internals).
+  function getInvoke() {
+    try {
+      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+        return window.__TAURI__.core.invoke.bind(window.__TAURI__.core);
+      }
+      if (window.__TAURI__ && window.__TAURI__.invoke) {
+        return window.__TAURI__.invoke.bind(window.__TAURI__);
+      }
+      if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
+        return window.__TAURI_INTERNALS__.invoke.bind(window.__TAURI_INTERNALS__);
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function openExternal(url) {
-    if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
-      window.__TAURI_INTERNALS__.invoke('open_external', { url: url }).catch(function (err) {
+    var inv = getInvoke();
+    if (inv) {
+      inv('open_external', { url: url }).catch(function (err) {
         console.error('[external_links] invoke failed:', err);
         try { window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) {}
       });
     } else {
-      // Browser fallback
       try { window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) {
         console.error('[external_links] window.open failed:', e);
       }
