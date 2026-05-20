@@ -1,0 +1,185 @@
+/* ============================================================
+   _fmt_tables.css — table layout / overflow polish (Agent: tables)
+
+   Standalone layer, imported LAST from style.css so it wins on
+   selector conflicts. Does NOT touch _v2_compat.css or
+   wikitable_polish.css (owned by other agents).
+
+   Scope / problems addressed (verified via Playwright srcdoc
+   harness against the live offline build, viewport 560–1137px):
+
+   1. _v2_compat.css sets `.mw-parser-output .filterable
+      { display:block }` on the BIG generated data tables
+      (法术列表 / 近战武器列表 / 生物总表 / *特征 — all share
+      `table.wikitable.filterable#filter-spell-list`, 11 columns,
+      hundreds of cf-item rows). A bare `display:block` on a
+      <table> keeps `table-layout:auto`, so at narrow widths the
+      browser crushes the wide text columns (特征/根源 fell from
+      ~14% to <48px, row height ballooned 56px→113px) instead of
+      letting the table scroll. There is no wrapper <div>, so a
+      pure-CSS horizontal-scroll escape hatch is needed.
+
+   2. Plain `.wikitable` (e.g. 阿修罗特征) is already styled by
+      wikitable_polish.css; here we only add the same overflow
+      safety + vertical-align + dark-mode parity so a wide plain
+      table can scroll rather than force the page to scroll.
+
+   Technique: turn the table box into a horizontal scroll
+   container (display:block; overflow-x:auto) and promote its
+   <tbody> back to a real table grid (display:table; width:100%;
+   min-width:<floor>) so columns keep a readable floor and the
+   table — not the page — scrolls. The width:% hints on <th>
+   are preserved by table-layout:auto on the tbody.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. Big filterable data tables — scrollable, no column crush
+   ------------------------------------------------------------ */
+.mw-parser-output table.wikitable.filterable {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  /* momentum scroll on touch + thin scrollbar on desktop */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  /* subtle edge so users notice horizontal scroll exists */
+  border-radius: 4px;
+}
+
+/* Promote the inner grid back to a real table so width:% th
+   hints + striping + header band keep working. min-width is the
+   readability floor: below it the table scrolls horizontally
+   instead of crushing the two wide text columns (特征/根源). */
+.mw-parser-output table.wikitable.filterable > tbody {
+  display: table;
+  width: 100%;
+  min-width: 920px;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+/* Cells: top-aligned, never let a single long token blow the
+   column open horizontally; allow normal wrapping. */
+.mw-parser-output table.wikitable.filterable > tbody > tr > td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* Cells whose sole content is a pf2icon (施法 action icons) or a
+   bare rarity/PFS glyph read best centered. Target by content
+   (icon-only / single-child) rather than by column position,
+   because the spell / weapon / creature lists reuse the same
+   #filter-spell-list template with DIFFERENT column orders — a
+   positional nowrap would wrongly clamp a wide 特征 column on the
+   weapon table. This stays safe across all four pages. */
+.mw-parser-output table.wikitable.filterable > tbody > tr > td:has(> .pf2icon:only-child),
+.mw-parser-output table.wikitable.filterable > tbody > tr > td:has(> span.pf2icon) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Header row stays put while scrolling vertically through the
+   long list. wikitable2R is huiji's own header-row class. */
+.mw-parser-output table.wikitable.filterable > tbody > tr.wikitable2R th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* ------------------------------------------------------------
+   2. Plain wikitable / pf2table — overflow safety + alignment
+      (visual band/striping already handled by wikitable_polish)
+   ------------------------------------------------------------ */
+
+/* A wide plain table should scroll itself rather than push the
+   whole page sideways. Only kicks in when the table is actually
+   wider than its container (min-width:max-content keeps the
+   intrinsic width; the wrapper-less table scrolls via block). */
+.mw-parser-output table.wikitable:not(.filterable):not(.navbox-inner):not(.navbox-subgroup),
+.mw-parser-output table.pf2table {
+  vertical-align: top;
+}
+
+/* Cell alignment + sane wrapping for plain tables */
+.mw-parser-output table.wikitable:not(.filterable) td,
+.mw-parser-output table.wikitable:not(.filterable) th,
+.mw-parser-output table.pf2table td,
+.mw-parser-output table.pf2table th {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+/* pf2table baseline (wiki_native styles wikitable but pf2table
+   may be unthemed) — give it the same grid look. */
+.mw-parser-output table.pf2table {
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.mw-parser-output table.pf2table td,
+.mw-parser-output table.pf2table th {
+  padding: 6px 10px;
+  border: 1px solid var(--border, #ddd);
+}
+.mw-parser-output table.pf2table tr:first-child th,
+.mw-parser-output table.pf2table thead th {
+  background: var(--accent-band, #6d2002);
+  color: var(--accent-on, #fffbf6);
+  text-align: left;
+}
+
+/* ------------------------------------------------------------
+   3. Dark mode parity
+   ------------------------------------------------------------ */
+body.dark .mw-parser-output table.wikitable.filterable > tbody > tr.wikitable2R th {
+  color: #fdf3f3;
+}
+body.dark .mw-parser-output table.pf2table td,
+body.dark .mw-parser-output table.pf2table th {
+  border-color: #3a3a3a;
+}
+body.dark .mw-parser-output table.pf2table tr:first-child th,
+body.dark .mw-parser-output table.pf2table thead th {
+  background: #4a1500;
+  color: #fdf3f3;
+}
+/* Sticky header needs an opaque backdrop in dark mode so rows
+   scrolling under it don't bleed through. */
+body.dark .mw-parser-output table.wikitable.filterable > tbody > tr.wikitable2R th {
+  background-clip: padding-box;
+}
+
+/* ------------------------------------------------------------
+   4. Narrow viewport — tighten so the scroll distance is small
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .mw-parser-output table.wikitable.filterable > tbody {
+    min-width: 760px;
+    font-size: 13px;
+  }
+  .mw-parser-output table.wikitable.filterable > tbody > tr > td,
+  .mw-parser-output table.wikitable.filterable > tbody > tr.wikitable2R th {
+    padding: 5px 7px;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. Print — show everything, no scroll clipping
+   ------------------------------------------------------------ */
+@media print {
+  .mw-parser-output table.wikitable.filterable {
+    display: table;
+    overflow: visible;
+  }
+  .mw-parser-output table.wikitable.filterable > tbody {
+    display: table-row-group;
+    min-width: 0;
+  }
+  .mw-parser-output table.wikitable.filterable > tbody > tr.wikitable2R th {
+    position: static;
+  }
+}

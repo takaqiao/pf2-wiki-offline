@@ -1,6 +1,6 @@
 [package]
 name = "pf2-wiki"
-version = "0.3.11"
+version = "0.3.12"
 description = "PF2 中文百科 离线镜像 — Pathfinder 2e Chinese wiki offline mirror"
 authors = ["takaqiao"]
 license = "MIT"
