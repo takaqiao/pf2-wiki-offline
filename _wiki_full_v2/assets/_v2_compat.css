@@ -581,15 +581,37 @@ body.dark div.page-categories li a {
 
 /* ---------- 6c. Page-level TOC (v2 builder-injected) ---------- */
 
+/* TOC floats to the RIGHT as a sticky sidebar (like modern doc sites) so it
+   never buries the article at the top. Article text flows down the left.
+   Collapses back to a full-width block on narrow viewports. */
 div.page-toc-v2 {
-  margin: 16px 0 24px;
-  padding: 12px 18px;
+  float: right;
+  clear: right;
+  width: 260px;
+  margin: 4px 0 16px 24px;
+  padding: 10px 14px;
   background: var(--bg-alt);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: 4px;
-  font-size: 13.5px;
-  max-width: 600px;
+  font-size: 13px;
+  position: sticky;
+  top: 64px;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+  z-index: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+@media (max-width: 900px) {
+  div.page-toc-v2 {
+    float: none;
+    clear: both;
+    width: auto;
+    max-width: 100%;
+    position: static;
+    max-height: none;
+    margin: 16px 0;
+  }
 }
 body.dark div.page-toc-v2 {
   background: var(--card);
@@ -623,14 +645,19 @@ div.page-toc-v2 li.toclevel-2 { padding-left: 0; }
 div.page-toc-v2 li.toclevel-3 { padding-left: 18px; }
 div.page-toc-v2 li.toclevel-4 { padding-left: 36px; }
 div.page-toc-v2 li.toclevel-5 { padding-left: 54px; }
-/* When expanded, cap height so a 30-section page doesn't bury the article. */
+/* Single column inside the narrow right sidebar (the sticky container already
+   scrolls). On narrow viewports where it collapses back to a block, allow 2
+   columns to save vertical space. */
 div.page-toc-v2 > details[open] > ul {
-  max-height: 45vh;
-  overflow-y: auto;
-  columns: 2;
-  column-gap: 28px;
+  columns: 1;
 }
-@media (max-width: 700px) {
+@media (max-width: 900px) {
+  div.page-toc-v2 > details[open] > ul {
+    columns: 2;
+    column-gap: 28px;
+  }
+}
+@media (max-width: 600px) {
   div.page-toc-v2 > details[open] > ul { columns: 1; }
 }
 div.page-toc-v2 a {
@@ -1659,4 +1686,37 @@ body.dark .pf2-keybind-modal-close:focus-visible {
 
 @media print {
   .pf2-keybind-modal { display: none !important; }
+}
+
+/* ---------- 11. Right-TOC coexistence + dark-bg text contrast ---------- */
+
+/* statblock builds a block-formatting context so it shrinks to the space
+   LEFT of the right-floated TOC instead of sliding underneath it (where the
+   TOC's opaque background + shadow would cover the statblock's right edge). */
+.mw-parser-output .statblock,
+.mw-parser-output .quote-block {
+  display: flow-root;
+}
+
+/* Trait tags: dark-grey (#333) on green bg measured 2.5:1 (WCAG needs 4.5).
+   Force white text on the coloured trait chips. */
+.mw-parser-output .statblock .tag,
+.mw-parser-output .traits .tag,
+.mw-parser-output .tag.trait,
+.mw-parser-output .trait {
+  color: #fff !important;
+}
+
+/* .classquote / .classtextbox: wiki sets an inline dark-green background but
+   no text colour, so it inherits the dark --fg → dark-green-on-dark-green.
+   We can't override the inline bg from CSS, but we can force readable text. */
+.mw-parser-output .classquote,
+.mw-parser-output .classquote .classtextbox,
+.mw-parser-output .classbox,
+.mw-parser-output .well.quote-primary {
+  color: #fff !important;
+}
+.mw-parser-output .classquote a,
+.mw-parser-output .classquote .classtextbox a {
+  color: #ffe9a8 !important;
 }

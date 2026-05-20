@@ -51,6 +51,10 @@
   --k-deity-bg:      #f6e4a4;
   --k-deity-border:  #c79c2c;
 
+  --k-action-fg:     #155e63;
+  --k-action-bg:     #cdeef0;
+  --k-action-border: #4fb3bb;
+
   --k-trait-fg:      #404040;
   --k-trait-bg:      #e2dfd6;
   --k-trait-border:  #9c9789;
@@ -107,6 +111,10 @@ body.dark {
   --k-deity-fg:      #ecd07a;
   --k-deity-bg:      #38280a;
   --k-deity-border:  #8a6a1c;
+
+  --k-action-fg:     #8fd6db;
+  --k-action-bg:     #13312f;
+  --k-action-border: #3a7a78;
 
   --k-trait-fg:      #c7c2b3;
   --k-trait-bg:      #2a2820;
@@ -243,6 +251,7 @@ body.dark .pf2s-chip:hover { filter: brightness(1.1); }
 .kind-background { --badge-fg: var(--k-background-fg); --badge-bg: var(--k-background-bg); }
 .kind-location   { --badge-fg: var(--k-location-fg);   --badge-bg: var(--k-location-bg); }
 .kind-deity      { --badge-fg: var(--k-deity-fg);      --badge-bg: var(--k-deity-bg); }
+.kind-action     { --badge-fg: var(--k-action-fg);     --badge-bg: var(--k-action-bg); }
 .kind-trait      { --badge-fg: var(--k-trait-fg);      --badge-bg: var(--k-trait-bg); }
 .kind-stub       { --badge-fg: var(--k-stub-fg);       --badge-bg: var(--k-stub-bg); }
 .kind-other      { --badge-fg: var(--k-other-fg);      --badge-bg: var(--k-other-bg); }
@@ -258,6 +267,7 @@ body.dark .pf2s-chip:hover { filter: brightness(1.1); }
 .pf2s-chip.kind-background { background: var(--k-background-bg); color: var(--k-background-fg); border-color: var(--k-background-border); }
 .pf2s-chip.kind-location   { background: var(--k-location-bg);   color: var(--k-location-fg);   border-color: var(--k-location-border); }
 .pf2s-chip.kind-deity      { background: var(--k-deity-bg);      color: var(--k-deity-fg);      border-color: var(--k-deity-border); }
+.pf2s-chip.kind-action     { background: var(--k-action-bg);     color: var(--k-action-fg);     border-color: var(--k-action-border); }
 .pf2s-chip.kind-trait      { background: var(--k-trait-bg);      color: var(--k-trait-fg);      border-color: var(--k-trait-border); }
 .pf2s-chip.kind-stub       { background: var(--k-stub-bg);       color: var(--k-stub-fg);       border-color: var(--k-stub-border); }
 .pf2s-chip.kind-other      { background: var(--k-other-bg);      color: var(--k-other-fg);      border-color: var(--k-other-border); }
@@ -273,6 +283,7 @@ body.dark .pf2s-chip:hover { filter: brightness(1.1); }
 .pf2s-group.kind-background .pf2s-group-h { border-bottom-color: var(--k-background-border); }
 .pf2s-group.kind-location   .pf2s-group-h { border-bottom-color: var(--k-location-border); }
 .pf2s-group.kind-deity      .pf2s-group-h { border-bottom-color: var(--k-deity-border); }
+.pf2s-group.kind-action     .pf2s-group-h { border-bottom-color: var(--k-action-border); }
 .pf2s-group.kind-trait      .pf2s-group-h { border-bottom-color: var(--k-trait-border); }
 .pf2s-group.kind-stub       .pf2s-group-h { border-bottom-color: var(--k-stub-border); }
 .pf2s-group.kind-other      .pf2s-group-h { border-bottom-color: var(--k-other-border); }

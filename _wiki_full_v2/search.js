@@ -325,6 +325,13 @@
         }
         state.items = t.items;
         state.byId = state.items;  // i === array index by construction
+        // Optional parallel popularity array (inbound-link counts) emitted by
+        // build_search_v2.py. Used as the secondary sort key — when two hits
+        // share a relevance score, the more-linked-to page wins (so "战士"
+        // outranks "战士专长(2e)" because the bare class page is linked far
+        // more often). Falls back to all-zero when absent (older index).
+        state.popularity = (Array.isArray(t.pop) && t.pop.length === state.items.length)
+          ? t.pop : null;
         // Optional aligned type lookup (window.__PF2_TYPES). If present, each
         // character in .codes corresponds 1:1 to items[i].
         const types = W.__PF2_TYPES;
@@ -360,9 +367,10 @@
     background: { label: "背景",   className: "kind-background",order: 8 },
     location:   { label: "地点",   className: "kind-location",  order: 9 },
     deity:      { label: "神祇",   className: "kind-deity",     order: 10 },
-    trait:      { label: "特征",   className: "kind-trait",     order: 11 },
-    stub:       { label: "短条目", className: "kind-stub",      order: 12 },
-    other:      { label: "其他",   className: "kind-other",     order: 13 },
+    action:     { label: "动作",   className: "kind-action",    order: 11 },
+    trait:      { label: "特征",   className: "kind-trait",     order: 12 },
+    stub:       { label: "短条目", className: "kind-stub",      order: 13 },
+    other:      { label: "其他",   className: "kind-other",     order: 14 },
   };
 
   function resolveType(item) {
@@ -462,6 +470,7 @@
 
     // Rank: title-prefix > title-substring > content-only.
     const lower = text.toLowerCase().trim();
+    const pop = state.popularity;  // may be null on legacy indexes
     const ranked = candidates.map(function (id) {
       const it = state.byId[id];
       const tl = (it.t || "").toLowerCase();
@@ -473,9 +482,20 @@
       score -= Math.min(50, (it.t || "").length);
       // Namespace boost: main content > data
       if (it.k === "p") score += 5;
-      return { item: it, score: score };
+      // Inbound-link popularity — used only as a tiebreaker, NOT folded into
+      // `score` so it can't outweigh title-match boosts. Stored alongside on
+      // the result row and consulted by the comparator below.
+      const popVal = (pop && typeof id === "number") ? (pop[id] | 0) : 0;
+      return { item: it, score: score, pop: popVal };
     });
-    ranked.sort(function (a, b) { return b.score - a.score; });
+    // Primary sort: relevance score (desc). Secondary: inbound-link count
+    // (desc) so canonical pages float above their disambiguation siblings.
+    // Tertiary: id (asc) for stable ordering when both are equal.
+    ranked.sort(function (a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.pop !== a.pop) return b.pop - a.pop;
+      return (a.item.i | 0) - (b.item.i | 0);
+    });
 
     return ranked.slice(0, limit).map(function (r) {
       return {
