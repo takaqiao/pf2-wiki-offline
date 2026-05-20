@@ -51,7 +51,9 @@ fn wait_for_server(port: u16, deadline_ms: u64) -> bool {
 fn serve_static(resource_root: PathBuf, port: u16) {
     let addr: SocketAddr = format!("127.0.0.1:{port}").parse().expect("addr");
     let server = Server::http(addr).expect("start tiny_http");
-    let root = Arc::new(resource_root);
+    // Canonicalize once so per-request traversal checks compare like-for-like
+    // (Windows canonical paths use the \\?\ prefix).
+    let root = Arc::new(std::fs::canonicalize(&resource_root).unwrap_or(resource_root));
 
     for request in server.incoming_requests() {
         let url = request.url().to_string();
@@ -75,6 +77,19 @@ fn serve_static(resource_root: PathBuf, port: u16) {
         }
 
         let full = root.join(&path[1..]);
+
+        // Defense in depth: a resolved path must stay under root. Catches
+        // Windows absolute-path joins (e.g. "/C:/Windows/...", where PathBuf::join
+        // discards the base) and symlink escapes that the textual ".." check
+        // above misses. canonicalize only succeeds for existing paths; a
+        // non-existent path is no traversal and falls through to 404 below.
+        if let Ok(canon) = std::fs::canonicalize(&full) {
+            if !canon.starts_with(&*root) {
+                let _ = request.respond(Response::from_string("Forbidden").with_status_code(403));
+                continue;
+            }
+        }
+
         if !full.exists() || !full.is_file() {
             // Friendly 404 fallback: serve _wiki_full_v2/404.html with HTTP
             // status 404 (so the webview renders our themed "page not found"
@@ -147,6 +162,12 @@ fn serve_static(resource_root: PathBuf, port: u16) {
 
 #[tauri::command]
 fn open_external(url: String) -> Result<(), String> {
+    // Only ever hand web links to the system browser. The webview only sends
+    // http(s) external links here; reject anything else (file://, etc.) so a
+    // stray invoke can't launch arbitrary protocol handlers.
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err(format!("refused non-http(s) url: {url}"));
+    }
     open::that(&url).map_err(|e| e.to_string())
 }
 

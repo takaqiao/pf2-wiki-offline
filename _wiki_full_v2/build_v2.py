@@ -871,7 +871,7 @@ def main(argv: list[str]) -> int:
     print("[2/4] build category reverse-index")
     category_members: dict[str, list[tuple[str, int, str]]] = {}
     tcat0 = time.time()
-    cat_scan_files = list(PARSED_DIR.rglob("*.json"))
+    cat_scan_files = sorted(PARSED_DIR.rglob("*.json"))  # sorted: deterministic scan order
     for pf in cat_scan_files:
         if pf.name.startswith("_"):
             continue
@@ -896,7 +896,7 @@ def main(argv: list[str]) -> int:
           f"populated {len(category_members)} categories")
 
     print("[3/4] enumerate parsed JSON files")
-    parsed_files = [p for p in PARSED_DIR.rglob("*.json") if not p.name.startswith("_")]
+    parsed_files = [p for p in sorted(PARSED_DIR.rglob("*.json")) if not p.name.startswith("_")]
     if args.ns >= 0:
         # filter by ns later when reading file
         pass
