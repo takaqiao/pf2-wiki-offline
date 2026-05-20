@@ -112,8 +112,9 @@ def iter_parsed_with_cats():
             )
 
 
-def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: str) -> str:
-    label = BUCKET_LABELS.get(bucket, bucket)
+def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: str,
+                        label: str | None = None) -> str:
+    label = label or BUCKET_LABELS.get(bucket, bucket)
     rows = []
     for e in entries:
         row = (

@@ -36,7 +36,7 @@
 - [x] **P1 枚举宇宙**: DONE(2026-05-21)。全集已枚举入 WORKLIST。离线 B 真值索引已建(3604 distinct cat,其中 3294 被标 `missing:true`=红链分类无 Category 页;仅 354 有 ns=14 页 → 358 html 多出 4 待查)。A 的 BUCKETS 关键词字典、C 的 STUBS 映射、class hubs 已读全。
 - [~] **P2 拉基准**: **B-part DONE**(354 全拉,0 失败,缓存 `out_v2/_cat_audit/_live/`,info_size 全对齐)。**A/C-part TODO**: A 的锚分类**多数已在 B 缓存里**(专长/法术/物品/生物/背景/变体/职业/地理/特征/戏法/聚能/武器/护甲/符文 共 14 个都是 ns=14,已拉)→ **无需再拉**;仅需补:缺失锚的真名(祖先?族裔? 神祇?信仰? — live 探测确认)+ C 的法术传统(奥术/神圣/神秘/原初,疑「(特征)」后缀)+ 物品子类(消耗品/佩戴物品/法器,疑「(特征)」后缀)。
 - [~] **P3 diff + 定位**: **B DONE**(正确/staleness)。**A 已量化**(`diff_a.py`:每桶大错配,真锚名已 probe 确认;creatures/archetypes 锚非单一分类,待 investigate)。**C 子类锚名已 probe**(见 FINDINGS);法术传统/怪物等级需数据驱动。剩:creatures/archetypes 锚 investigate + C 数据驱动方案。
-- [~] **P4 修复**: **A-part DONE**(build_browse_v2.py→`BUCKET_CATS` 分类驱动,`verify_a.py` 实测全 staleness 级、0 关键词污染,已重生成 13 browse 页)。B 无需改码。**C-part TODO**:build_nav_stubs.py 装饰 stub→真实子类过滤内容(worn/consumables/equipment 用分类;weapons/armor/runes/法术传统/怪物等级 用 ns=3500 数据字段)。
+- [x] **P4 修复**: **DONE**。A:build_browse_v2.py→`BUCKET_CATS` 分类驱动(verify_a 全 staleness 级、0 污染)。B:无需改码。C:build_nav_stubs.py 重写为 ns=3500 数据驱动的真实子区页 + ∩父桶(verify_c 全 ⊆ 父桶 True)。三套机制全部修复。
 - [ ] **P5 整体重建 + 验证**: TODO。全量重跑 build_*.py;抽样+全量 diff 0 残留;`diagnostics/acl_probe.mjs`;死链复查。
 - [ ] **P6 发版(仅此时 bump)**: TODO。见铁律。
 
@@ -62,7 +62,9 @@
 - [ ] categories | A | TODO | ns=14 全量桶;基本对应 B 全集,核实是否冗余。
 - [ ] browse-all | A | TODO | 全条目字母表;核实计数。
 
-### C — 17 子区 nav stub(全部 meta-refresh 跳到**未过滤**父页)
+### C — 17 子区 ✅ **DONE(改真实过滤内容页,verify_c 全 ⊆ 父桶 True)**
+> build_nav_stubs.py 重写:弃 meta-refresh 空跳,改从 ns=3500 Data 表(根源/法术分类/等级/物品分类,中文 字段 join 到 ns0 文章)生成真实成员页,并 ∩ 父桶保证严格子集。计数:法术 奥术558/神术297/异能415/原能423/戏法90/聚能354;生物 0-3:369/4-7:375/8-12:286/13-17:157/18-25:76;物品 武器254/护甲111/消耗品756/穿戴380/符文105/法器31。覆盖缺口(非缺陷):605 法术无 data 页/221 生物无等级/1754 物品不属这 6 类。**真锚名修正**:传统=奥术/神术/异能/原能(非 神圣/神秘/原初);worn=穿戴物品。下列原 TODO 已覆盖:
+### C — 原 stub(历史 TODO,已被覆盖)
 - [ ] items: weapons/armor/consumables/worn/runes/implements(6) | C | TODO | 标签 武器/护甲/消耗品/佩戴物品/符文/法器;**当前 url=browse-items.html 无过滤**。
 - [ ] spells: arcane/divine/occult/primal/cantrips/focus(6) | C | TODO | 标签 奥术/神圣/神秘/原初/戏法/专注;传统分类 live 名待核实(可能 秘法/玄秘 等)。
 - [ ] creatures: level 0-3/4-7/8-12/13-17/18-25(5) | C | TODO | 按等级分段;wiki 可能无等级分类→需从 creature level 数据字段驱动,非分类。
@@ -98,4 +100,5 @@
 - 2026-05-21(iter2) | P0 DONE(读全状态+CF 探针实测过+路径/产物/工具记录)+ P1 DONE(全集枚举入 WORKLIST,建离线真值索引 3604cat,读全 A/B/C 脚本,导出 354 B 目标)+ 建 3 个 cat_audit 工具+预备发现(A 关键词脏/C 子区装饰/B 小 staleness)| 下次从 **P2**:跑 `dump_live_catmembers.py _b_category_targets.txt` 拉 354 B 分类 live 成员(headed ~5-10min),再拉 A 锚分类+C 传统分类(先核实名称),然后 P3 diff B。
 - 2026-05-21(iter2 续) | **P2-B + P3-B DONE**:拉全 354 B 分类 live(0 失败)→ `diff_b.py` → `analyze_b_findings.py`。**B 结案=正确,119 差异全 staleness,build_v2 无 bug**(命匣 2e→2r remaster 为铁证)。建 diff_b.py/analyze_b_findings.py 工具。锚覆盖核实:creatures 真名=**生物**(非怪物)、locations=**地理**、archetypes=**变体**。| 下次从 **P3-A**。
 - 2026-05-21(iter3) | **P3-A 量化 + A/C 锚名 probe**:补拉 28 候选锚(`_ac_probe_targets.txt`)→ 确认 ancestries=**族裔**(非祖先)、deities=**信仰**(非神祇);法术传统无分类(仅奥术(特征)110,余空)→ 须数据驱动。`diff_a.py`:每桶大错配(items+6080、classes+4522、archetypes+2375 误含;locations 漏1061、deities 漏406、ancestries 漏245)。建 diff_a.py。**A 是用户「对不上」主因,实锤**。| 下次:investigate creatures/archetypes 真锚 → 定 A 的 P4 映射 → 改 build_browse_v2.py(分类驱动)→ 重建复核;再处理 C。
-- 2026-05-21(iter4) | **P4-A DONE + 验证**:investigate_anchors 定 creatures=体型并集/archetypes=变体（特征）;补拉 5 验证锚;**重写 build_browse_v2.py 为 BUCKET_CATS 分类驱动**(弃 classify 关键词),重生成 13 browse 页;建 verify_a.py 实测 offline-bucket vs live-cat 全 staleness 级(false+≤2/false-≤10,0 污染)。建 investigate_anchors.py/verify_a.py。| 下次 **C(P3+P4)**:① 物品 worn/consumables/equipment 子区改真实分类过滤(穿戴物品/消耗品（特征）/装备);② weapons/armor/runes + 法术传统(奥术/神圣/神秘/原初)+ 怪物等级 → 查 ns=3500 data schema(看 data/*.json.html 或 parsed ns=3500 结构)用数据字段驱动;③ 改 build_nav_stubs.py:stub 不再空跳父页,而是生成带真实成员的子区页(或父页支持可用过滤参数)。先看一个 ns=3500 法术 data 页确认有 tradition 字段。
+- 2026-05-21(iter4) | **P4-A DONE + 验证**:investigate_anchors 定 creatures=体型并集/archetypes=变体（特征）;补拉 5 验证锚;**重写 build_browse_v2.py 为 BUCKET_CATS 分类驱动**(弃 classify 关键词),重生成 13 browse 页;建 verify_a.py 实测全 staleness 级(0 污染)。| 下次 C。
+- 2026-05-21(iter5) | **P4-C DONE + 验证**:schema_probe 解析 ns=3500 Data 表 → 法术 根源(奥术/神术/异能/原能)+法术分类(戏法/聚能)、生物 等级、物品 物品分类。**重写 build_nav_stubs.py**:17 子区从空跳 stub 改为数据驱动真实成员页,中文 join 到 ns0 文章,∩ 父桶保证子集。建 schema_probe.py/verify_c.py,verify_c 全 ⊆ 父桶 True。**A+B+C 三套全部完成**。| 下次 **P5**:全量重跑 run_v2_pipeline(或至少 build_v2+browse+nav_stubs+class_hubs+search)→ 抽样开 app/acl_probe → 死链复查(子区现在有真内容,旧死链应清)→ 复查 358-vs-354 那 4 个多余 category html。P5 全绿后才 P6 发版 v0.3.24。
