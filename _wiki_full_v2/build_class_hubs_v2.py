@@ -23,13 +23,16 @@ SNIPPET_SUB = ROOT / "_snippets" / "topnav_sub.html"
 
 CACHE_VER = "v2h"
 
-# 25 PF2 真职业 — strict allowlist (canonical wiki titles, verified 2026-05-20)
-# Mapping: 中文 wiki title -> English label (for tooltip / future i18n)
+# 27 PF2 真职业 — from the live 职业 page roster (canonical wiki titles, English
+# verified against each page's intro, 2026-05-21). All present in the offline corpus.
+# Mapping: 中文 wiki title -> English label (for tooltip / future i18n).
+# Naming caught up with the wiki: Swashbuckler 斗士->浪客, Kineticist 元素使->御能师,
+# Inventor 发明家->发明家（职业）, Psychic 灵媒->心能者 (灵媒 is now Animist!);
+# new classes Guardian/Commander/Exemplar; dropped 圣武士 (a 神卫 cause, not a class).
 KNOWN_CLASSES = {
     "野蛮人": "Barbarian",
     "吟游诗人": "Bard",
     "神卫": "Champion",
-    "圣武士": "Champion (Paladin variant)",
     "牧师": "Cleric",
     "德鲁伊": "Druid",
     "战士": "Fighter",
@@ -44,13 +47,16 @@ KNOWN_CLASSES = {
     "魔战士": "Magus",
     "先知": "Oracle",
     "女巫": "Witch",
-    "元素使": "Kineticist",
+    "御能师": "Kineticist",
     "奇术师": "Thaumaturge",
-    "灵媒": "Psychic",
+    "心能者": "Psychic",
     "召唤师": "Summoner",
-    "发明家": "Inventor",
-    "斗士": "Swashbuckler",
-    "魂铸者": "Animist",
+    "发明家（职业）": "Inventor",
+    "浪客": "Swashbuckler",
+    "灵媒": "Animist",
+    "神源者": "Exemplar",
+    "守护者": "Guardian",
+    "统帅": "Commander",
 }
 
 SAFE_RX = re.compile(r'[*?"<>|]')
@@ -116,7 +122,7 @@ def build_classes_hub():
     Only includes pages whose title is in KNOWN_CLASSES dict. Falls back to
     placeholder row for titles not yet scraped.
     """
-    print("[classes] scanning for known classes (strict 25 allowlist) ...")
+    print(f"[classes] scanning for known classes (strict {len(KNOWN_CLASSES)} allowlist) ...")
     found: dict[str, dict] = {}
     for doc in iter_parsed():
         title = doc.get("title", "")
@@ -169,7 +175,7 @@ def build_classes_hub():
         '.aon-table tbody tr:hover{background:rgba(255,179,0,0.15)}</style>'
     )
     bc = '<span>玩家选项</span><span class="sep">›</span><span class="current">职业</span>'
-    html = page_html("职业 — 25 真职业 hub", body, bc).replace(
+    html = page_html("职业 — 27 真职业 hub", body, bc).replace(
         '<a href="../index.html">首页</a><span class="sep">›</span>',
         '<a href="../index.html">首页</a><span class="sep">›</span>',
     )
