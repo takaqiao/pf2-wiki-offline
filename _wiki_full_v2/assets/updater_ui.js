@@ -78,6 +78,16 @@
     return null;
   }
 
+  // Tauri 2 event listener (for update-progress events from apply_incremental_update).
+  function getListen() {
+    try {
+      if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.listen) {
+        return window.__TAURI__.event.listen.bind(window.__TAURI__.event);
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function openExternal(url) {
     var inv = getInvoke();
     if (inv) {
@@ -172,11 +182,40 @@
       btn.disabled = true;
       btn.textContent = '下载中…';
       document.getElementById('pf2-updater-msg').innerHTML =
-        '<strong>正在更新到 ' + escapeHtml(latestTag) + '</strong> — '
-        + chain.count + ' 个补丁，完成后自动重启…';
+        '<strong>正在更新到 ' + escapeHtml(latestTag) + '</strong>'
+        + '<div style="margin-top:6px;height:8px;border-radius:4px;background:rgba(0,0,0,.18);overflow:hidden">'
+        + '<div id="pf2-upd-fill" style="height:100%;width:0%;background:#ffb300;transition:width .15s"></div></div>'
+        + '<div id="pf2-upd-pct" style="margin-top:4px;font-size:12px;opacity:.85">准备中…</div>';
+
+      // Listen for download/verify/apply progress so the user sees a percentage.
+      var lis = getListen();
+      var unlisten = null;
+      if (lis) {
+        lis('update-progress', function (ev) {
+          var p = (ev && ev.payload) || {};
+          var fill = document.getElementById('pf2-upd-fill');
+          var pct = document.getElementById('pf2-upd-pct');
+          if (!fill || !pct) return;
+          if (p.phase === 'download') {
+            var mb = p.total
+              ? (p.downloaded / 1048576).toFixed(1) + ' / ' + (p.total / 1048576).toFixed(1) + ' MB'
+              : (p.downloaded / 1048576).toFixed(1) + ' MB';
+            fill.style.width = (p.pct || 0) + '%';
+            pct.textContent = '下载补丁 ' + p.patch + '/' + p.total_patches + ' — ' + (p.pct || 0) + '% (' + mb + ')';
+          } else if (p.phase === 'verify') {
+            fill.style.width = '100%';
+            pct.textContent = '校验补丁 ' + p.patch + '/' + p.total_patches + '…';
+          } else if (p.phase === 'apply') {
+            fill.style.width = '100%';
+            pct.textContent = '正在应用更新，即将自动重启…';
+          }
+        }).then(function (un) { unlisten = un; }).catch(function () {});
+      }
+
       var payload = chain.steps.map(function (s) { return { url: s.url, sha256: s.sha256 }; });
       inv('apply_incremental_update', { patches: payload })
         .catch(function (err) {
+          if (unlisten) { try { unlisten(); } catch (e) {} }
           btn.disabled = false;
           btn.textContent = patchLabel;
           document.getElementById('pf2-updater-msg').innerHTML =

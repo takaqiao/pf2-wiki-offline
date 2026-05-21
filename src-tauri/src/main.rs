@@ -21,8 +21,20 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tiny_http::{Header, Response, Server};
+
+/// Progress payload emitted to the webview during apply_incremental_update so
+/// updater_ui.js can render a percentage bar (phase: download | verify | apply).
+#[derive(Clone, serde::Serialize)]
+struct UpdateProgress {
+    phase: String,
+    patch: usize,
+    total_patches: usize,
+    downloaded: u64,
+    total: u64,
+    pct: u32,
+}
 
 fn pick_free_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind random port");
@@ -229,11 +241,57 @@ async fn apply_incremental_update(
             .timeout(std::time::Duration::from_secs(180))
             .call()
             .map_err(|e| format!("download #{} failed: {e}", i + 1))?;
+        let total: u64 = resp
+            .header("Content-Length")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        // Stream in chunks so we can emit download progress to the webview.
         let mut buf = Vec::with_capacity(8 * 1024 * 1024);
-        resp.into_reader()
-            .take(800 * 1024 * 1024)
-            .read_to_end(&mut buf)
-            .map_err(|e| format!("read #{} failed: {e}", i + 1))?;
+        let mut reader = resp.into_reader().take(800 * 1024 * 1024);
+        let mut chunk = [0u8; 65536];
+        let mut downloaded: u64 = 0;
+        let mut last_emit = std::time::Instant::now();
+        loop {
+            let n = reader
+                .read(&mut chunk)
+                .map_err(|e| format!("read #{} failed: {e}", i + 1))?;
+            if n == 0 {
+                break;
+            }
+            buf.extend_from_slice(&chunk[..n]);
+            downloaded += n as u64;
+            if last_emit.elapsed().as_millis() >= 120 {
+                let pct = if total > 0 {
+                    ((downloaded as f64 / total as f64) * 100.0).min(100.0) as u32
+                } else {
+                    0
+                };
+                let _ = app.emit(
+                    "update-progress",
+                    UpdateProgress {
+                        phase: "download".into(),
+                        patch: i + 1,
+                        total_patches: patches.len(),
+                        downloaded,
+                        total,
+                        pct,
+                    },
+                );
+                last_emit = std::time::Instant::now();
+            }
+        }
+        // download of this patch complete -> verify phase
+        let _ = app.emit(
+            "update-progress",
+            UpdateProgress {
+                phase: "verify".into(),
+                patch: i + 1,
+                total_patches: patches.len(),
+                downloaded,
+                total,
+                pct: 100,
+            },
+        );
         let mut hasher = Sha256::new();
         hasher.update(&buf);
         let actual = format!("{:x}", hasher.finalize());
@@ -251,6 +309,18 @@ async fn apply_incremental_update(
     eprintln!(
         "[pf2-wiki updater] {} patch(es) downloaded + verified",
         patches.len()
+    );
+    // all patches in hand -> applying + relaunch imminent
+    let _ = app.emit(
+        "update-progress",
+        UpdateProgress {
+            phase: "apply".into(),
+            patch: patches.len(),
+            total_patches: patches.len(),
+            downloaded: 0,
+            total: 0,
+            pct: 100,
+        },
     );
 
     let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
