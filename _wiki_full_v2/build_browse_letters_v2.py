@@ -61,7 +61,8 @@ def first_char_bucket(t: str) -> str:
     return "_"
 
 
-def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: str) -> str:
+def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: str,
+                        available: list[str]) -> str:
     rows = []
     for e in entries:
         rows.append(
@@ -113,7 +114,7 @@ def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: s
         '<div class="mw-parser-output">\n'
         '<nav class="letter-nav" aria-label="按字母浏览">\n'
         '  ' + " ".join(f'<a href="browse-{x}.html"{" class=\"current\"" if x == letter else ""}>{x}</a>'
-                        for x in (list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["CJK", "_"])) + '\n'
+                        for x in available) + '\n'
         '</nav>\n'
         f'<p style="color:var(--fg-mute);margin:8px 0 16px">共 {len(entries):,} 条以 <strong>{html_lib.escape(letter)}</strong> 起始的条目。</p>\n'
         '<table class="browse-table">\n'
@@ -141,14 +142,26 @@ def main() -> int:
     print(f"[1/3] grouping {len(pages)} pages by first char ...")
     buckets: dict[str, list[dict]] = defaultdict(list)
     skip_prefixes = ("Category:", "分类:", "File:", "Template:", "Help:", "MediaWiki:", "User:")
+    n_skip_redirect = 0
+    n_skip_unrendered = 0
     for p in pages:
         title = p.get("title", "")
         if any(title.startswith(s) for s in skip_prefixes):
+            continue
+        if p.get("is_redirect"):          # redirects aren't standalone pages
+            n_skip_redirect += 1
             continue
         ns = p.get("ns", 0)
         if ns not in (0, 102, 14, 3500):
             continue
         target_dir, bare = determine_dir_bare(ns, title)
+        # Only link to pages that were actually rendered. metadata.pages lists
+        # titles that build_v2 may not emit (special pages, broken redirects,
+        # parse failures) -> those would be dead links. build_v2 runs before this
+        # in the pipeline, so pages/ exists here.
+        if not (ROOT / target_dir / f"{safe_title(bare)}.html").exists():
+            n_skip_unrendered += 1
+            continue
         bucket = first_char_bucket(bare)
         ns_label = {0: "条目", 14: "分类", 102: "资源", 3500: "数据"}.get(ns, "")
         buckets[bucket].append({
@@ -156,18 +169,29 @@ def main() -> int:
             "href": f"{target_dir}/{urllib.parse.quote(safe_title(bare))}.html",
             "ns_label": ns_label,
         })
-    print(f"  buckets: {sorted(buckets.keys())}")
+    print(f"  buckets: {sorted(buckets.keys())} "
+          f"(skipped {n_skip_redirect} redirects, {n_skip_unrendered} unrendered)")
 
     print(f"[2/3] writing browse-X.html (A-Z + CJK + _) ...")
     t0 = time.time()
-    for letter in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["CJK", "_"]:
+    all_letters = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + ["CJK", "_"]
+    # letter-nav must only link letters that have a page (else dead nav links)
+    available = [x for x in all_letters if buckets.get(x)]
+    for letter in all_letters:
         entries = sorted(buckets.get(letter, []), key=lambda e: e["title"].lower())
         if not entries:
             print(f"  browse-{letter}.html: SKIP (0 entries)")
             continue
-        html = render_letter_page(letter, entries, topnav_root, sidebar_root)
+        html = render_letter_page(letter, entries, topnav_root, sidebar_root, available)
         (ROOT / f"browse-{letter}.html").write_text(html, encoding="utf-8")
         print(f"  browse-{letter}.html: {len(entries):,} entries")
+    # remove orphaned letter pages from a prior build (else stale nav + /MIR ships them)
+    for letter in all_letters:
+        if letter not in available:
+            stale = ROOT / f"browse-{letter}.html"
+            if stale.exists():
+                stale.unlink()
+                print(f"  removed orphan browse-{letter}.html")
     print(f"\n[3/3] done in {time.time()-t0:.1f}s")
     return 0
 
