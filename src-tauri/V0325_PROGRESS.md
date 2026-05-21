@@ -20,6 +20,13 @@
 ## 27 职业权威映射(中文 = English,全部离线present)
 吟游诗人=Bard 牧师=Cleric 德鲁伊=Druid 战士=Fighter 游侠=Ranger 游荡者=Rogue 女巫=Witch 法师=Wizard 炼金术士=Alchemist 野蛮人=Barbarian 神卫=Champion 调查员=Investigator 武僧=Monk 术士=Sorcerer 先知=Oracle 浪客=Swashbuckler 御能师=Kineticist 灵媒=Animist 神源者=Exemplar 发明家（职业）=Inventor 枪手=Gunslinger 守护者=Guardian 统帅=Commander 奇术师=Thaumaturge 心能者=Psychic 魔战士=Magus 召唤师=Summoner
 
+## 优化项 (用户 2026-05-22 "再看看能优化什么" → "好,全做")
+- [x] **#5 browse 分页**: DONE。复用 `assets/wikitable_paginate.js`(自带搜索框+翻页+每页选择+MutationObserver,≥100 行启用)。render_browse_html + render_letter_page 表加 `wikitable` class + 引脚本,删冗余自定义 filterBrowse。browse-all 排除 ns=3500 数据页(37k→~25k)。
+- [x] **#6 全分类页**: DONE。build_v2.py 加 [4b] 后处理:为反向索引里所有被引用但未抓的分类合成最小 Category doc 过 render_page_html 生成成员列表页。实测 **+3287 页(category/ 358→3646)**,内容页死链 **3.11%→1.70%**(分类死链基本清除;剩余是文章红链)。
+- [x] **#7 topnav 标签**: DONE。_snippets/topnav_sub.html + index.html:神祇→信仰、地点→地理、状态特征→异常状态(桌面+移动菜单)。
+- [x] **#8 首页旧数**: DONE。35,469→真实文章数 **24,666**(ns0);搜索框占位去掉旧数变通用;统计段改真实计数(24,666 文章/11,866 数据/3,646 分类)+定性翻译说明(弃旧的 35,317/152)。
+- 遗留(未做,低优):内容页剩 1.70% 死链=文章红链(部分是 wiki 本身红链=应死链,部分可能漏抓,需逐个对 live 核实,价值低)。
+
 ## 日志
 - 2026-05-21 | 建账本;抓 live 首页结构 + 职业 27 权威roster+English(校对页 intro);确认 27 全离线present(无需重抓)。下一步:实现 #1。
 - 2026-05-21 | **#1/#3/#4/#2 全部 DONE 并提交推送**(b35d54b 职业、b8a176a 字母死链、9c584f7 首页对齐、本次 #2 进度条)。**4 项全完成,待打包 v0.3.25**(纯内容部分 + #2 的 Rust 改动 → 发版须 `release.ps1 -PrevVer v0.3.24 -NewVer v0.3.25 -RebuildExe`,基准=干净 pf2-wiki-offline_0.3.24_x64-portable;发版待用户授权)。
