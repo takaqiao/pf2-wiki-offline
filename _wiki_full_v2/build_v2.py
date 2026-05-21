@@ -909,6 +909,7 @@ def main(argv: list[str]) -> int:
     n_ok = 0
     n_fail = 0
     by_dir: dict[str, int] = {}
+    rendered_cat_names: set[str] = set()   # bare names of ns=14 cats already written
     for i, pf in enumerate(parsed_files):
         try:
             doc = json.loads(pf.read_text(encoding="utf-8"))
@@ -930,6 +931,13 @@ def main(argv: list[str]) -> int:
         out_path.write_text(html, encoding="utf-8")
         by_dir[target_dir] = by_dir.get(target_dir, 0) + 1
         n_ok += 1
+        if doc.get("ns") == 14:
+            _ct = doc.get("title", "")
+            for _p in ("Category:", "分类:"):
+                if _ct.startswith(_p):
+                    _ct = _ct[len(_p):]
+                    break
+            rendered_cat_names.add(_ct)
         if (n_ok + n_fail) % 500 == 0:
             elapsed = time.time() - t0
             print(f"  [{n_ok + n_fail}/{len(parsed_files)}] ok={n_ok} fail={n_fail} rate={n_ok/max(elapsed,0.001):.0f}/s")
@@ -937,6 +945,37 @@ def main(argv: list[str]) -> int:
     print(f"\n[4/4] done: rendered {n_ok}, failed {n_fail} in {time.time()-t0:.1f}s")
     for d, c in sorted(by_dir.items()):
         print(f"    {d}/: {c}")
+
+    # [4b] Category pages for referenced-but-un-scraped categories. Content pages
+    # link to every category they belong to, but only scraped ns=14 ones had pages
+    # -> ~3% of content links were dead (mostly trait categories). MediaWiki shows
+    # member lists even for description-less categories; we do the same by
+    # synthesizing a minimal Category doc and letting render_page_html inject the
+    # member list from the inverted index.
+    print("\n[4b/4] category pages for referenced (un-scraped) categories")
+    t4b = time.time()
+    n_xcat = 0
+    for cat in sorted(category_members.keys()):
+        if cat in rendered_cat_names or not category_members.get(cat):
+            continue
+        fake = {
+            "ns": 14, "pageid": 0, "title": f"Category:{cat}",
+            "parse": {"title": f"Category:{cat}",
+                      "text": '<div class="mw-parser-output"></div>', "categories": []},
+        }
+        try:
+            td, fname, html = render_page_html(fake, topnav, sidebar, redirect_map,
+                                               title_index, manifest, category_members)
+        except Exception:
+            continue
+        out_path = ROOT / td / fname
+        if out_path.exists():
+            continue   # never overwrite a real scraped category page
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(html, encoding="utf-8")
+        n_xcat += 1
+    print(f"    +{n_xcat} extra category pages in {time.time()-t4b:.1f}s "
+          f"(category/ now resolves referenced categories)")
 
     if args.redirects:
         print("\n[5/5] redirect stubs")

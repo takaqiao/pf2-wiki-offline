@@ -145,6 +145,7 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<script defer src="assets/updater_ui.js"></script>\n'
         '<script defer src="assets/mw_collapsible.js"></script>\n'
         '<script defer src="assets/bookmark.js"></script>\n'
+        '<script defer src="assets/wikitable_paginate.js"></script>\n'
         '<style>\n'
         '.browse-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: var(--card); font-size: 13.5px; }\n'
         '.browse-table thead th { background: var(--accent-band); color: var(--accent-on); padding: 8px 12px; text-align: left; font-weight: 600; cursor: pointer; user-select: none; }\n'
@@ -173,29 +174,11 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<main class="page-body" id="main-content">\n'
         '<div id="mw-content-text" class="mw-body-content mw-content-ltr">\n'
         '<div class="mw-parser-output">\n'
-        f'<p class="browse-info">{html_lib.escape(sub_label)}。点表头排序，输入框筛选。</p>\n'
-        '<div class="browse-controls">\n'
-        '  <input type="search" id="browse-filter" placeholder="筛选名称…" oninput="filterBrowse(this.value)">\n'
-        '  <span class="browse-info" id="browse-count"></span>\n'
-        '</div>\n'
-        '<table class="browse-table aon-table sortable" id="browse-tbl">\n'
+        f'<p class="browse-info">{html_lib.escape(sub_label)}。点表头排序；下方分页栏可搜索 / 翻页 / 调整每页条数。</p>\n'
+        '<table class="browse-table aon-table sortable wikitable" id="browse-tbl">\n'
         '<thead><tr><th>名称 ▾</th><th>类型</th><th>分类</th></tr></thead>\n'
         f'<tbody>\n{table_body}\n</tbody>\n'
         '</table>\n'
-        '<script>\n'
-        'function filterBrowse(q) {\n'
-        '  q = q.trim().toLowerCase();\n'
-        '  const tbl = document.getElementById("browse-tbl");\n'
-        '  let shown = 0;\n'
-        '  for (const tr of tbl.tBodies[0].rows) {\n'
-        '    const txt = tr.cells[0].textContent.toLowerCase();\n'
-        '    const ok = !q || txt.indexOf(q) !== -1;\n'
-        '    tr.style.display = ok ? "" : "none";\n'
-        '    if (ok) shown++;\n'
-        '  }\n'
-        '  document.getElementById("browse-count").textContent = q ? `匹配 ${shown} 条` : "";\n'
-        '}\n'
-        '</script>\n'
         '</div>\n'
         '</div>\n'
         '</main>\n'
@@ -272,11 +255,13 @@ def main() -> int:
         print(f"  browse-{bucket}.html: {len(entries):,} entries")
         written += 1
 
-    # browse-all alphabetical (all hosted namespaces — unchanged behavior)
-    all_entries.sort(key=lambda e: e["title"].lower())
+    # browse-all alphabetical — exclude ns=3500 Data: subpages (not articles;
+    # they were ~12k of the rows, bloating the page). Keep ns 0/102/14.
+    all_content = [e for e in all_entries if e["ns"] != 3500]
+    all_content.sort(key=lambda e: e["title"].lower())
     (ROOT / "browse-all.html").write_text(
-        render_browse_html("all", all_entries, topnav_root, sidebar_root), encoding="utf-8")
-    print(f"  browse-all.html: {len(all_entries):,} entries")
+        render_browse_html("all", all_content, topnav_root, sidebar_root), encoding="utf-8")
+    print(f"  browse-all.html: {len(all_content):,} entries (excluded {len(all_entries)-len(all_content)} data pages)")
     written += 1
 
     print(f"[3/3] done — {written} browse pages written in {time.time()-t0:.1f}s")
