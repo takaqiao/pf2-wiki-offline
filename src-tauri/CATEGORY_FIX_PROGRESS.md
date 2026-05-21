@@ -95,6 +95,13 @@
 - 校验:改后 `diff_a.py` false_pos/neg 应≈0(staleness 级别)。
 **C 设计**(后做):物品 worn/consumables/equipment 用分类[穿戴物品/消耗品（特征）/装备];weapons/armor/runes + 法术传统 + 怪物等级 **无干净分类 → 读 ns=3500 数据字段**(待查 data schema);stub 改为真过滤内容页或带可用过滤参数。
 
+## P6 重抓发现 (2026-05-21,阻塞用户「先重抓」选择)
+用户选「先重抓再发」。实跑 cookie_warmup+metadata+parsed+images,**实为缓存空操作**:
+- metadata `auto-resume`,discover/各 ns/redirects 全 `cached, skipping` → 不发现新页(仍 40736)。
+- dump_parsed 按 **pageid** 记 done(`todo = pid not in done_set`)→ **改动页(同 pageid)永不重抓**,只抓新 pageid。本次 0 todo。
+- cookie_warmup **cf_clearance=False**(仅 __cf_bm)→ 强制 curl_cffi 重抓有 403 风险(Playwright/metadata 走 headed profile 可过)。
+**结论**:现有工具是「补缺失」非「刷新改动」,无法干净消除 staleness(94 新页可强制 metadata 重发现后补;~25 改动页[命匣等]需 revision 跟踪,未实现)。staleness 占比 0.4%、既存、与用户「分类对不上」无关(那已由 A/C 修复)。**待用户定**:① 直接发(现数据,推荐)② 仅强制补新页(部分,CF 允许的话)③ 建 revision 跟踪做真刷新(较大工作)。
+
 ## 迭代日志 (每次运行追加一行: 日期 | 本次干了什么 | 下次从哪继续)
 - 2026-05-21 | 建账本骨架 + 自迭代 prompt(本次未动逻辑) | 下次从 P0 开始
 - 2026-05-21(iter2) | P0 DONE(读全状态+CF 探针实测过+路径/产物/工具记录)+ P1 DONE(全集枚举入 WORKLIST,建离线真值索引 3604cat,读全 A/B/C 脚本,导出 354 B 目标)+ 建 3 个 cat_audit 工具+预备发现(A 关键词脏/C 子区装饰/B 小 staleness)| 下次从 **P2**:跑 `dump_live_catmembers.py _b_category_targets.txt` 拉 354 B 分类 live 成员(headed ~5-10min),再拉 A 锚分类+C 传统分类(先核实名称),然后 P3 diff B。
@@ -102,4 +109,5 @@
 - 2026-05-21(iter3) | **P3-A 量化 + A/C 锚名 probe**:补拉 28 候选锚(`_ac_probe_targets.txt`)→ 确认 ancestries=**族裔**(非祖先)、deities=**信仰**(非神祇);法术传统无分类(仅奥术(特征)110,余空)→ 须数据驱动。`diff_a.py`:每桶大错配(items+6080、classes+4522、archetypes+2375 误含;locations 漏1061、deities 漏406、ancestries 漏245)。建 diff_a.py。**A 是用户「对不上」主因,实锤**。| 下次:investigate creatures/archetypes 真锚 → 定 A 的 P4 映射 → 改 build_browse_v2.py(分类驱动)→ 重建复核;再处理 C。
 - 2026-05-21(iter4) | **P4-A DONE + 验证**:investigate_anchors 定 creatures=体型并集/archetypes=变体（特征）;补拉 5 验证锚;**重写 build_browse_v2.py 为 BUCKET_CATS 分类驱动**(弃 classify 关键词),重生成 13 browse 页;建 verify_a.py 实测全 staleness 级(0 污染)。| 下次 C。
 - 2026-05-21(iter5) | **P4-C DONE + 验证**:schema_probe 解析 ns=3500 Data 表 → 法术 根源(奥术/神术/异能/原能)+法术分类(戏法/聚能)、生物 等级、物品 物品分类。**重写 build_nav_stubs.py**:17 子区从空跳 stub 改为数据驱动真实成员页,中文 join 到 ns0 文章,∩ 父桶保证子集。建 schema_probe.py/verify_c.py,verify_c 全 ⊆ 父桶 True。| 下次 P5。
-- 2026-05-21(iter6) | **P5 DONE + 全任务收尾**:build_search 不依赖 browse(无需重跑);`deadlink_check`(99266 链,我改页 **0 死链**;letter 桶 90 既存死链=范围外);**358-vs-354 解释清**=build_dead_stubs 友好404 stub(良性)。建 deadlink_check.py/reconcile_cat_html.py。**P0–P5 全 DONE,A/B/C 三套机制全部修复+验证**。| **P6 待用户 go/no-go**:公开发布 v0.3.24(子决策:是否先全量重抓以消 staleness,还是仅从现有 parsed 重建直接发)。发版流程见铁律;exe 无变更可复用 v0.3.23。
+- 2026-05-21(iter6) | **P5 DONE + 全任务收尾**:build_search 不依赖 browse(无需重跑);`deadlink_check`(99266 链,我改页 **0 死链**;letter 桶 90 既存死链=范围外);**358-vs-354 解释清**=build_dead_stubs 友好404 stub(良性)。建 deadlink_check.py/reconcile_cat_html.py。**P0–P5 全 DONE,A/B/C 三套机制全部修复+验证**。| **P6 待用户 go/no-go**。
+- 2026-05-21(iter7) | **P6 进行中 — 用户选「revision 真刷新」**:发现重抓是缓存空操作 + done-by-pageid 永不重抓改动页 + cf_clearance 缺失。**建 `refresh_changed.py`**:`list=recentchanges` 自语料日期(2026-05-18)起找改动/新页 → 经 **headed 浏览器**(过 CF,免 cf_clearance)按 dump_parsed 同格式重抓写回。实跑:窗口 188 改动页 → 91 需刷新(27 新 pageid+64 改动)**全部 ok、0 失败**;state done 37068→37095。重建 offline 索引后 diff_b missing 97→33(新页已补;extra 升因 live 缓存比语料旧)。verify_a 仍全 staleness 级。**进行中**:全量重建(build_v2+browse+nav_stubs+...,后台 bej0ce4a6)+ live B 重拉(--refresh,后台 begvl05az)→ 完成后 current-vs-current 终验 → bump v0.3.24 → release.ps1。
