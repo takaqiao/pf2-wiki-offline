@@ -29,7 +29,13 @@
       "url": "https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.24/pf2-wiki-patch_v0.3.23_to_v0.3.24.zip",
       "sha256": "4b0faa116cef89fd3961001e7f7e66b21578d8e5d1011745deb8660d191d71f1",
       "size_mb": 21.91
+    },
+    "v0.3.24": {
+      "to": "v0.3.25",
+      "url": "https://github.com/takaqiao/pf2-wiki-offline/releases/download/v0.3.25/pf2-wiki-patch_v0.3.24_to_v0.3.25.zip",
+      "sha256": "ca70878c2a0954ce08cffd110b7af7125b307ed4343ae2becefcf0715f5c1095",
+      "size_mb": 224.22
     }
   },
-  "latest": "v0.3.24"
+  "latest": "v0.3.25"
 }
