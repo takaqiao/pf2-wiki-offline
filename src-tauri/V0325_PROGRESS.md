@@ -27,6 +27,14 @@
 - [x] **#8 首页旧数**: DONE。35,469→真实文章数 **24,666**(ns0);搜索框占位去掉旧数变通用;统计段改真实计数(24,666 文章/11,866 数据/3,646 分类)+定性翻译说明(弃旧的 35,317/152)。
 - 遗留(未做,低优):内容页剩 1.70% 死链=文章红链(部分是 wiki 本身红链=应死链,部分可能漏抓,需逐个对 live 核实,价值低)。
 
+## 🎉 v0.3.25 已发布 (2026-05-22)
+用户授权"打包吧" → `release.ps1 -PrevVer v0.3.24 -NewVer v0.3.25 -RebuildExe`(cargo build 1m10s)。
+- 补丁 v0.3.24→v0.3.25 = **224.22 MB**(+3289 新[分类页]/~37160 改/-3;**topnav 标签改动重烤了全部 ~37k 页→补丁大**,一次性代价,后续内容补丁会恢复小)。
+- tag v0.3.25 + GitHub release(portable 1229.6MB + patch 224.2MB + patches.json)+ patches.json `latest=v0.3.25`/chain[v0.3.24]→v0.3.25 + repo commit `c7628c4`。
+- **acl_probe 全绿**(重编 exe 验证):open_external RESOLVED、apply_incremental_update 可达、**eventListen OK**(进度条事件链通)。
+- 下次补丁基准 = 干净 `pf2-wiki-offline_0.3.25_x64-portable`(勿覆盖)。
+- **8 项改进全部上线**:职业27/字母死链/首页对齐/进度条 + 分页/全分类页/topnav标签/首页旧数。
+
 ## 日志
 - 2026-05-21 | 建账本;抓 live 首页结构 + 职业 27 权威roster+English(校对页 intro);确认 27 全离线present(无需重抓)。下一步:实现 #1。
 - 2026-05-21 | **#1/#3/#4/#2 全部 DONE 并提交推送**(b35d54b 职业、b8a176a 字母死链、9c584f7 首页对齐、本次 #2 进度条)。**4 项全完成,待打包 v0.3.25**(纯内容部分 + #2 的 Rust 改动 → 发版须 `release.ps1 -PrevVer v0.3.24 -NewVer v0.3.25 -RebuildExe`,基准=干净 pf2-wiki-offline_0.3.24_x64-portable;发版待用户授权)。
