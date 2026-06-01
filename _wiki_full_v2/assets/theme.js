@@ -22,6 +22,12 @@
   }
 
   function apply(theme) {
+    // Sync BOTH <html> (set pre-paint by the inline head script, kills FOUC)
+    // and <body> (the ~189 body.dark rules in _v2_compat.css match this).
+    var html = document.documentElement;
+    var on = theme === DARK;
+    html.classList.toggle(DARK, on);
+    html.classList.toggle(LIGHT, !on);
     var body = document.body;
     if (!body) return;
     if (theme === DARK) {
@@ -32,7 +38,7 @@
       body.classList.add(LIGHT);
     }
     // Update any toggle buttons' visible glyph
-    var btns = document.querySelectorAll(".theme-toggle, [data-theme-toggle]");
+    var btns = document.querySelectorAll(".theme-toggle, [data-theme-toggle], .topnav-theme, .sb-theme, .topnav-fallback-theme");
     for (var i = 0; i < btns.length; i++) {
       var b = btns[i];
       // Only swap text if button has just one of these glyphs
@@ -76,7 +82,8 @@
   }
 
   window.toggleTheme = function () {
-    var current = document.body.classList.contains(DARK) ? DARK : LIGHT;
+    // Read current from <html> so it works even before <body> is ready.
+    var current = document.documentElement.classList.contains(DARK) ? DARK : LIGHT;
     var next = current === DARK ? LIGHT : DARK;
     setStored(next);
     apply(next);

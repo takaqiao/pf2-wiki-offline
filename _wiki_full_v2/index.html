@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();</script>
 <title>PF2 离线百科 — Pathfinder 2e 中文资料</title>
-<meta name="description" content="Pathfinder 2e 中文资料离线镜像。35,000+ 条目，含职业 / 祖先 / 专长 / 法术 / 怪物 / 物品 / 神祇 / 设定。">
+<meta name="description" content="Pathfinder 2e 中文资料离线镜像。24,000+ 条目，含职业 / 族裔 / 专长 / 法术 / 生物 / 物品 / 信仰 / 设定。">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="assets/favicon.ico">
 <style>
@@ -536,13 +537,12 @@ body.index { padding:0; margin:0; max-width:100%; background: var(--bg); color: 
   }
 }
 </style>
-<link rel="stylesheet" href="assets/topnav.css?v=v2a">
+<!-- topnav.css comes via assets/style.css @import; no standalone link needed -->
 <script defer src="assets/topnav.js"></script>
 <script defer src="assets/updater_ui.js"></script>
 <script defer src="assets/external_links.js"></script>
 <script defer src="assets/mw_collapsible.js"></script>
 <script defer src="assets/image_lightbox.js"></script>
-<script defer src="assets/bookmark.js"></script>
 <script defer src="assets/bookmark.js"></script>
 </head>
 <body class="index">

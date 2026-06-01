@@ -39,9 +39,9 @@
       .then(function (j) { return (j && j.version) ? j.version : null; })
       .catch(function () { return null; })
       .then(function (v) {
-        if (v) { CURRENT_VERSION = v; return v; }
-        var m = document.querySelector('meta[name="app-version"]');
-        CURRENT_VERSION = (m && m.content) ? m.content : 'v0.3.18';
+        // If version is unknown, leave it null so decide() suppresses the banner
+        // (a hardcoded fallback could show a spurious "update available" prompt).
+        CURRENT_VERSION = v || null;
         return CURRENT_VERSION;
       });
   }
@@ -188,20 +188,25 @@
         + '<div id="pf2-upd-pct" style="margin-top:4px;font-size:12px;opacity:.85">准备中…</div>';
 
       // Listen for download/verify/apply progress so the user sees a percentage.
+      // Attach exactly once per page (a retry after error must not double-register).
       var lis = getListen();
-      var unlisten = null;
-      if (lis) {
+      if (lis && !window.__pf2UpdProgressBound) {
+        window.__pf2UpdProgressBound = true;
         lis('update-progress', function (ev) {
           var p = (ev && ev.payload) || {};
           var fill = document.getElementById('pf2-upd-fill');
           var pct = document.getElementById('pf2-upd-pct');
           if (!fill || !pct) return;
           if (p.phase === 'download') {
-            var mb = p.total
-              ? (p.downloaded / 1048576).toFixed(1) + ' / ' + (p.total / 1048576).toFixed(1) + ' MB'
-              : (p.downloaded / 1048576).toFixed(1) + ' MB';
-            fill.style.width = (p.pct || 0) + '%';
-            pct.textContent = '下载补丁 ' + p.patch + '/' + p.total_patches + ' — ' + (p.pct || 0) + '% (' + mb + ')';
+            if (p.total) {
+              fill.style.width = (p.pct || 0) + '%';
+              pct.textContent = '下载补丁 ' + p.patch + '/' + p.total_patches + ' — ' + (p.pct || 0)
+                + '% (' + (p.downloaded / 1048576).toFixed(1) + ' / ' + (p.total / 1048576).toFixed(1) + ' MB)';
+            } else {
+              // unknown total: indeterminate — show bytes, keep bar pulsing-ish
+              fill.style.width = '40%';
+              pct.textContent = '下载补丁 ' + p.patch + '/' + p.total_patches + ' — ' + (p.downloaded / 1048576).toFixed(1) + ' MB';
+            }
           } else if (p.phase === 'verify') {
             fill.style.width = '100%';
             pct.textContent = '校验补丁 ' + p.patch + '/' + p.total_patches + '…';
@@ -209,13 +214,12 @@
             fill.style.width = '100%';
             pct.textContent = '正在应用更新，即将自动重启…';
           }
-        }).then(function (un) { unlisten = un; }).catch(function () {});
+        }).catch(function () {});
       }
 
       var payload = chain.steps.map(function (s) { return { url: s.url, sha256: s.sha256 }; });
       inv('apply_incremental_update', { patches: payload })
         .catch(function (err) {
-          if (unlisten) { try { unlisten(); } catch (e) {} }
           btn.disabled = false;
           btn.textContent = patchLabel;
           document.getElementById('pf2-updater-msg').innerHTML =
@@ -226,6 +230,7 @@
 
   function decide(patches) {
     if (!patches || !patches.latest) return;
+    if (!CURRENT_VERSION) return;  // unknown local version -> never prompt
     var latestTag = patches.latest;
     var snoozed = null;
     try { snoozed = localStorage.getItem(SNOOZE_KEY); } catch (e) {}

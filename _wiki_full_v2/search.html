@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();</script>
 <title>搜索 — PF2 离线百科</title>
 <link rel="stylesheet" href="./assets/style.css?v=v2d">
 <link rel="stylesheet" href="./assets/search_polish.css">
-<link rel="stylesheet" href="./assets/topnav.css?v=v2d">
+<!-- topnav.css comes via style.css @import; no standalone link needed -->
 <script defer src="./assets/topnav.js?v=v2d"></script>
 <script defer src="./assets/theme.js?v=v2d"></script>
 <script defer src="./assets/external_links.js?v=v2d"></script>
@@ -53,6 +54,7 @@
     font-family: Consolas, monospace; font-size: 12px;
   }
 </style>
+<script defer src="assets/bookmark.js"></script>
 </head>
 <body>
 <!-- topnav_snippet_root.html — for pages at the wiki root (index.html, browse-*.html, search.html).
