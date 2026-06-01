@@ -76,6 +76,7 @@ def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: s
     full_html = (
         '<!DOCTYPE html>\n<html lang="zh-Hans">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
         f'<title>{html_lib.escape(label)} — PF2 离线百科</title>\n'
         '<link rel="stylesheet" href="assets/style.css">\n'
         '<link rel="icon" href="assets/favicon.ico">\n'
@@ -84,6 +85,9 @@ def render_letter_page(letter: str, entries: list[dict], topnav: str, sidebar: s
         '<script defer src="assets/external_links.js"></script>\n'
         '<script defer src="assets/updater_ui.js"></script>\n'
         '<script defer src="assets/mw_collapsible.js"></script>\n'
+        '<script defer src="assets/bookmark.js"></script>\n'
+        '<script defer src="assets/keybindings.js"></script>\n'
+        '<script defer src="assets/wikitable_sort.js"></script>\n'
         '<script defer src="assets/wikitable_paginate.js"></script>\n'
         '<style>\n'
         '.letter-nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 16px 0; padding: 10px 12px; background: var(--bg-alt); border-radius: 4px; }\n'
@@ -136,7 +140,7 @@ def main() -> int:
     meta = json.loads(META_FILE.read_text(encoding="utf-8"))
     pages = meta.get("pages", [])
     topnav_sub = SNIPPET_TOPNAV_SUB.read_text(encoding="utf-8")
-    topnav_root = topnav_sub.replace('href="../', 'href="')
+    topnav_root = topnav_sub.replace('href="../', 'href="').replace('action="../', 'action="')
     sidebar_sub = SNIPPET_SIDEBAR_SUB.read_text(encoding="utf-8") if SNIPPET_SIDEBAR_SUB.exists() else ""
     sidebar_root = sidebar_sub.replace('href="../', 'href="').replace('action="../', 'action="')
 

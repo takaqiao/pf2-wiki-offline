@@ -84,23 +84,10 @@ REDIRECT_RULES: dict[str, tuple[str, str]] = {
         "../search.html?q=" + quote("草原地"),
         "草原地",
     ),
-    # --- category-level dead targets ---
-    "category/相关.html": (
-        "../index.html",
-        "相关",
-    ),
-    "category/变体（特征）.html": (
-        "../browse-archetypes.html",
-        "变体（特征）",
-    ),
-    "category/预言破灭之年（2e）.html": (
-        "../search.html?q=" + quote("预言破灭之年"),
-        "预言破灭之年（2e）",
-    ),
-    "category/绑定（特征）.html": (
-        "../search.html?q=" + quote("绑定 特征"),
-        "绑定（特征）",
-    ),
+    # NOTE: former category-level dead-stub rules (相关 / 变体（特征） /
+    # 预言破灭之年（2e） / 绑定（特征）) were REMOVED — build_v2.py [4b] now generates
+    # real member-list pages for every referenced category, so a 2-sec redirect
+    # stub would shadow the real 2153-member archetype listing etc. Real page wins.
 }
 
 

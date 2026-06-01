@@ -620,7 +620,12 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
     redirect_msg_a = soup.select_one(".redirectMsg a[href]")
     if redirect_msg_a:
         redirect_target = redirect_msg_a.get("href", "").strip()
-        if redirect_target and not redirect_target.startswith("http"):
+        # Don't auto-refresh to a non-existent target: rewrite_links marks unknown
+        # pages with class="new"; refreshing there would 404 with no fallback, so
+        # leave the redirect notice visible instead.
+        a_classes = redirect_msg_a.get("class") or []
+        is_dead = "new" in a_classes
+        if redirect_target and not redirect_target.startswith("http") and not is_dead:
             redirect_meta_html = (
                 f'<meta http-equiv="refresh" content="0; url={html_lib.escape(redirect_target)}">\n'
             )
@@ -657,6 +662,7 @@ def render_page_html(doc: dict, topnav: str, sidebar: str, redirect_map: dict, t
         '<head>\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
         f'<meta name="description" content="{html_lib.escape(meta_desc)}">\n'
         f'{redirect_meta_html}'
         f'<link rel="canonical" href="https://pf2.huijiwiki.com/wiki/{urllib.parse.quote(title)}">\n'
@@ -852,15 +858,25 @@ def main(argv: list[str]) -> int:
     sidebar = SNIPPET_SIDEBAR.read_text(encoding="utf-8") if SNIPPET_SIDEBAR.exists() else '<nav class="wiki-sidebar" aria-label="百科导航"></nav>'
 
     # Build title index: title -> (target_dir, safe_fn)
+    # The full ns-prefixed title key (t) is unique. The bare key (without ns
+    # prefix) can COLLIDE — e.g. article "《核心规则书》" (ns0) and category
+    # "Category:《核心规则书》" (ns14) both reduce to "《核心规则书》". A naive
+    # last-write-wins made [[《核心规则书》]] resolve to the category listing.
+    # Resolve by namespace priority: articles (ns 0/102) beat project/category.
+    NS_BARE_PRIORITY = {0: 0, 102: 1, 3500: 2, 4: 3, 14: 4}
     title_index: dict[str, tuple[str, str]] = {}
+    bare_owner_prio: dict[str, int] = {}
     for p in meta.get("pages", []):
         ns = p.get("ns", 0)
         t = p.get("title", "")
         target_dir, bare = determine_target_dir(ns, t)
         title_index[t] = (target_dir, safe_title(bare))
-        # also index without ns prefix for short refs
+        # also index without ns prefix for short refs (non-clobbering, ns-prioritized)
         if bare != t:
-            title_index[bare] = (target_dir, safe_title(bare))
+            prio = NS_BARE_PRIORITY.get(ns, 9)
+            if bare not in bare_owner_prio or prio < bare_owner_prio[bare]:
+                title_index[bare] = (target_dir, safe_title(bare))
+                bare_owner_prio[bare] = prio
 
     print(f"  meta: {len(meta.get('pages', []))} pages, {len(redirect_map)} redirects, manifest {len(manifest)}, topnav {len(topnav)} chars")
 
@@ -904,6 +920,13 @@ def main(argv: list[str]) -> int:
         parsed_files = parsed_files[: args.limit]
     print(f"  found {len(parsed_files)} parsed JSON files")
 
+    # NOTE: deliberately NO blanket clean of pages/ here. The parsed corpus
+    # (~37k) is smaller than metadata (~40k) — ~1.4k non-redirect wiki pages that
+    # exist on the wiki simply weren't in the last parse run. Those pages were
+    # rendered by earlier, more-complete scrapes and persist on disk; a blanket
+    # rmtree deletes that valid content and spikes content-page dead links from
+    # ~1.7% to ~10.5% (measured). Orphan removal for genuinely-deleted wiki pages
+    # is deferred to a smarter title-set diff once the scrape corpus is complete.
     print("[4/4] render pages")
     t0 = time.time()
     n_ok = 0
@@ -952,30 +975,38 @@ def main(argv: list[str]) -> int:
     # member lists even for description-less categories; we do the same by
     # synthesizing a minimal Category doc and letting render_page_html inject the
     # member list from the inverted index.
-    print("\n[4b/4] category pages for referenced (un-scraped) categories")
-    t4b = time.time()
-    n_xcat = 0
-    for cat in sorted(category_members.keys()):
-        if cat in rendered_cat_names or not category_members.get(cat):
-            continue
-        fake = {
-            "ns": 14, "pageid": 0, "title": f"Category:{cat}",
-            "parse": {"title": f"Category:{cat}",
-                      "text": '<div class="mw-parser-output"></div>', "categories": []},
-        }
-        try:
-            td, fname, html = render_page_html(fake, topnav, sidebar, redirect_map,
-                                               title_index, manifest, category_members)
-        except Exception:
-            continue
-        out_path = ROOT / td / fname
-        if out_path.exists():
-            continue   # never overwrite a real scraped category page
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(html, encoding="utf-8")
-        n_xcat += 1
-    print(f"    +{n_xcat} extra category pages in {time.time()-t4b:.1f}s "
-          f"(category/ now resolves referenced categories)")
+    # Gate on FULL builds only — a --ns/--limit sample shouldn't write the whole
+    # ~3600-page category tree.
+    if args.ns >= 0 or args.limit:
+        print("\n[4b/4] skipped (sample build: --ns/--limit set)")
+        n_xcat = 0
+    else:
+        print("\n[4b/4] category pages for referenced (un-scraped) categories")
+        t4b = time.time()
+        n_xcat = 0
+        for cat in sorted(category_members.keys()):
+            # rendered_cat_names already holds every scraped ns=14 page we wrote, so
+            # we never shadow a real category page. We DO (re)write synthesized ones
+            # unconditionally (no exists() skip) so member counts/lists stay fresh on
+            # every rebuild (overwrites the prior synthesized page with current data).
+            if cat in rendered_cat_names or not category_members.get(cat):
+                continue
+            fake = {
+                "ns": 14, "pageid": 0, "title": f"Category:{cat}",
+                "parse": {"title": f"Category:{cat}",
+                          "text": '<div class="mw-parser-output"></div>', "categories": []},
+            }
+            try:
+                td, fname, html = render_page_html(fake, topnav, sidebar, redirect_map,
+                                                   title_index, manifest, category_members)
+            except Exception:
+                continue
+            out_path = ROOT / td / fname
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(html, encoding="utf-8")
+            n_xcat += 1
+        print(f"    +{n_xcat} extra category pages in {time.time()-t4b:.1f}s "
+              f"(category/ now resolves referenced categories)")
 
     if args.redirects:
         print("\n[5/5] redirect stubs")

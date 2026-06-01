@@ -1,4 +1,4 @@
-# update_content.ps1 — 一条命令完成「拉取 wiki 更新 → 重建 → 发增量补丁」
+﻿# update_content.ps1 — 一条命令完成「拉取 wiki 更新 → 重建 → 发增量补丁」
 #
 # 利用 build_v2 的确定性 (deterministic): 全量重抓 + 全量重建后, build_patch
 # 比对 sha256 只会把【真正变化的页面】放进补丁 —— 不需要手工 diff pageid。
