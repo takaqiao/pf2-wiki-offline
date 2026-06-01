@@ -25,16 +25,16 @@
 - [ ] C2 release.ps1:链连续性断言、robocopy /XF/XD 排除、草稿优先+幂等 tag。
 - [ ] C3 update_content.ps1 / make_portable_zip.ps1:UTF-8 BOM 或去中文(ASCII 铁律)。
 
-### Batch D — 抓取器(不影响发布,修正确性)
-- [ ] D1 dump_parsed/metadata/images:原子写(temp+os.replace)、load_state try/except 重建、退避重试、revid、dedup、图片 .part。
-- [ ] D2 refresh_changed:revid + 删除/移动对账(择优)。
+### Batch D — 抓取器(不影响发布,修正确性)✅ 核心 DONE
+- [x] D1 dump_parsed_v2_concurrent.py:load_state try/except + 损坏时从磁盘 parsed 重建 done-set;_state.json 原子写(temp+os.replace);页面 JSON 原子写(temp+os.replace);补 `import os`。**有意延后**(scraper 一直能用,低值):dump_metadata dedup、dump_images .part、429/5xx 退避重试、revid 跟踪。
+- [—] D2 refresh_changed revid:延后(同上)。
 
-### Batch E — 打包卫生 / 死文件
-- [ ] E1 删 21 死 CSS + favicon.png;.gitignore 加 out_v2/。
-- [ ] E2 style.css @import→<link> + 更新注释。
+### Batch E — 打包卫生 / 死文件 ✅ DONE
+- [x] E1 删 20 个死 CSS(31→11,含 style.bundled 96K;实测无任何页引用,含恢复的孤儿页)+ favicon.png(未引用);offline repo git rm 21 项。working assets 加载链完整(style.css+8 @import+search_polish 全在)。
+- [x] E2 out_v2/ 已在 offline repo .gitignore(cookies.json 已 IGNORED,无需改);style.css "4-file" 注释纸延后(纯纸)。
 
 ### Batch F — browse-all 性能(评估)
-- [ ] F1 browse-all 25k 行:评估服务端分页/JSON 渲染 vs 现有客户端分页;高风险则记录权衡。
+- [—] F1 **延后(记录权衡)**:browse-all 25k 行/5.3MB。现已有 wikitable_paginate 客户端分页(限可见行),残留是 5.3MB 初始解析。服务端分页/JSON 渲染=高工作量+改 browse 架构风险,价值(localhost 一次性解析)有限 → 延后,留作单独优化。browse-CJK 近重复同理延后。
 
 ### Batch C — Rust + 发版 ✅ DONE
 - [x] C1 main.rs:**安全/完整性**(高值)——updater PS1 `$ErrorActionPreference='Stop'`、`_remove_these.txt` 加包含校验(GetFullPath StartsWith installRoot,拒 ../绝对路径)、PS 单引号转义($install/$exe/zip)、`-LiteralPath`、补丁**流式写临时文件+增量哈希**(去 224MB RAM 缓冲 + 800MB 静默截断,改 2GB 显式上限)、open_external 拒控制字符。cargo check 通过(1m26s)。**缓存头优化有意延后**:assets/ 无统一 ?v= 破缓存令牌,改 immutable 会导致更新后用户拿不到 search.js 修复(staleness 风险>localhost 重解析收益)。

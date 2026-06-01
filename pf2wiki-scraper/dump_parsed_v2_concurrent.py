@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import threading
 import time
@@ -51,13 +52,33 @@ def sha_path(pageid: int) -> Path:
 
 def load_state() -> dict:
     if STATE_FILE.exists():
-        return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        try:
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            # Corrupt state (e.g. killed mid-write): rebuild done-set from the
+            # parsed files actually on disk so a resume doesn't re-fetch everything.
+            done = []
+            for pf in PARSED_DIR.rglob("*.json"):
+                if pf.name.startswith("_"):
+                    continue
+                try:
+                    d = json.loads(pf.read_text(encoding="utf-8"))
+                    if d.get("pageid") is not None:
+                        done.append(d["pageid"])
+                except Exception:
+                    continue
+            print(f"[state] corrupt _state.json — rebuilt {len(done)} done from disk")
+            return {"done": sorted(set(done)), "started_at": None}
     return {"done": [], "started_at": None}
 
 
 def save_state(state: dict) -> None:
+    # Atomic: write to a temp file then os.replace so a kill mid-write can't
+    # truncate _state.json (which previously crashed/zeroed resume).
     with state_lock:
-        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = STATE_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, STATE_FILE)
 
 
 def make_session(cookies: list[dict]) -> "crequests.Session":
@@ -155,7 +176,11 @@ def worker(work_item: dict, threadlocal: threading.local, cookies: list[dict]) -
     }
     dest = sha_path(pid)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    # Atomic write so a kill mid-write can't leave a truncated parsed JSON that
+    # the corrupt-state rebuild path would then trust.
+    tmp = dest.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, dest)
     return pid, "ok", time.time() - t0, None
 
 
