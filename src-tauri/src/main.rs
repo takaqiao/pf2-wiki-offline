@@ -180,6 +180,14 @@ fn open_external(url: String) -> Result<(), String> {
     if !(url.starts_with("http://") || url.starts_with("https://")) {
         return Err(format!("refused non-http(s) url: {url}"));
     }
+    // Reject control / line-separator chars so a crafted link can't smuggle extra
+    // args or newlines into the OS handler.
+    if url
+        .chars()
+        .any(|c| c.is_control() || c == '\u{0085}' || c == '\u{2028}' || c == '\u{2029}')
+    {
+        return Err("refused url with control characters".into());
+    }
     open::that(&url).map_err(|e| e.to_string())
 }
 
@@ -220,7 +228,7 @@ async fn apply_incremental_update(
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
     use std::fs;
-    use std::io::Read;
+    use std::io::{Read, Write};
     use std::process::Command;
 
     if patches.is_empty() {
@@ -245,9 +253,16 @@ async fn apply_incremental_update(
             .header("Content-Length")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        // Stream in chunks so we can emit download progress to the webview.
-        let mut buf = Vec::with_capacity(8 * 1024 * 1024);
-        let mut reader = resp.into_reader().take(800 * 1024 * 1024);
+        // Stream chunks straight to the temp zip while hashing incrementally, so a
+        // 200+ MB patch never sits fully in RAM and an oversized download fails
+        // explicitly (no silent truncation).
+        const MAX_PATCH: u64 = 2 * 1024 * 1024 * 1024; // 2 GB hard ceiling
+        let zp = temp_dir.join(format!("pf2-wiki-patch-{i}.zip"));
+        let mut reader = resp.into_reader();
+        let mut out = std::io::BufWriter::new(
+            fs::File::create(&zp).map_err(|e| format!("create #{} failed: {e}", i + 1))?,
+        );
+        let mut hasher = Sha256::new();
         let mut chunk = [0u8; 65536];
         let mut downloaded: u64 = 0;
         let mut last_emit = std::time::Instant::now();
@@ -258,8 +273,14 @@ async fn apply_incremental_update(
             if n == 0 {
                 break;
             }
-            buf.extend_from_slice(&chunk[..n]);
             downloaded += n as u64;
+            if downloaded > MAX_PATCH {
+                let _ = fs::remove_file(&zp);
+                return Err(format!("patch #{} exceeds {MAX_PATCH} bytes — refusing", i + 1));
+            }
+            hasher.update(&chunk[..n]);
+            out.write_all(&chunk[..n])
+                .map_err(|e| format!("write #{} failed: {e}", i + 1))?;
             if last_emit.elapsed().as_millis() >= 120 {
                 let pct = if total > 0 {
                     ((downloaded as f64 / total as f64) * 100.0).min(100.0) as u32
@@ -280,6 +301,8 @@ async fn apply_incremental_update(
                 last_emit = std::time::Instant::now();
             }
         }
+        out.flush().map_err(|e| format!("flush #{} failed: {e}", i + 1))?;
+        drop(out);
         // download of this patch complete -> verify phase
         let _ = app.emit(
             "update-progress",
@@ -292,18 +315,15 @@ async fn apply_incremental_update(
                 pct: 100,
             },
         );
-        let mut hasher = Sha256::new();
-        hasher.update(&buf);
         let actual = format!("{:x}", hasher.finalize());
         if actual.to_lowercase() != step.sha256.to_lowercase() {
+            let _ = fs::remove_file(&zp);
             return Err(format!(
                 "patch #{} sha256 mismatch: got {actual}, expected {}",
                 i + 1,
                 step.sha256
             ));
         }
-        let zp = temp_dir.join(format!("pf2-wiki-patch-{i}.zip"));
-        fs::write(&zp, &buf).map_err(|e| format!("save #{} failed: {e}", i + 1))?;
         zip_paths.push(zp);
     }
     eprintln!(
@@ -327,35 +347,50 @@ async fn apply_incremental_update(
     let install_dir = exe.parent().ok_or("no parent dir")?.to_path_buf();
     let ps1_path = temp_dir.join("pf2-wiki-update.ps1");
 
+    // Escape single quotes for PowerShell single-quoted literals (' -> '') so a
+    // path containing an apostrophe can't break out of the literal into code.
+    let ps_lit = |s: String| s.replace('\'', "''");
+    let install_lit = ps_lit(install_dir.display().to_string());
+    let exe_lit = ps_lit(exe.display().to_string());
     // PowerShell array of patch zip paths, in chain order.
     let zips_ps = zip_paths
         .iter()
-        .map(|p| format!("'{}'", p.display()))
+        .map(|p| format!("'{}'", ps_lit(p.display().to_string())))
         .collect::<Vec<_>>()
         .join(",");
 
     let ps1 = format!(
-        r#"$ErrorActionPreference = 'Continue'
+        r#"$ErrorActionPreference = 'Stop'
 Start-Sleep -Seconds 2
 $install = '{install}'
 $exe = '{exe}'
+$installRoot = [System.IO.Path]::GetFullPath($install)
 $patches = @({zips})
 try {{
     foreach ($patch in $patches) {{
         Expand-Archive -Path $patch -DestinationPath $install -Force
         $removeFile = Join-Path $install '_remove_these.txt'
-        if (Test-Path $removeFile) {{
-            Get-Content $removeFile -Encoding UTF8 | ForEach-Object {{
-                if ($_ -and $_.Trim()) {{
-                    $target = Join-Path $install $_
-                    if (Test-Path $target) {{ Remove-Item $target -Force -ErrorAction SilentlyContinue }}
+        if (Test-Path -LiteralPath $removeFile) {{
+            Get-Content -LiteralPath $removeFile -Encoding UTF8 | ForEach-Object {{
+                $entry = $_
+                if ($entry -and $entry.Trim()) {{
+                    # Containment guard: resolve under $install and require the
+                    # result to stay inside it (rejects ..\ and absolute/drive paths
+                    # that would delete files outside the install dir).
+                    try {{
+                        $full = [System.IO.Path]::GetFullPath((Join-Path $install $entry.Trim()))
+                        if ($full.StartsWith($installRoot, [System.StringComparison]::OrdinalIgnoreCase) `
+                            -and (Test-Path -LiteralPath $full)) {{
+                            Remove-Item -LiteralPath $full -Force -Recurse -ErrorAction SilentlyContinue
+                        }}
+                    }} catch {{}}
                 }}
             }}
-            Remove-Item $removeFile -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $removeFile -Force -ErrorAction SilentlyContinue
         }}
         $manifestFile = Join-Path $install '_patch_manifest.json'
-        if (Test-Path $manifestFile) {{ Remove-Item $manifestFile -Force -ErrorAction SilentlyContinue }}
-        Remove-Item $patch -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $manifestFile) {{ Remove-Item -LiteralPath $manifestFile -Force -ErrorAction SilentlyContinue }}
+        Remove-Item -LiteralPath $patch -Force -ErrorAction SilentlyContinue
     }}
     Start-Process -FilePath $exe
 }} catch {{
@@ -364,8 +399,8 @@ try {{
 }}
 Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
 "#,
-        install = install_dir.display(),
-        exe = exe.display(),
+        install = install_lit,
+        exe = exe_lit,
         zips = zips_ps,
     );
     // Write with a UTF-8 BOM. Windows PowerShell 5.1 decodes a BOM-less .ps1

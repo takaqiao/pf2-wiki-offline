@@ -54,15 +54,21 @@ def to_int(v: str):
 
 # --- sub-zone specs: slug -> (label, predicate(rec)->bool, display_field) ---
 # rec carries: _type (Spells/Creatures/Items), plus parsed table fields.
+# Mapped from the 83 distinct 物品分类 values in the corpus. Broadened so the six
+# equipment subzones cover the recognizable item types (shields->armor,
+# wands/staves/grimoires->implements, amulets/tattoos/implants->worn, etc.)
+# instead of dropping ~half of items into the unfiltered parent only. Truly
+# generic gear (冒险道具/材料/货物/神器…) intentionally stays parent-only.
 ITEM_GROUPS = {
     "weapons":     {"特殊魔法武器", "珍贵材料武器", "魔兽枪"},
-    "armor":       {"特殊魔法护甲", "珍贵材料护甲"},
+    "armor":       {"特殊魔法护甲", "珍贵材料护甲", "特殊魔法盾牌", "珍贵材料盾牌"},
     "runes":       {"武器性能符文", "护甲性能符文", "配件符文"},
-    "worn":        {"穿戴物品"},
+    "worn":        {"穿戴物品", "护符", "魔法刺青", "植入体", "圣物种子"},
     "consumables": {"药水", "油", "炼金灵药", "炼金毒素", "炼金炸弹", "炼金食物",
                     "炼金药物", "炼金弹药", "其他消耗品", "消耗品", "茶", "魔法弹药",
-                    "永久炼金物品", "瓶装气息", "瓶装怪物", "炼金工具", "圈套"},
-    "implements":  {"咒心"},
+                    "永久炼金物品", "瓶装气息", "瓶装怪物", "炼金工具", "圈套",
+                    "符箓", "法术触媒", "魔法圈套"},
+    "implements":  {"咒心", "法杖", "特殊魔杖", "魔杖", "魔典", "天命套牌", "尾声乐器"},
 }
 
 
@@ -106,8 +112,8 @@ SUBZONES = [
     ("browse-spells-divine",  "神术法术", lambda r: spell_root(r, "神术"), "根源"),
     ("browse-spells-occult",  "异能法术", lambda r: spell_root(r, "异能"), "根源"),
     ("browse-spells-primal",  "原能法术", lambda r: spell_root(r, "原能"), "根源"),
-    ("browse-spells-cantrips", "戏法",    lambda r: spell_class(r, "戏法"), "环级"),
-    ("browse-spells-focus",   "聚能法术", lambda r: spell_class(r, "聚能"), "环级"),
+    ("browse-spells-cantrips", "戏法",    lambda r: spell_class(r, "戏法"), "根源"),
+    ("browse-spells-focus",   "聚能法术", lambda r: spell_class(r, "聚能"), "根源"),
     ("browse-creatures-level-0-3",   "0-3 级生物",   lambda r: creature_band(r, -99, 3),  "等级"),
     ("browse-creatures-level-4-7",   "4-7 级生物",   lambda r: creature_band(r, 4, 7),    "等级"),
     ("browse-creatures-level-8-12",  "8-12 级生物",  lambda r: creature_band(r, 8, 12),   "等级"),
@@ -161,7 +167,7 @@ def main() -> int:
           f"{len(records)} data records")
 
     topnav_sub = SNIPPET_TOPNAV_SUB.read_text(encoding="utf-8")
-    topnav_root = topnav_sub.replace('href="../', 'href="')
+    topnav_root = topnav_sub.replace('href="../', 'href="').replace('action="../', 'action="')
     sidebar_sub = SNIPPET_SIDEBAR_SUB.read_text(encoding="utf-8")
     sidebar_root = sidebar_sub.replace('href="../', 'href="').replace('action="../', 'action="')
 

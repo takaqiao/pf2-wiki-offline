@@ -1,4 +1,4 @@
-# Build a portable ZIP package: pf2-wiki.exe + _wiki_full_v2/ in one folder.
+﻿# Build a portable ZIP package: pf2-wiki.exe + _wiki_full_v2/ in one folder.
 # Users can unzip + double-click pf2-wiki.exe without running NSIS at all.
 # Bypasses Defender/SmartScreen heuristics that may flag NSIS installer.
 #

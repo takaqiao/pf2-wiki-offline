@@ -48,7 +48,8 @@ BUCKET_CATS = {
     "ancestries":   ["族裔"],
     "backgrounds":  ["背景"],
     "archetypes":   ["变体（特征）"],
-    "classes":      ["职业"],
+    # NOTE: no "classes" bucket — the 职业 category is a 419-row archetype/feat
+    # grab-bag; the curated 27-class hub at classes/index.html is the real nav.
     "deities":      ["信仰"],
     "locations":    ["地理"],
     # "other" historically a keyword grab-bag (~16k); redefine to conditions/状态.
@@ -58,7 +59,7 @@ BUCKET_CATS = {
 BUCKET_LABELS = {
     "feats": "专长", "spells": "法术", "items": "物品", "creatures": "怪物",
     "ancestries": "族裔", "backgrounds": "背景", "archetypes": "变体",
-    "classes": "职业", "deities": "信仰", "locations": "地理", "other": "异常状态",
+    "deities": "信仰", "locations": "地理", "other": "异常状态",
     "categories": "分类页面", "all": "全部条目",
 }
 
@@ -134,17 +135,19 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<head>\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
         f'<title>{html_lib.escape(label)} 浏览 — PF2 离线百科</title>\n'
         f'<meta name="description" content="PF2 中文百科 {html_lib.escape(label)} 浏览，共 {len(entries):,} 条。">\n'
         '<link rel="stylesheet" href="assets/style.css">\n'
         '<link rel="icon" href="assets/favicon.ico">\n'
         '<script defer src="assets/topnav.js"></script>\n'
         '<script defer src="assets/theme.js"></script>\n'
-        '<script defer src="assets/aon_table.js"></script>\n'
+        '<script defer src="assets/wikitable_sort.js"></script>\n'
         '<script defer src="assets/external_links.js"></script>\n'
         '<script defer src="assets/updater_ui.js"></script>\n'
         '<script defer src="assets/mw_collapsible.js"></script>\n'
         '<script defer src="assets/bookmark.js"></script>\n'
+        '<script defer src="assets/keybindings.js"></script>\n'
         '<script defer src="assets/wikitable_paginate.js"></script>\n'
         '<style>\n'
         '.browse-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: var(--card); font-size: 13.5px; }\n'
@@ -175,8 +178,8 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<div id="mw-content-text" class="mw-body-content mw-content-ltr">\n'
         '<div class="mw-parser-output">\n'
         f'<p class="browse-info">{html_lib.escape(sub_label)}。点表头排序；下方分页栏可搜索 / 翻页 / 调整每页条数。</p>\n'
-        '<table class="browse-table aon-table sortable wikitable" id="browse-tbl">\n'
-        '<thead><tr><th>名称 ▾</th><th>类型</th><th>分类</th></tr></thead>\n'
+        '<table class="browse-table wikitable" id="browse-tbl">\n'
+        '<thead><tr><th>名称</th><th>类型</th><th>分类</th></tr></thead>\n'
         f'<tbody>\n{table_body}\n</tbody>\n'
         '</table>\n'
         '</div>\n'
@@ -198,7 +201,9 @@ def main() -> int:
     json.loads(META_FILE.read_text(encoding="utf-8"))  # validate present
 
     topnav_sub = SNIPPET_TOPNAV_SUB.read_text(encoding="utf-8")
-    topnav_root = topnav_sub.replace('href="../', 'href="')
+    # NOTE: rewrite BOTH href="../ and action="../ — the topnav search <form
+    # action="../search.html"> would otherwise 404 from a root-level browse page.
+    topnav_root = topnav_sub.replace('href="../', 'href="').replace('action="../', 'action="')
     sidebar_sub = SNIPPET_SIDEBAR_SUB.read_text(encoding="utf-8")
     sidebar_root = sidebar_sub.replace('href="../', 'href="').replace('action="../', 'action="')
 
@@ -244,7 +249,22 @@ def main() -> int:
                     seen.add(e["title"])
                     members.append(e)
         bucket_entries[bucket] = members
-    bucket_entries["categories"] = ns14_entries  # ns=14 category pages bucket
+    # categories bucket: list EVERY category that has a generated page (build_v2
+    # generates a member-list page for all referenced categories ~3646, not just
+    # the 354 scraped ns=14 docs). cat_to_entries keys = categories with >=1 ns0
+    # member, which is what build_v2 [4b] renders. Union with scraped ns14 titles.
+    cat_names = set(cat_to_entries.keys())
+    for e in ns14_entries:
+        cat_names.add(e["title"])
+    cat_entries = []
+    for cat in cat_names:
+        n = len(cat_to_entries.get(cat, []))
+        cat_entries.append({
+            "pageid": 0, "ns": 14, "ns_label": "分类", "title": cat,
+            "href": page_href(14, f"Category:{cat}"),
+            "cats": [f"{n} 个页面"] if n else [],
+        })
+    bucket_entries["categories"] = cat_entries
 
     print("[2/3] writing browse-*.html files ...")
     written = 0

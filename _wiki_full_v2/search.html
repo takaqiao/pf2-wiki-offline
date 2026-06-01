@@ -10,6 +10,8 @@
 <!-- topnav.css comes via style.css @import; no standalone link needed -->
 <script defer src="./assets/topnav.js?v=v2d"></script>
 <script defer src="./assets/theme.js?v=v2d"></script>
+<script defer src="./assets/mw_collapsible.js?v=v2d"></script>
+<script defer src="./assets/keybindings.js?v=v2d"></script>
 <script defer src="./assets/external_links.js?v=v2d"></script>
 <script defer src="./assets/updater_ui.js?v=v2d"></script>
 <style>
@@ -73,7 +75,7 @@
           玩家选项 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
         </button>
         <ul class="topnav-panel" role="menu" aria-label="玩家选项">
-          <li role="none"><a class="topnav-link" role="menuitem" href="classes/index.html">职业 <span class="topnav-count">25</span></a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="classes/index.html">职业 <span class="topnav-count">27</span></a></li>
           <li role="none"><a class="topnav-link" role="menuitem" href="browse-ancestries.html">祖先</a></li>
           <li role="none"><a class="topnav-link" role="menuitem" href="browse-backgrounds.html">背景</a></li>
           <li role="none"><a class="topnav-link" role="menuitem" href="browse-feats.html">专长</a></li>
@@ -134,7 +136,7 @@
           规则 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
         </button>
         <ul class="topnav-panel" role="menu" aria-label="规则">
-          <li role="none"><a class="topnav-link" role="menuitem" href="browse-other.html">状态特征</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-other.html">异常状态</a></li>
           <li role="none"><a class="topnav-link" role="menuitem" href="browse-categories.html">分类页面</a></li>
           <li role="none"><a class="topnav-link" role="menuitem" href="source/index.html">出版物</a></li>
         </ul>
@@ -145,8 +147,8 @@
           设定 <span class="topnav-caret" aria-hidden="true">&#9662;</span>
         </button>
         <ul class="topnav-panel" role="menu" aria-label="设定">
-          <li role="none"><a class="topnav-link" role="menuitem" href="browse-deities.html">神祇</a></li>
-          <li role="none"><a class="topnav-link" role="menuitem" href="browse-locations.html">地点</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-deities.html">信仰</a></li>
+          <li role="none"><a class="topnav-link" role="menuitem" href="browse-locations.html">地理</a></li>
         </ul>
       </li>
     </ul>
@@ -165,7 +167,7 @@
         <details class="topnav-mobile-group" open>
           <summary>玩家选项</summary>
           <ul>
-            <li><a href="classes/index.html">职业 <span class="topnav-count">25</span></a></li>
+            <li><a href="classes/index.html">职业 <span class="topnav-count">27</span></a></li>
             <li><a href="browse-ancestries.html">祖先</a></li>
             <li><a href="browse-backgrounds.html">背景</a></li>
             <li><a href="browse-feats.html">专长</a></li>
@@ -210,7 +212,7 @@
         <details class="topnav-mobile-group">
           <summary>规则</summary>
           <ul>
-            <li><a href="browse-other.html">状态特征</a></li>
+            <li><a href="browse-other.html">异常状态</a></li>
             <li><a href="browse-categories.html">分类页面</a></li>
             <li><a href="source/index.html">出版物</a></li>
           </ul>
@@ -218,8 +220,8 @@
         <details class="topnav-mobile-group">
           <summary>设定</summary>
           <ul>
-            <li><a href="browse-deities.html">神祇</a></li>
-            <li><a href="browse-locations.html">地点</a></li>
+            <li><a href="browse-deities.html">信仰</a></li>
+            <li><a href="browse-locations.html">地理</a></li>
           </ul>
         </details>
         <details class="topnav-mobile-group">
@@ -252,31 +254,31 @@
   <details class="sb-group" open>
     <summary>玩家选项</summary>
     <ul>
-      <li><a href="classes/index.html">职业<span class="sb-count">25</span></a></li>
-      <li><a href="browse-ancestries.html">祖先<span class="sb-count">16</span></a></li>
-      <li><a href="browse-backgrounds.html">背景<span class="sb-count">436</span></a></li>
-      <li><a href="browse-feats.html">专长<span class="sb-count">11,006</span></a></li>
-      <li><a href="browse-archetypes.html">变体<span class="sb-count">~290</span></a></li>
+      <li><a href="classes/index.html">职业<span class="sb-count">27</span></a></li>
+      <li><a href="browse-ancestries.html">族裔<span class="sb-count">245</span></a></li>
+      <li><a href="browse-backgrounds.html">背景<span class="sb-count">462</span></a></li>
+      <li><a href="browse-feats.html">专长<span class="sb-count">4,872</span></a></li>
+      <li><a href="browse-archetypes.html">变体<span class="sb-count">2,153</span></a></li>
     </ul>
   </details>
 
   <details class="sb-group">
     <summary>战斗与法术</summary>
     <ul>
-      <li><a href="browse-spells.html">法术<span class="sb-count">3,241</span></a></li>
-      <li><a href="browse-items.html">物品<span class="sb-count">12,410</span></a></li>
-      <li><a href="browse-creatures.html">怪物<span class="sb-count">2,711</span></a></li>
-      <li><a href="browse-other.html">状态·特征·其他<span class="sb-count">4,400+</span></a></li>
+      <li><a href="browse-spells.html">法术<span class="sb-count">1,761</span></a></li>
+      <li><a href="browse-items.html">物品<span class="sb-count">3,400</span></a></li>
+      <li><a href="browse-creatures.html">怪物<span class="sb-count">1,490</span></a></li>
+      <li><a href="browse-other.html">异常状态<span class="sb-count">43</span></a></li>
     </ul>
   </details>
 
   <details class="sb-group">
     <summary>世界</summary>
     <ul>
-      <li><a href="browse-deities.html">神祉<span class="sb-count">646</span></a></li>
-      <li><a href="browse-locations.html">地点<span class="sb-count">116</span></a></li>
-      <li><a href="browse-categories.html">分类页面<span class="sb-count">349</span></a></li>
-      <li><a href="source/index.html">出版物<span class="sb-count">284</span></a></li>
+      <li><a href="browse-deities.html">信仰<span class="sb-count">474</span></a></li>
+      <li><a href="browse-locations.html">地理<span class="sb-count">1,145</span></a></li>
+      <li><a href="browse-categories.html">分类页面<span class="sb-count">3,646</span></a></li>
+      <li><a href="source/index.html">出版物</a></li>
     </ul>
   </details>
 
@@ -291,7 +293,7 @@
   </div>
 
   <div class="sb-meta">
-    共 35,469 条 &middot; <a href="search.html">搜索</a> &middot; <a href="index.html">首页</a>
+    离线全文检索 &middot; <a href="search.html">搜索</a> &middot; <a href="index.html">首页</a>
   </div>
 </nav>
 <script>

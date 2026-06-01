@@ -175,10 +175,7 @@ def build_classes_hub():
         '.aon-table tbody tr:hover{background:rgba(255,179,0,0.15)}</style>'
     )
     bc = '<span>玩家选项</span><span class="sep">›</span><span class="current">职业</span>'
-    html = page_html("职业 — 27 真职业 hub", body, bc).replace(
-        '<a href="../index.html">首页</a><span class="sep">›</span>',
-        '<a href="../index.html">首页</a><span class="sep">›</span>',
-    )
+    html = page_html("职业 — 27 真职业 hub", body, bc)
     out = ROOT / "classes" / "index.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
@@ -214,11 +211,11 @@ def build_source_index():
         rows.append(
             '<tr>'
             f'<td><strong>{html_lib.escape(cn)}</strong><br><small style="color:var(--fg-mute)">{html_lib.escape(en)}</small></td>'
-            f'<td><a href="../browse-all.html?q={urllib.parse.quote(cn)}">在浏览中搜索</a></td>'
+            f'<td><a href="../search.html?q={urllib.parse.quote(cn)}">搜索</a></td>'
             '</tr>'
         )
     body = (
-        '<p>下面是已知的 PF2 出版物列表。点击「在浏览中搜索」会跳到 browse-all.html 并按出版物名筛选。</p>'
+        '<p>下面是已知的 PF2 出版物列表。点击「搜索」会跳到搜索页并按出版物名查询(search.html 读取 ?q=)。</p>'
         '<table class="aon-table" style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">'
         '<thead><tr><th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">出版物</th>'
         '<th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">索引</th></tr></thead>'
