@@ -135,14 +135,18 @@
         // Restore original.
         sorted.sort(function (a, b) { return a.__wtOrigIdx - b.__wtOrigIdx; });
       } else {
-        // Decide numeric vs string by sampling: all-numeric → number sort.
-        var allNum = true;
+        // Decide numeric vs string by MAJORITY: if most non-empty cells parse as
+        // numbers, sort numerically (one stray '—'/CJK cell shouldn't force lexical
+        // sort, e.g. creature-level columns). Non-numeric cells sort to the end.
+        var numCnt = 0, nonEmpty = 0;
         var keys = sorted.map(function (tr) {
           var cell = tr.children[colIdx];
           var k = cellKey(cell);
-          if (isNaN(k.num)) allNum = false;
+          var s = (k.str || '').trim();
+          if (s) { nonEmpty++; if (!isNaN(k.num)) numCnt++; }
           return k;
         });
+        var allNum = nonEmpty > 0 && numCnt >= nonEmpty * 0.7;
 
         var dirMul = (nextDir === 'asc') ? 1 : -1;
         var idx = sorted.map(function (tr, i) { return i; });
@@ -150,7 +154,12 @@
           var ka = keys[i], kb = keys[j];
           var cmp;
           if (allNum) {
-            cmp = ka.num - kb.num;
+            // NaN (non-numeric) cells sort to the end regardless of direction.
+            var an = isNaN(ka.num), bn = isNaN(kb.num);
+            if (an && bn) cmp = 0;
+            else if (an) return 1;
+            else if (bn) return -1;
+            else cmp = ka.num - kb.num;
           } else {
             cmp = ka.str.localeCompare(kb.str, 'zh-Hans-CN', { numeric: true });
           }

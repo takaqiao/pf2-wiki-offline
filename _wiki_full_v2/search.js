@@ -582,8 +582,10 @@
       const groupHtml = typeOrder.map(function (t) {
         const info = TYPE_INFO[t] || TYPE_INFO.other;
         const items = groups[t].map(function (r) {
-          const folder = (r.kind === "d") ? "data" : "pages";
-          const url = pageBase + folder + "/" + r.href;
+          // r.href already encodes the correct directory (pages/ data/ category/),
+          // so prepend only pageBase. (Bug fix: previously re-added folder + "/" ->
+          // pages/pages/X.html, 404ing every result; category results were unreachable.)
+          const url = pageBase + r.href;
           const ex = r.excerpt
             ? '<div class="pf2s-ex">' + escapeHtml(r.excerpt) + "</div>"
             : "";

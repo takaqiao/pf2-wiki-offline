@@ -84,8 +84,12 @@
   --p7-shell-max: 1280px;
 }
 
-/* Dark mode — flips bg/fg, accent stays */
-body.dark {
+/* Dark mode — flips bg/fg, accent stays.
+   html.dark is set by an inline <head> script pre-paint (kills FOUC); body.dark
+   is added by theme.js once body parses (the ~189 body.dark rules in
+   _v2_compat.css still match). Defining the tokens on BOTH means html,body
+   background (below) resolves dark immediately, before body exists. */
+html.dark, body.dark {
   --fg:        #e3e3e3;
   --fg-soft:   #b8b8b8;
   --fg-mute:   #808080;
