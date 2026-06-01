@@ -48,3 +48,5 @@
 
 ## 日志
 - 2026-05-22 | 建账本(全修 P0–P3)。下一步:Batch A。
+- 2026-05-22 | **全部 A–E DONE**(F 延后),commit 83243fd(A)/efb1502(B+C)/7c44add(D+E)。clean-before-build 加后实测死链 1.7%→10.5% 已撤回+恢复孤儿。**最终重建+验证全绿**:browse 0 死链、搜索结果 0/300 死(P0 修复实证)、内容死链 1.70%、pages 28514/category 3646/browse 51/css 31→11、fresh 页 topnav 27+FOUC+排序就位。cargo check 通过。**待用户授权打包 v0.3.26(需 -RebuildExe)**。
+- 待办(本批延后,记录):补全抓取 ~1.4k 缺口页(根治孤儿)、browse-all 服务端分页、scraper 退避/revid、wiki_native PurgeCSS、补丁签名 PKI、topnav 客户端注入。
