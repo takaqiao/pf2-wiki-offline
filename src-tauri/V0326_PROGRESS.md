@@ -49,4 +49,5 @@
 ## 日志
 - 2026-05-22 | 建账本(全修 P0–P3)。下一步:Batch A。
 - 2026-05-22 | **全部 A–E DONE**(F 延后),commit 83243fd(A)/efb1502(B+C)/7c44add(D+E)。clean-before-build 加后实测死链 1.7%→10.5% 已撤回+恢复孤儿。**最终重建+验证全绿**:browse 0 死链、搜索结果 0/300 死(P0 修复实证)、内容死链 1.70%、pages 28514/category 3646/browse 51/css 31→11、fresh 页 topnav 27+FOUC+排序就位。cargo check 通过。**待用户授权打包 v0.3.26(需 -RebuildExe)**。
-- 待办(本批延后,记录):补全抓取 ~1.4k 缺口页(根治孤儿)、browse-all 服务端分页、scraper 退避/revid、wiki_native PurgeCSS、补丁签名 PKI、topnav 客户端注入。
+- 待办(本批延后,记录):browse-all 服务端分页、scraper 退避/revid、wiki_native PurgeCSS、补丁签名 PKI、topnav 客户端注入。
+- 2026-05-22(收尾) | **用户选「先补齐抓取缺口再发」→ 调查发现缺口=0**:`fetch_missing.py` + 直接核对——**37068/37068 非重定向 WANTED_NS 页全部已 parsed,无可抓缺口**(我此前"~1.4k 缺口"的说法是错的:metadata-parsed 的算术差不对应实际缺失 pageid)。`diag_deadlinks.py` 实测内容死链构成:**391/395 = not_in_meta(当前 wiki 根本没有该标题=真红链,live wiki 上也是红链,正确镜像)**,0 redirect,1 safe_title 边角(分类:出版物),3 = 实为 redirect(属 [5/5] 的 3 个 unresolved)。结论:**语料已完整,1.70% 死链是 wiki 固有红链 + 保留的上游已删页(孤儿,满足内链优于 404),无可补**。建 fetch_missing.py/diag_deadlinks.py/deadcheck.py。→ 回报用户:无缺口可补,可直接打包。
