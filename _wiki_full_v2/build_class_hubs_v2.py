@@ -165,7 +165,8 @@ def build_classes_hub():
                 f'<td><em style="color:var(--fg-mute)">尚未抓取</em></td></tr>'
             )
     body = (
-        f'<p>共 {len(found)} 真职业（PF2r 2024 玩家核心 + Player Core 2 + 出版物补充）。</p>'
+        f'<p>共 {len(found)} 真职业（PF2r 2024 玩家核心 + Player Core 2 + 出版物补充）。'
+        f'　📖 <a href="../pages/{urllib.parse.quote("职业")}.html"><strong>阅读完整《职业》词条</strong></a>（职业系统说明与对照）。</p>'
         '<table class="aon-table" style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">'
         '<thead><tr><th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">职业</th>'
         '<th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">简介</th></tr></thead>'
@@ -183,51 +184,23 @@ def build_classes_hub():
 
 
 def build_source_index():
-    """Build source/index.html — group pages by their |source= field if available.
-
-    Heuristic: scan parse.text for known PF2 publication name patterns.
-    For first iteration, just list known PF2 books with placeholder counts.
-    """
-    print("[source] building source/index.html (publication index) ...")
-    # Known PF2 publications (translated names from huiji wiki)
-    known_pubs = [
-        ("玩家核心 (PF2r)", "Player Core"),
-        ("玩家核心 2 (PF2r)", "Player Core 2"),
-        ("GM核心 (PF2r)", "GM Core"),
-        ("怪物核心 (PF2r)", "Monster Core"),
-        ("玩家手册 (PF2e)", "Core Rulebook"),
-        ("怪物图鉴 (PF2e)", "Bestiary"),
-        ("怪物图鉴2 (PF2e)", "Bestiary 2"),
-        ("怪物图鉴3 (PF2e)", "Bestiary 3"),
-        ("高级玩家指南", "Advanced Player's Guide"),
-        ("黑暗潮汐", "Dark Tides"),
-        ("流浪猫救援团", "Stray Cats"),
-        ("莽林卫士", "Outlaws"),
-        ("失落天体", "Lost Omens"),
-        ("国王缔造者", "Kingmaker"),
-    ]
-    rows = []
-    for cn, en in known_pubs:
-        rows.append(
-            '<tr>'
-            f'<td><strong>{html_lib.escape(cn)}</strong><br><small style="color:var(--fg-mute)">{html_lib.escape(en)}</small></td>'
-            f'<td><a href="../search.html?q={urllib.parse.quote(cn)}">搜索</a></td>'
-            '</tr>'
-        )
-    body = (
-        '<p>下面是已知的 PF2 出版物列表。点击「搜索」会跳到搜索页并按出版物名查询(search.html 读取 ?q=)。</p>'
-        '<table class="aon-table" style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">'
-        '<thead><tr><th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">出版物</th>'
-        '<th style="background:var(--accent-band);color:var(--accent-on);padding:8px 12px;text-align:left">索引</th></tr></thead>'
-        '<tbody>' + "\n".join(rows) + '</tbody></table>'
-        '<p><em>注：完整出版物索引需要后续从 parse.text 提取每页的 |source= 字段统计；首版仅列已知出版物名。</em></p>'
+    """source/index.html is now a REDIRECT to the real wiki publications page
+    (pages/出版物索引.html, ~112 KB, complete). The old hand-built 14-book stub
+    didn't match the wiki ("类目对不齐"); nav has been repointed to the real page,
+    and this stub redirects so any stray/legacy link still lands correctly."""
+    print("[source] writing source/index.html as redirect -> 出版物索引 ...")
+    target = "../pages/" + urllib.parse.quote("出版物索引") + ".html"
+    html = (
+        '<!DOCTYPE html>\n<html lang="zh-Hans">\n<head>\n<meta charset="utf-8">\n'
+        f'<meta http-equiv="refresh" content="0; url={target}">\n'
+        '<title>出版物索引 — 跳转中 — PF2 离线百科</title>\n'
+        '<link rel="stylesheet" href="../assets/style.css">\n</head>\n'
+        f'<body><p style="padding:24px">正在跳转到 <a href="{target}">出版物索引</a>…</p></body>\n</html>\n'
     )
-    bc = '<span>规则</span><span class="sep">›</span><span class="current">出版物</span>'
-    html = page_html("出版物 — 索引", body, bc)
     out = ROOT / "source" / "index.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
-    print(f"  wrote source/index.html ({len(known_pubs)} known publications)")
+    print("  wrote source/index.html (redirect to 出版物索引)")
 
 
 def main() -> int:
