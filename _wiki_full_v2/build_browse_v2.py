@@ -261,6 +261,70 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
     return full_html
 
 
+def render_browse_all_hub(bucket_entries: dict, letters: list, topnav: str, sidebar: str) -> str:
+    """browse-all as a lightweight hub: type cards (with counts) + letter strip."""
+    order = ["feats", "spells", "items", "creatures", "ancestries", "backgrounds",
+             "archetypes", "deities", "locations", "other", "categories"]
+    cards = []
+    for b in order:
+        if b not in bucket_entries:
+            continue
+        cards.append(
+            f'<a class="ba-card ba-{b}" href="browse-{b}.html">'
+            f'<span class="ba-card-label">{html_lib.escape(BUCKET_LABELS.get(b, b))}</span>'
+            f'<span class="ba-card-count">{len(bucket_entries[b]):,}</span></a>'
+        )
+    letter_links = "".join(
+        f'<a href="browse-{x}.html">{html_lib.escape("#" if x == "_" else x)}</a>' for x in letters
+    )
+    body = (
+        '<p class="browse-info">按类型或首字母浏览全部条目。</p>'
+        '<h2 class="ui-section-h">按类型</h2>'
+        '<div class="ba-grid">' + "".join(cards) + '</div>'
+        '<h2 class="ui-section-h">按首字母</h2>'
+        '<div class="ba-letters">' + letter_links + '</div>'
+    )
+    style = (
+        '<style>'
+        '.ba-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin:14px 0}'
+        '.ba-card{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;'
+        'background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent-500);'
+        'border-radius:var(--r-md);box-shadow:var(--e-1);text-decoration:none;color:var(--fg);'
+        'font-size:var(--fs-lg);font-weight:var(--fw-medium);transition:transform .12s,box-shadow .15s,border-color .12s,background .12s}'
+        '.ba-card:hover{transform:translateY(-2px);box-shadow:var(--e-2);border-left-color:var(--accent);'
+        'background:var(--surface-accent);color:var(--accent);text-decoration:none}'
+        '.ba-card-count{font-variant-numeric:tabular-nums;color:var(--fg-mute);font-size:var(--fs-sm)}'
+        '.ba-card:hover .ba-card-count{color:var(--accent)}'
+        '.ba-letters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}'
+        '.ba-letters a{display:inline-block;min-width:34px;text-align:center;padding:7px 10px;'
+        'background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);'
+        'color:var(--link);text-decoration:none;font-weight:var(--fw-medium)}'
+        '.ba-letters a:hover{background:var(--surface-accent);border-color:var(--accent);color:var(--accent)}'
+        '</style>'
+    )
+    return (
+        '<!DOCTYPE html>\n<html lang="zh-Hans">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<script>/* pre-paint theme */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
+        '<title>全部条目 — PF2 离线百科</title>\n'
+        '<link rel="stylesheet" href="assets/style.css">\n<link rel="icon" href="assets/favicon.ico">\n'
+        '<script defer src="assets/topnav.js"></script>\n<script defer src="assets/theme.js"></script>\n'
+        '<script defer src="assets/external_links.js"></script>\n<script defer src="assets/updater_ui.js"></script>\n'
+        '<script defer src="assets/mw_collapsible.js"></script>\n<script defer src="assets/bookmark.js"></script>\n'
+        '<script defer src="assets/keybindings.js"></script>\n' + style + '\n</head>\n'
+        '<body class="mediawiki ltr sitedir-ltr action-view skin--responsive page-browse-all">\n'
+        '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
+        f'{topnav}\n<header class="page-head"><h1>全部条目</h1></header>\n'
+        '<nav class="breadcrumb" aria-label="导航"><a href="index.html">首页</a>'
+        '<span class="sep">›</span><span class="current">全部条目</span></nav>\n'
+        f'<div class="layout">\n{sidebar}\n<main class="page-body" id="main-content">\n'
+        '<div id="mw-content-text" class="mw-body-content mw-content-ltr"><div class="mw-parser-output">\n'
+        f'{body}\n</div></div>\n</main>\n</div>\n'
+        '<footer class="page-foot"><small>本页内容来自 <a href="https://pf2.huijiwiki.com" rel="external">pf2.huijiwiki.com</a>，采用 CC BY-SA 4.0。</small></footer>\n'
+        '</body>\n</html>\n'
+    )
+
+
 def main() -> int:
     if not META_FILE.exists():
         print(f"ERROR: {META_FILE} missing")
@@ -346,13 +410,24 @@ def main() -> int:
         print(f"  browse-{bucket}.html: {len(entries):,} entries")
         written += 1
 
-    # browse-all alphabetical — exclude ns=3500 Data: subpages (not articles;
-    # they were ~12k of the rows, bloating the page). Keep ns 0/102/14.
+    # browse-all is now a HUB (was a 25k-row / 5.3 MB single table that janked
+    # WebView2). Link the type buckets (with counts) + the by-letter pages that
+    # actually exist (computed from the corpus, same letters build_browse_letters
+    # emits) instead of dumping every row into one DOM.
     all_content = [e for e in all_entries if e["ns"] != 3500]
-    all_content.sort(key=lambda e: e["title"].lower())
+    def first_letter(t):
+        c = (t or " ")[0]
+        if "a" <= c.lower() <= "z":
+            return c.upper()
+        cp = ord(c)
+        if (0x3400 <= cp <= 0x4DBF) or (0x4E00 <= cp <= 0x9FFF) or (0xF900 <= cp <= 0xFAFF):
+            return "CJK"
+        return "_"
+    letters = sorted({first_letter(e["title"]) for e in all_content},
+                     key=lambda b: (0, ord(b)) if len(b) == 1 and "A" <= b <= "Z" else (2, 0) if b == "_" else (1, ord(b[0])))
     (ROOT / "browse-all.html").write_text(
-        render_browse_html("all", all_content, topnav_root, sidebar_root, data_index=data_index), encoding="utf-8")
-    print(f"  browse-all.html: {len(all_content):,} entries (excluded {len(all_entries)-len(all_content)} data pages)")
+        render_browse_all_hub(bucket_entries, letters, topnav_root, sidebar_root), encoding="utf-8")
+    print(f"  browse-all.html: HUB ({len(bucket_entries)} type cards + {len(letters)} letters; was {len(all_content):,}-row table)")
     written += 1
 
     print(f"[3/3] done — {written} browse pages written in {time.time()-t0:.1f}s")
