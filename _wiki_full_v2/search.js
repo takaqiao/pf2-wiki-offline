@@ -696,6 +696,32 @@
         });
       }, 80);
     });
+
+    // Keyboard navigation of results: ↓/↑ move a highlighted row, Enter opens it,
+    // Esc clears. Roving over the currently-visible result anchors.
+    input.addEventListener("keydown", function (ev) {
+      var links = Array.prototype.slice.call(
+        host.querySelectorAll('.pf2s-group:not([hidden]) a.pf2s-t')
+      );
+      if (ev.key === "Escape") {
+        input.value = ""; lastQ = ""; host.innerHTML = ""; status.textContent = "";
+        return;
+      }
+      if (!links.length) return;
+      var cur = links.indexOf(host.querySelector("a.pf2s-t.pf2s-active"));
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        if (cur >= 0) links[cur].classList.remove("pf2s-active");
+        var next = ev.key === "ArrowDown"
+          ? (cur + 1) % links.length
+          : (cur <= 0 ? links.length - 1 : cur - 1);
+        links[next].classList.add("pf2s-active");
+        links[next].scrollIntoView({ block: "nearest" });
+      } else if (ev.key === "Enter" && cur >= 0) {
+        ev.preventDefault();
+        window.location.href = links[cur].getAttribute("href");
+      }
+    });
     return { input: input, host: host, status: status };
   }
   function escapeHtml(s) {

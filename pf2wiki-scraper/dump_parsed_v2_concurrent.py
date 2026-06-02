@@ -123,20 +123,40 @@ def fetch_parse(session: "crequests.Session", pageid: int) -> dict:
         "format": "json",
         "formatversion": "2",
     }
-    r = session.get(API_URL, params=params, timeout=30)
-    if r.status_code == 429:
-        raise RateLimited(f"429 {r.text[:100]}")
-    if r.status_code == 403:
-        body = r.text[:200]
-        if "just a moment" in body.lower() or "cloudflare" in body.lower():
-            raise CFExpired("CF re-challenged (cookies stale)")
-        raise CFExpired(f"403: {body}")
-    if r.status_code != 200:
-        raise RuntimeError(f"http {r.status_code}: {r.text[:200]}")
-    j = r.json()
-    if "error" in j:
-        raise RuntimeError(f"api error: {j['error'].get('code','?')} {j['error'].get('info','')}")
-    return j
+    # Bounded retry-with-backoff on transient 429/5xx (honor Retry-After) so a
+    # momentary blip doesn't permanently record a fail. CF 403 is NOT retried
+    # here (cookies are stale -> the caller must re-warm).
+    last_exc = None
+    for attempt in range(4):
+        try:
+            r = session.get(API_URL, params=params, timeout=30)
+        except Exception as e:
+            last_exc = RuntimeError(f"request error: {e}")
+            time.sleep(min(8, 0.6 * (2 ** attempt)))
+            continue
+        if r.status_code == 403:
+            body = r.text[:200]
+            if "just a moment" in body.lower() or "cloudflare" in body.lower():
+                raise CFExpired("CF re-challenged (cookies stale)")
+            raise CFExpired(f"403: {body}")
+        if r.status_code == 429 or r.status_code >= 500:
+            ra = r.headers.get("Retry-After")
+            try:
+                wait = float(ra) if ra else min(8, 0.6 * (2 ** attempt))
+            except ValueError:
+                wait = min(8, 0.6 * (2 ** attempt))
+            last_exc = RateLimited(f"{r.status_code} {r.text[:80]}")
+            if attempt < 3:
+                time.sleep(wait)
+                continue
+            raise last_exc
+        if r.status_code != 200:
+            raise RuntimeError(f"http {r.status_code}: {r.text[:200]}")
+        j = r.json()
+        if "error" in j:
+            raise RuntimeError(f"api error: {j['error'].get('code','?')} {j['error'].get('info','')}")
+        return j
+    raise last_exc or RuntimeError("fetch_parse exhausted retries")
 
 
 def append_fail(pid: int, title: str, error: str) -> None:

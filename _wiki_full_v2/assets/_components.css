@@ -98,6 +98,13 @@ body.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-
 }
 @keyframes pf2-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* ---- Lightbox caption ---- */
+.pf2-lightbox-cap {
+  margin-top: 12px; max-width: 80vw; text-align: center;
+  color: #f0f0f0; font-size: var(--fs-sm); line-height: 1.5;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+}
+
 /* ---- Back-to-top button ---- */
 #pf2-backtop {
   position: fixed; right: 22px; bottom: 22px; z-index: 1100;
@@ -121,6 +128,14 @@ body.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-
   transition: opacity .12s; vertical-align: middle;
 }
 .pf2-anchor:hover { opacity: 1 !important; text-decoration: none; }
+
+/* ---- Search-result keyboard navigation (↑↓/Enter) ---- */
+a.pf2s-t.pf2s-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--surface-accent);
+  border-radius: var(--r-sm);
+}
 
 /* ---- Search-result query highlight ---- */
 .pf2s-ex mark {
