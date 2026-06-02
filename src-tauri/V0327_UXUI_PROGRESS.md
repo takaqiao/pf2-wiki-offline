@@ -24,4 +24,5 @@
 
 ## 决策记录 / 日志
 - 2026-06-02 | 建账本。
+- 2026-06-02 | **全量重建+验证全绿**(0 死链/slim sidebar 7→1/orphans 28514/标签传播)。**P1+P2(a-e)+P2b+P3核心 全部 DONE 并验证**。v0.3.27 内容-only(复用 v0.3.26 exe,无需 -RebuildExe),待用户授权打包。
 - 2026-06-02 | **P1 全部 DONE + 验证**:令牌系统(字号/间距/圆角/阴影/accent ramp/暖边框/fg-mute AA/CJK字体/暗色修复-暖珊瑚)、版权样板剥离(索引 社区使用政策 14948→1)、权威标签(生物/族裔/穿戴物品 全站传播)、a11y 底线(focus-visible/reduced-motion/_components.css/pf2Toast/更新横幅移底部)。截图验证暗色暖调+许可框受抑+标签正确。下一步:P2a statblock。
