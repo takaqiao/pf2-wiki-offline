@@ -98,6 +98,30 @@ body.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-
 }
 @keyframes pf2-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* ---- Back-to-top button ---- */
+#pf2-backtop {
+  position: fixed; right: 22px; bottom: 22px; z-index: 1100;
+  width: 42px; height: 42px; border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--accent); color: var(--accent-on);
+  font-size: 20px; line-height: 1; cursor: pointer;
+  box-shadow: var(--e-2); opacity: 0; pointer-events: none;
+  transform: translateY(8px); transition: opacity .2s, transform .2s;
+}
+#pf2-backtop.show { opacity: .9; pointer-events: auto; transform: none; }
+#pf2-backtop:hover { opacity: 1; background: var(--accent-700); }
+
+/* ---- Heading copy-link anchors ---- */
+.mw-parser-output h2:hover .pf2-anchor,
+.mw-parser-output h3:hover .pf2-anchor,
+.mw-parser-output h4:hover .pf2-anchor { opacity: .6; }
+.pf2-anchor {
+  margin-left: var(--sp-2); font-size: 0.7em; font-weight: var(--fw-normal);
+  color: var(--accent); text-decoration: none; opacity: 0;
+  transition: opacity .12s; vertical-align: middle;
+}
+.pf2-anchor:hover { opacity: 1 !important; text-decoration: none; }
+
 /* ---- Search-result query highlight ---- */
 .pf2s-ex mark {
   background: var(--gold-soft);

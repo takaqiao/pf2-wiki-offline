@@ -6,60 +6,27 @@
     <button type="submit" aria-label="搜索">🔍</button>
   </form>
 
-  <details class="sb-group" open>
-    <summary>玩家选项</summary>
+  <!-- The topnav already carries full category navigation, so the sidebar no
+       longer duplicates it as six open menus. One collapsed 浏览 group keeps
+       every hub reachable; bookmark.js injects ⌚最近 / ★收藏 above this at
+       runtime, making the sidebar a personal "this-page" utility rail. -->
+  <details class="sb-group">
+    <summary>浏览全部</summary>
     <ul>
       <li><a href="../classes/index.html">职业</a></li>
       <li><a href="../browse-ancestries.html">族裔</a></li>
       <li><a href="../browse-backgrounds.html">背景</a></li>
       <li><a href="../browse-feats.html">专长</a></li>
       <li><a href="../browse-archetypes.html">变体</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>装备</summary>
-    <ul>
-      <li><a href="../browse-items.html">全部物品</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>法术</summary>
-    <ul>
-      <li><a href="../browse-spells.html">全部法术</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>生物</summary>
-    <ul>
-      <li><a href="../browse-creatures.html">全部生物</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>规则</summary>
-    <ul>
+      <li><a href="../browse-items.html">物品</a></li>
+      <li><a href="../browse-spells.html">法术</a></li>
+      <li><a href="../browse-creatures.html">生物</a></li>
       <li><a href="../browse-other.html">异常状态</a></li>
-      <li><a href="../browse-categories.html">分类页面</a></li>
-      <li><a href="../source/index.html">出版物</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>设定</summary>
-    <ul>
       <li><a href="../browse-deities.html">信仰</a></li>
       <li><a href="../browse-locations.html">地理</a></li>
-    </ul>
-  </details>
-
-  <details class="sb-group">
-    <summary>其他</summary>
-    <ul>
+      <li><a href="../source/index.html">出版物</a></li>
+      <li><a href="../browse-categories.html">分类页面</a></li>
       <li><a href="../browse-all.html">全部条目 (A-Z)</a></li>
-      <li><a href="#" onclick="toggleTheme();return false;">切换暗黑/明亮</a></li>
     </ul>
   </details>
 </nav>

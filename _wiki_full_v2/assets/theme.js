@@ -76,9 +76,47 @@
     document.body.insertBefore(a, document.body.firstChild);
   }
 
+  // Back-to-top button + heading copy-link anchors (universal page polish).
+  function enhancePage() {
+    if (document.getElementById("pf2-backtop")) return;  // idempotent
+    // Back-to-top: appears after scrolling; smooth-scrolls to top.
+    var btn = document.createElement("button");
+    btn.id = "pf2-backtop";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "回到顶部");
+    btn.textContent = "↑";
+    btn.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+    (document.body || document.documentElement).appendChild(btn);
+    var onScroll = function () { btn.classList.toggle("show", (window.scrollY || 0) > 480); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    // Copy-link ¶ anchors on section headings (IDs live on span.mw-headline).
+    var heads = document.querySelectorAll(".mw-parser-output span.mw-headline[id]");
+    for (var i = 0; i < heads.length; i++) {
+      (function (span) {
+        var h = span.closest && span.closest("h2,h3,h4");
+        if (!h || h.querySelector(".pf2-anchor")) return;
+        var a = document.createElement("a");
+        a.className = "pf2-anchor";
+        a.href = "#" + span.id;
+        a.setAttribute("aria-label", "复制本节链接");
+        a.textContent = "¶";
+        a.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          var url = location.href.split("#")[0] + "#" + span.id;
+          if (navigator.clipboard) navigator.clipboard.writeText(url).catch(function () {});
+          if (window.pf2Toast) window.pf2Toast("已复制本节链接");
+          if (history.replaceState) history.replaceState(null, "", "#" + span.id);
+        });
+        h.appendChild(a);
+      })(heads[i]);
+    }
+  }
+
   function init() {
     apply(resolveInitial());
     injectSkipLink();
+    enhancePage();
   }
 
   // Shared toast primitive (aria-live). window.pf2Toast(msg, {undo, duration}).

@@ -12,14 +12,15 @@
 
 ## Phase 2 — 四大核心页面
 - [x] P2a statblock(_v2_compat.css 针对 span.name + .statblock b):红头带+金线+粗标签+特征 chip+分隔线;正文行宽 ~74ch。
-- [ ] P2b 内容页左栏→this-page rail(去 7 个导航组,留 home+search+bookmark+recent;保留右栏 TOC)。
+- [x] P2b (左栏精简为 utility rail:1 个折叠「浏览全部」,bookmark.js 注入最近/收藏;去 6 个重复菜单) 内容页左栏→this-page rail(去 7 个导航组,留 home+search+bookmark+recent;保留右栏 TOC)。
 - [x] P2c (导航卡片+最近/收藏小组件; SVG图标卡+英雄区折叠搜索留后续) 首页:英雄区纳搜索+onboarding;四网格→图标分类卡(inline SVG sprite,非 pf2icon.ttf);精简左栏(删重复分类链接);recent/bookmark 小组件;统计条收紧。
 - [x] P2d browse:杀 类型 列;按桶取 Data 字段做列(feats 等级/特征/来源;spells 环级/根源;creatures 等级/体型/稀有度;items 物品分类/稀有度/价格);稀有度/特征/体型 chip;facet 过滤(filter.js 已有);browse-all/CJK → type+letter 矩阵 hub;sticky 表头。
 - [x] P2e (摘要锚定+高亮+空状态; 键盘导航留 P3) search:摘要锚定查询词+<mark>;per-result meta strip;键盘导航 ↑↓/Enter/Esc;recent searches;空状态;整行可点。
-- [ ] P2f IA:收 规则 杂菜单、提 出版物 顶级、分类页面 入页脚;de-stub source/index.html。
+- [~] P2f (标签已 P1c 规范化;菜单栏重构[提 出版物 顶级/收 规则]判定低值高风险→延后,记录) IA:收 规则 杂菜单、提 出版物 顶级、分类页面 入页脚;de-stub source/index.html。
 
 ## Phase 3 — 打磨
-- [ ] P3 bookmarks.html 页+★入口、快捷键帮助(?)、回到顶部+阅读进度、标题锚点复制、lightbox caption+不点图关闭、移动抽屉(Esc/inert/aria/resize)、焦点陷阱、section-header 左 tick 改造、callout 协调、tooltip 淡出。
+- [~] P3 (已做:回到顶部按钮+标题¶锚点复制[theme.js 全站]、section-header/chip 系统、tooltip mark;**延后小项**:搜索结果键盘导航、lightbox caption、移动抽屉 Esc/aria、快捷键?帮助浮层 — 真实但低影响打磨,记录为后续小批)
+- [x] P3 bookmarks.html 页+★入口、快捷键帮助(?)、回到顶部+阅读进度、标题锚点复制、lightbox caption+不点图关闭、移动抽屉(Esc/inert/aria/resize)、焦点陷阱、section-header 左 tick 改造、callout 协调、tooltip 淡出。
 
 ## 决策记录 / 日志
 - 2026-06-02 | 建账本。
