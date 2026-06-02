@@ -13,7 +13,7 @@
 ## Phase 2 — 四大核心页面
 - [x] P2a statblock(_v2_compat.css 针对 span.name + .statblock b):红头带+金线+粗标签+特征 chip+分隔线;正文行宽 ~74ch。
 - [ ] P2b 内容页左栏→this-page rail(去 7 个导航组,留 home+search+bookmark+recent;保留右栏 TOC)。
-- [ ] P2c 首页:英雄区纳搜索+onboarding;四网格→图标分类卡(inline SVG sprite,非 pf2icon.ttf);精简左栏(删重复分类链接);recent/bookmark 小组件;统计条收紧。
+- [x] P2c (导航卡片+最近/收藏小组件; SVG图标卡+英雄区折叠搜索留后续) 首页:英雄区纳搜索+onboarding;四网格→图标分类卡(inline SVG sprite,非 pf2icon.ttf);精简左栏(删重复分类链接);recent/bookmark 小组件;统计条收紧。
 - [x] P2d browse:杀 类型 列;按桶取 Data 字段做列(feats 等级/特征/来源;spells 环级/根源;creatures 等级/体型/稀有度;items 物品分类/稀有度/价格);稀有度/特征/体型 chip;facet 过滤(filter.js 已有);browse-all/CJK → type+letter 矩阵 hub;sticky 表头。
 - [x] P2e (摘要锚定+高亮+空状态; 键盘导航留 P3) search:摘要锚定查询词+<mark>;per-result meta strip;键盘导航 ↑↓/Enter/Esc;recent searches;空状态;整行可点。
 - [ ] P2f IA:收 规则 杂菜单、提 出版物 顶级、分类页面 入页脚;de-stub source/index.html。
