@@ -113,6 +113,13 @@
     }
   }
 
+  // Esc closes the open mobile nav drawer (the native <details> hamburger).
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    var d = document.querySelector("details.topnav-hamburger[open]");
+    if (d) { d.removeAttribute("open"); var s = d.querySelector("summary"); if (s) s.focus(); }
+  });
+
   function init() {
     apply(resolveInitial());
     injectSkipLink();

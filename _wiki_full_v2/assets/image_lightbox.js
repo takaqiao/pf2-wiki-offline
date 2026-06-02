@@ -87,13 +87,18 @@
     overlay.appendChild(big);
     overlay.appendChild(closeBtn);
 
-    // Click anywhere on the overlay (including the image) closes it.
+    // Caption from alt/title, shown under the image.
+    var capText = pickAlt(img);
+    if (capText) {
+      var cap = document.createElement('div');
+      cap.className = 'pf2-lightbox-cap';
+      cap.textContent = capText;
+      overlay.appendChild(cap);
+    }
+    // Clicking the image (or caption) must NOT dismiss — only the backdrop/×.
+    big.addEventListener('click', function (e) { e.stopPropagation(); });
     overlay.addEventListener('click', function (e) {
-      // If the click somehow lands on a child we still want to close,
-      // since the only meaningful action here is dismiss.
-      e.preventDefault();
-      e.stopPropagation();
-      close();
+      if (e.target === overlay) { e.preventDefault(); close(); }
     });
 
     document.body.appendChild(overlay);
