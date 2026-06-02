@@ -239,7 +239,8 @@ def iter_parsed(limit: int | None = None):
             body_text = WHITESPACE_RE.sub(" ", body_text)
             # Strip the ns=3500 data-page doc preamble ("此数据的文档可以在…创建").
             body_text = DATA_DOC_RE.sub("", body_text).strip()
-            excerpt = make_excerpt(body_text, 120)
+            # Wider window so search.js can anchor the excerpt on the query term.
+            excerpt = make_excerpt(body_text, 200)
             categories = parse.get("categories", []) or []
             links = parse.get("links", []) or []
             yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt, categories, links

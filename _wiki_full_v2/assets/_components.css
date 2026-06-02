@@ -98,6 +98,18 @@ body.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-
 }
 @keyframes pf2-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* ---- Search-result query highlight ---- */
+.pf2s-ex mark {
+  background: var(--gold-soft);
+  color: #3a2a00;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: var(--fw-medium);
+}
+html.dark .pf2s-ex mark, body.dark .pf2s-ex mark {
+  background: #5a4500; color: #ffe9b0;
+}
+
 /* ---- Recede provenance / license callouts so article content leads ---- */
 /* The green .well.quote-success boxes (edition notice + the PAZIO license/ORC
    boilerplate) open most content pages and dominate the fold. Make them quiet,

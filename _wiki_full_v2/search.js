@@ -546,9 +546,28 @@
     // name (e.g. "spell"), only that group is shown. Toggled via chip clicks.
     let activeFilter = null;
 
+    // Anchor the excerpt on the first query-term hit + <mark> highlight it.
+    function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+    function highlightExcerpt(excerpt, q) {
+      if (!excerpt) return "";
+      var terms = (q || "").trim().toLowerCase().split(/\s+/).filter(function (t) { return t.length >= 1; });
+      var lower = excerpt.toLowerCase();
+      var first = -1;
+      terms.forEach(function (t) { var i = lower.indexOf(t); if (i >= 0 && (first < 0 || i < first)) first = i; });
+      var text = (first > 36) ? "…" + excerpt.slice(first - 12) : excerpt;
+      var out = escapeHtml(text);
+      terms.forEach(function (t) {
+        if (!t) return;
+        try {
+          out = out.replace(new RegExp(escapeRegex(escapeHtml(t)), "gi"), function (m) { return "<mark>" + m + "</mark>"; });
+        } catch (e) {}
+      });
+      return out;
+    }
+
     function renderResults(rs) {
       if (!rs.length) {
-        host.innerHTML = '<div class="pf2s-empty">未找到结果。</div>';
+        host.innerHTML = '<div class="pf2s-empty">未找到结果。试试更短的关键词，或检查拼写。</div>';
         return;
       }
       // Group by type
@@ -587,7 +606,7 @@
           // pages/pages/X.html, 404ing every result; category results were unreachable.)
           const url = pageBase + r.href;
           const ex = r.excerpt
-            ? '<div class="pf2s-ex">' + escapeHtml(r.excerpt) + "</div>"
+            ? '<div class="pf2s-ex">' + highlightExcerpt(r.excerpt, lastQ) + "</div>"
             : "";
           return ''
             + '<li class="pf2s-r">'
