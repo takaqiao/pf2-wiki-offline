@@ -17,17 +17,17 @@
   /* Foreground */
   --fg:        #333333;
   --fg-soft:   #555555;
-  --fg-mute:   #707070;
+  --fg-mute:   #6a6a6a;   /* lifted to clear WCAG AA on white (~5:1) */
 
   /* Surfaces */
   --bg:        #ffffff;
-  --bg-alt:    #f5f5f5;
+  --bg-alt:    #f5f3ef;   /* faint warm tint, coheres with brand */
   --card:      #fafafa;
-  --card-alt:  #f0f0f0;
+  --card-alt:  #f0ede8;
 
-  /* Borders */
-  --border:        #dddddd;
-  --border-strong: #b0b0b0;
+  /* Borders — warmed + softened (hairlines were cold #ddd) */
+  --border:        #e7e3dd;
+  --border-strong: #c9c2b8;
 
   /* Accent — PF2 brand brown-red (navbox-title) */
   --accent:        #6d2002;
@@ -73,15 +73,60 @@
   --font-serif:
     "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong",
     Georgia, "Times New Roman", serif;
+  /* CJK-first: this is a Chinese wiki, so Han faces lead and Latin falls back. */
   --font-sans:
-    "Helvetica Neue", Helvetica, Arial,
     "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Helvetica, Arial,
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-sans);
+  --font-display: var(--font-serif);   /* headings get the serif voice */
   --font-ui: var(--font-sans);
 
   /* Layout */
   --p7-shell-max: 1280px;
+
+  /* ---- Design tokens (added v2j-uxui) — one type/space/scale system ---- */
+  /* Type scale (~1.18 ratio, base 14px) */
+  --fs-xs: 12px;  --fs-sm: 13px;  --fs-md: 14px;  --fs-lg: 16px;
+  --fs-xl: 19px;  --fs-2xl: 23px; --fs-3xl: 28px; --fs-4xl: 34px;
+  --lh-tight: 1.3; --lh-normal: 1.6; --lh-loose: 1.75;
+  --fw-normal: 400; --fw-medium: 600; --fw-bold: 700;
+  --tracking-cjk: 0.01em;
+  --measure: 74ch;            /* comfortable prose reading width */
+
+  /* Spacing (4px base) */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+  /* Radius */
+  --r-sm: 3px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px;
+
+  /* Elevation (alias existing shadow tokens + one deeper) */
+  --e-1: var(--shadow-sm);
+  --e-2: var(--shadow-md);
+  --e-3: 0 4px 16px rgba(0, 0, 0, 0.14);
+
+  /* Accent ramp + tint surfaces (brand brown-red #6d2002) */
+  --accent-700: #571a02;
+  --accent-600: #6d2002;
+  --accent-500: #8d3a1c;
+  --surface-accent:   color-mix(in srgb, var(--accent) 6%, var(--bg));
+  --surface-accent-2: color-mix(in srgb, var(--accent) 12%, var(--bg));
+  --gold-rule: linear-gradient(90deg, var(--gold), var(--gold-soft));
+
+  /* Per-kind palette (single source for home rails / browse pills / search badges) */
+  --kind-feat:       #2f6f3b;
+  --kind-spell:      #6b3f8a;
+  --kind-creature:   #8b2f2f;
+  --kind-item:       #9a6a12;
+  --kind-condition:  #8a5a1f;
+  --kind-ancestry:   #4a6b2f;
+  --kind-class:      #6b3f8a;
+  --kind-background: #2f5f6b;
+  --kind-location:   #356b6b;
+  --kind-deity:      #7a4a2a;
+  --kind-action:     #444a8a;
+  --kind-trait:      #6a5a2a;
+  --kind-other:      #777777;
 }
 
 /* Dark mode — flips bg/fg, accent stays.
@@ -90,22 +135,30 @@
    _v2_compat.css still match). Defining the tokens on BOTH means html,body
    background (below) resolves dark immediately, before body exists. */
 html.dark, body.dark {
-  --fg:        #e3e3e3;
-  --fg-soft:   #b8b8b8;
-  --fg-mute:   #808080;
-  --bg:        #1a1a1a;
-  --bg-alt:    #242424;
-  --card:      #2a2a2a;
-  --card-alt:  #303030;
-  --border:        #3a3a3a;
-  --border-strong: #555555;
-  --accent:        #c43a3e;
-  --accent-soft:   #d96666;
+  --fg:        #e6e4e1;
+  --fg-soft:   #bdb9b3;
+  --fg-mute:   #a0a0a0;   /* lifted to clear WCAG AA on #1a1a1a (~7:1) */
+  --bg:        #1a1816;   /* faint warm-neutral, not pure cold grey */
+  --bg-alt:    #232120;
+  --card:      #26241f;
+  --card-alt:  #322f2a;
+  --border:        #3b3733;   /* warmed to match the brand */
+  --border-strong: #57514a;
+  /* warm terracotta/coral in the #6d2002 hue family (was cold scarlet #c43a3e) */
+  --accent:        #d4633a;
+  --accent-soft:   #e08658;
+  --accent-700:    #b94d28;
+  --accent-600:    #d4633a;
+  --accent-500:    #e08658;
   --accent-band:   #6d2002;
   --link:          #6cb4ee;
   --link-hover:    #99ccff;
-  --code-bg:       #1f1f1f;
+  --code-bg:       #1f1d1b;
   --quote-bg:      #2a261e;
+  /* shadows must be deeper on dark to be visible at all */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.55);
+  --e-3:       0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
 /* Apply tokens — base body styling */
@@ -115,8 +168,8 @@ html, body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
 }
 
 a {

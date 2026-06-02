@@ -1,0 +1,111 @@
+/* ============================================================
+   _components.css — shared UI primitives + global a11y floor.
+   Loaded LAST in the style.css @import chain so these win.
+   Added v2j-uxui. Uses tokens from _v2_palette.css.
+   ============================================================ */
+
+/* ---- Global accessibility floor ---- */
+/* :where() => 0 specificity, so any component can still override. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+html.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+body.dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline-color: var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Card ---- */
+.ui-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--e-1);
+  padding: var(--sp-4);
+}
+
+/* ---- Section header (left-tick idiom replacing the dated double rule) ---- */
+.ui-section-h {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xl);
+  color: var(--accent);
+  margin: var(--sp-6) 0 var(--sp-3);
+  padding-left: var(--sp-3);
+  border-left: 4px solid var(--accent);
+  line-height: var(--lh-tight);
+}
+
+/* ---- Chip (traits / facets) ---- */
+.ui-chip {
+  display: inline-flex; align-items: center;
+  padding: 1px 9px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-alt);
+  color: var(--fg-soft);
+  white-space: nowrap;
+}
+.ui-chip-rare    { background: var(--rare-bg);     color: var(--rare-fg);     border-color: transparent; }
+.ui-chip-uncommon{ background: var(--uncommon-bg); color: var(--uncommon-fg); border-color: transparent; }
+.ui-chip-size    { background: var(--size-bg);     color: var(--size-fg);     border-color: transparent; }
+
+/* ---- Badge (kind / type) ---- */
+.ui-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  border-radius: var(--r-sm);
+  color: #fff;
+  background: var(--kind-other);
+}
+.ui-badge-feat{background:var(--kind-feat)} .ui-badge-spell{background:var(--kind-spell)}
+.ui-badge-creature{background:var(--kind-creature)} .ui-badge-item{background:var(--kind-item)}
+.ui-badge-condition{background:var(--kind-condition)} .ui-badge-ancestry{background:var(--kind-ancestry)}
+.ui-badge-class{background:var(--kind-class)} .ui-badge-background{background:var(--kind-background)}
+.ui-badge-location{background:var(--kind-location)} .ui-badge-deity{background:var(--kind-deity)}
+.ui-badge-action{background:var(--kind-action)} .ui-badge-trait{background:var(--kind-trait)}
+
+/* ---- Shared toast (action feedback, aria-live) ---- */
+#pf2-toast-host {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: 9998; display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none; align-items: center;
+}
+.pf2-toast {
+  background: var(--accent); color: var(--accent-on);
+  padding: 8px 16px; border-radius: var(--r-pill);
+  box-shadow: var(--e-2); font-size: var(--fs-sm);
+  pointer-events: auto; display: flex; align-items: center; gap: 12px;
+  animation: pf2-toast-in .18s ease;
+}
+.pf2-toast button {
+  background: rgba(255,255,255,.2); color: inherit; border: 0;
+  border-radius: var(--r-sm); padding: 2px 10px; cursor: pointer; font: inherit;
+}
+@keyframes pf2-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---- Recede provenance / license callouts so article content leads ---- */
+/* The green .well.quote-success boxes (edition notice + the PAZIO license/ORC
+   boilerplate) open most content pages and dominate the fold. Make them quiet,
+   compact, secondary — readers can still see them, but they don't shout. */
+.mw-parser-output .well.quote-success {
+  font-size: var(--fs-sm);
+  opacity: 0.72;
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.mw-parser-output .well.quote-success:hover { opacity: 1; }

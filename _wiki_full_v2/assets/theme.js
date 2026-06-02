@@ -81,6 +81,35 @@
     injectSkipLink();
   }
 
+  // Shared toast primitive (aria-live). window.pf2Toast(msg, {undo, duration}).
+  // Used by bookmark/copy-link/etc for humane action feedback. CSS in _components.css.
+  window.pf2Toast = function (msg, opts) {
+    opts = opts || {};
+    var host = document.getElementById("pf2-toast-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "pf2-toast-host";
+      host.setAttribute("aria-live", "polite");
+      (document.body || document.documentElement).appendChild(host);
+    }
+    var t = document.createElement("div");
+    t.className = "pf2-toast";
+    var span = document.createElement("span");
+    span.textContent = msg;
+    t.appendChild(span);
+    if (typeof opts.undo === "function") {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = opts.undoLabel || "撤销";
+      b.addEventListener("click", function () { try { opts.undo(); } catch (e) {} remove(); });
+      t.appendChild(b);
+    }
+    host.appendChild(t);
+    var timer = setTimeout(remove, opts.duration || 3200);
+    function remove() { clearTimeout(timer); if (t.parentNode) t.parentNode.removeChild(t); }
+    return remove;
+  };
+
   window.toggleTheme = function () {
     // Read current from <html> so it works even before <body> is ready.
     var current = document.documentElement.classList.contains(DARK) ? DARK : LIGHT;
