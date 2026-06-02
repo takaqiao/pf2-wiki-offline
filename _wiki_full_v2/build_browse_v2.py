@@ -57,7 +57,7 @@ BUCKET_CATS = {
 }
 
 BUCKET_LABELS = {
-    "feats": "专长", "spells": "法术", "items": "物品", "creatures": "怪物",
+    "feats": "专长", "spells": "法术", "items": "物品", "creatures": "生物",
     "ancestries": "族裔", "backgrounds": "背景", "archetypes": "变体",
     "deities": "信仰", "locations": "地理", "other": "异常状态",
     "categories": "分类页面", "all": "全部条目",

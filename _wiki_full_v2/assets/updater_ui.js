@@ -132,11 +132,14 @@
 
     var banner = document.createElement('div');
     banner.id = 'pf2-updater-banner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    // Anchor to the BOTTOM so it never covers the sticky topnav at top:0.
     banner.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+      'position:fixed', 'bottom:0', 'left:0', 'right:0', 'z-index:1200',
       'background:#6d2002', 'color:#fffbf6', 'padding:10px 20px',
       'font:14px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif',
-      'box-shadow:0 2px 8px rgba(0,0,0,0.3)', 'display:flex',
+      'box-shadow:0 -2px 12px rgba(0,0,0,0.35)', 'display:flex',
       'align-items:center', 'gap:12px', 'flex-wrap:wrap',
     ].join(';');
 

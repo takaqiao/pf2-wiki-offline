@@ -116,6 +116,8 @@ CJK_RANGE = (
 )
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9'_-]{1,30}")
 WHITESPACE_RE = re.compile(r"\s+")
+# ns=3500 Data pages start with a doc-stub preamble; drop it from excerpts.
+DATA_DOC_RE = re.compile(r"^此数据的文档可以在.*?创建\s*")
 
 
 def is_cjk(ch: str) -> bool:
@@ -227,9 +229,17 @@ def iter_parsed(limit: int | None = None):
             # Drop scripts/styles/comments
             for tag in soup.find_all(["script", "style"]):
                 tag.decompose()
+            # Drop the license/attribution boxes that otherwise dominate ~40% of
+            # excerpts ("本条目内容来自《...》规则内容版权为PAZIO所有...社区使用政策").
+            # ONLY the .well.quote-success / .quote-primary callouts are pure
+            # license boilerplate — bare .well holds legitimate content, leave it.
+            for tag in soup.select(".well.quote-success, .quote-primary"):
+                tag.decompose()
             body_text = soup.get_text(" ", strip=True)
             body_text = WHITESPACE_RE.sub(" ", body_text)
-            excerpt = make_excerpt(body_text, 100)
+            # Strip the ns=3500 data-page doc preamble ("此数据的文档可以在…创建").
+            body_text = DATA_DOC_RE.sub("", body_text).strip()
+            excerpt = make_excerpt(body_text, 120)
             categories = parse.get("categories", []) or []
             links = parse.get("links", []) or []
             yield doc.get("ns", 0), doc.get("pageid"), title, body_text, excerpt, categories, links
