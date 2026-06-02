@@ -63,6 +63,69 @@ BUCKET_LABELS = {
     "categories": "分类页面", "all": "全部条目",
 }
 
+# --- ns=3500 Data join: 中文 title -> useful fields (等级/环级/根源/物品分类/体型/稀有度) ---
+# Lets browse lists show meaningful, scannable columns instead of the dead
+# "类型 = 条目" column. Mirrors build_nav_stubs' table parsing.
+_DATA_ROW_RX = re.compile(r"<th>(.*?)</th><td class=\"mw-jsonconfig-value\">(.*?)</td>", re.S)
+_DATA_TAG_RX = re.compile(r"<[^>]+>")
+
+
+def _data_clean(s: str) -> str:
+    return _DATA_TAG_RX.sub("", s).replace("&amp;", "&").strip()
+
+
+def build_data_index() -> dict:
+    """中文 title -> {等级, 环级, 根源, 法术分类, 物品分类, 体型, 稀有度}."""
+    idx: dict[str, dict] = {}
+    KEEP = ("等级", "环级", "根源", "法术分类", "物品分类", "体型", "稀有度")
+    for sub in PARSED_DIR.iterdir():
+        if not sub.is_dir() or sub.name.startswith("_"):
+            continue
+        for f in sub.iterdir():
+            if not f.name.endswith(".json"):
+                continue
+            try:
+                doc = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if doc.get("ns") != 3500:
+                continue
+            rec = {_data_clean(a): _data_clean(b)
+                   for a, b in _DATA_ROW_RX.findall(doc.get("parse", {}).get("text", "") or "")}
+            name = rec.get("中文", "")
+            if name:
+                idx[name] = {k: rec.get(k, "") for k in KEEP}
+    return idx
+
+
+# Per-bucket extra columns: (header, key, kind) — kind: 'text' | 'rarity' | 'size' | 'trad'.
+# First data col replaces the dead 类型 column; second replaces/supplements 分类.
+BUCKET_COLUMNS = {
+    "feats":      [("等级", "等级", "text")],
+    "spells":     [("环级", "环级", "text"), ("根源", "根源", "trad")],
+    "creatures":  [("等级", "等级", "text"), ("体型", "体型", "size"), ("稀有度", "稀有度", "rarity")],
+    "items":      [("等级", "等级", "text"), ("类别", "物品分类", "text"), ("稀有度", "稀有度", "rarity")],
+    "archetypes": [("稀有度", "稀有度", "rarity")],
+    "backgrounds": [("稀有度", "稀有度", "rarity")],
+}
+
+
+def _rarity_chip(v: str) -> str:
+    v = (v or "").strip()
+    if not v or v == "常见":
+        return html_lib.escape(v)
+    cls = "ui-chip-uncommon" if v == "罕见" else "ui-chip-rare"
+    return f'<span class="ui-chip {cls}">{html_lib.escape(v)}</span>'
+
+
+def _render_data_cell(val: str, kind: str) -> str:
+    val = (val or "").strip()
+    if kind == "rarity":
+        return _rarity_chip(val)
+    if kind == "size":
+        return f'<span class="ui-chip ui-chip-size">{html_lib.escape(val)}</span>' if val else ""
+    return html_lib.escape(val)
+
 NS_TO_DIR = {0: "pages", 4: "project", 14: "category", 102: "pages", 3500: "data"}
 
 SAFE_RX = re.compile(r'[*?"<>|]')
@@ -114,18 +177,22 @@ def iter_parsed_with_cats():
 
 
 def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: str,
-                        label: str | None = None) -> str:
+                        label: str | None = None, data_index: dict | None = None) -> str:
     label = label or BUCKET_LABELS.get(bucket, bucket)
+    data_index = data_index or {}
+    cols = BUCKET_COLUMNS.get(bucket, [])
+    # Header cells: 名称 + each data column + 分类 (source). Without data cols,
+    # fall back to the old 分类 column only (drop the useless "类型 = 条目").
+    head_cells = ['<th>名称</th>'] + [f'<th>{html_lib.escape(h)}</th>' for h, _, _ in cols] + ['<th>分类</th>']
+    thead = '<thead><tr>' + ''.join(head_cells) + '</tr></thead>'
     rows = []
     for e in entries:
-        row = (
-            '<tr>'
-            f'<td><a href="{e["href"]}">{html_lib.escape(e["title"])}</a></td>'
-            f'<td class="ns">{html_lib.escape(e.get("ns_label",""))}</td>'
-            f'<td class="cats">{html_lib.escape(", ".join(e.get("cats", [])[:3]))}</td>'
-            '</tr>'
-        )
-        rows.append(row)
+        d = data_index.get(e["title"], {})
+        cells = [f'<td><a href="{e["href"]}">{html_lib.escape(e["title"])}</a></td>']
+        for _, key, kind in cols:
+            cells.append(f'<td class="bc-{kind}">{_render_data_cell(d.get(key, ""), kind)}</td>')
+        cells.append(f'<td class="cats">{html_lib.escape(", ".join(e.get("cats", [])[:2]))}</td>')
+        rows.append('<tr>' + ''.join(cells) + '</tr>')
     table_body = "\n".join(rows)
     sub_label = f"{label} 共 {len(entries):,} 条"
 
@@ -179,7 +246,7 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<div class="mw-parser-output">\n'
         f'<p class="browse-info">{html_lib.escape(sub_label)}。点表头排序；下方分页栏可搜索 / 翻页 / 调整每页条数。</p>\n'
         '<table class="browse-table wikitable" id="browse-tbl">\n'
-        '<thead><tr><th>名称</th><th>类型</th><th>分类</th></tr></thead>\n'
+        f'{thead}\n'
         f'<tbody>\n{table_body}\n</tbody>\n'
         '</table>\n'
         '</div>\n'
@@ -238,6 +305,10 @@ def main() -> int:
                     cat_to_entries[cc].append(entry)
     print(f"  indexed {len(cat_to_entries)} ns0 categories in {time.time()-t0:.1f}s")
 
+    # ns=3500 Data join for meaningful browse columns (等级/环级/根源/体型/稀有度…)
+    data_index = build_data_index()
+    print(f"  built data index: {len(data_index)} entries")
+
     # Assemble buckets from BUCKET_CATS (union of mapped categories, deduped by title)
     bucket_entries: dict[str, list[dict]] = {}
     for bucket, catlist in BUCKET_CATS.items():
@@ -270,7 +341,7 @@ def main() -> int:
     written = 0
     for bucket, entries in bucket_entries.items():
         entries.sort(key=lambda e: e["title"].lower())
-        html = render_browse_html(bucket, entries, topnav_root, sidebar_root)
+        html = render_browse_html(bucket, entries, topnav_root, sidebar_root, data_index=data_index)
         (ROOT / f"browse-{bucket}.html").write_text(html, encoding="utf-8")
         print(f"  browse-{bucket}.html: {len(entries):,} entries")
         written += 1
@@ -280,7 +351,7 @@ def main() -> int:
     all_content = [e for e in all_entries if e["ns"] != 3500]
     all_content.sort(key=lambda e: e["title"].lower())
     (ROOT / "browse-all.html").write_text(
-        render_browse_html("all", all_content, topnav_root, sidebar_root), encoding="utf-8")
+        render_browse_html("all", all_content, topnav_root, sidebar_root, data_index=data_index), encoding="utf-8")
     print(f"  browse-all.html: {len(all_content):,} entries (excluded {len(all_entries)-len(all_content)} data pages)")
     written += 1
 
