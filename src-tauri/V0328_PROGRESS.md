@@ -20,5 +20,8 @@
 - [x] scraper 退避重试(fetch_parse 429/5xx 有界退避+Retry-After;403 仍抛=cookies 需重热)(dump_parsed 429/5xx backoff)— 廉价robust。
 - [—] **判定保留延后(高风险/低 ROI,本地 app)**:wiki_native PurgeCSS(390KB 本地磁盘无碍,改有破样式风险)、补丁签名 PKI(大基建)、topnav 客户端注入(高风险架构重构)、scraper revid 全量改动跟踪。→ 向用户说明,征询是否坚持做。
 
+## 状态
+全部重建+验证:0 死链、出版物→真页(战士 topnav 已指 出版物索引)、? 帮助按钮全站、browse-all hub 17.7KB、orphans 28514。**内容-only,复用 v0.3.26 exe,无 -RebuildExe**。待用户授权打包 v0.3.28。
+
 ## 日志
 - 2026-06-02 | 建账本;① 出版物对齐 + 职业 enrich + nav 审计(对不齐面=仅出版物)。下一步:② 打磨 + ③ browse-all hub/backoff。
