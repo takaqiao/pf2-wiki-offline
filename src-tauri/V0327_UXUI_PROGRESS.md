@@ -1,4 +1,6 @@
-# v0.3.27 UI/UX 重做进度账本
+# v0.3.27 UI/UX 重做进度账本  —  🎉 已发布 (2026-06-02)
+
+**已发布**:release.ps1(内容-only,复用 v0.3.26 hardened exe,无 -RebuildExe)。补丁 v0.3.26→v0.3.27=254.91MB(slim sidebar+标签改全站)。tag+3资产(portable 1246.6MB/patch 254.9MB/patches.json)+commit cb68595+latest=v0.3.27+链 preflight 通过。下次补丁基准=干净 pf2-wiki-offline_0.3.27_x64-portable。
 
 > 用户 2026-06-02 选「全部实现 P1→P3」(基于 WIKI_UXUI_RESEARCH.md)。分阶段做,每块 commit,关键里程碑截图验证,最后全量重建+打包(发版单独授权)。
 > 设计方向:一个声音(令牌)· 一套分类(权威标签)· 一个招牌组件(statblock)。基准=干净 pf2-wiki-offline_0.3.26_x64-portable。
