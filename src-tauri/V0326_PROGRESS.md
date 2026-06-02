@@ -1,4 +1,8 @@
-# v0.3.26 修复批进度账本
+# v0.3.26 修复批进度账本  —  🎉 已发布 (2026-05-22)
+
+**v0.3.26 已发布**:release.ps1 -RebuildExe(cargo 1m16s)。补丁 v0.3.25→v0.3.26 = **231.19MB**(~40456 改/-42 删[死CSS+_snippets+.py+browse-classes];FOUC+topnav 改全站故大)。tag+3 资产(portable 1236.7MB/patch 231.2MB/patches.json)+ repo commit 91aaa5f + latest=v0.3.26。**新加的链连续性 preflight 实跑通过**。**acl_probe 全绿**(open_external RESOLVED/apply 可达/eventListen OK——硬化 updater+流式下载验证可用)。下次补丁基准=干净 pf2-wiki-offline_0.3.26_x64-portable。
+
+
 
 > 用户 2026-05-22 选「全修 P0–P3」(基于 WIKI_AUDIT.md)。全部修完→打包 v0.3.26(需 -RebuildExe,因改 main.rs)。发版单独征求授权。
 > 基准 = 干净 `pf2-wiki-offline_0.3.25_x64-portable`。每批改完 commit;最后全量重建+验证+打包。
