@@ -1,4 +1,4 @@
-"""Build classes/index.html (25 真职业 hub) + source/index.html (出版物索引).
+"""Build classes/index.html (27 真职业 hub) + source/index.html (出版物索引).
 
 Both reuse the parsed corpus + native CSS. Standalone — runs after build_v2.py.
 
@@ -87,14 +87,14 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
         '<!DOCTYPE html>\n<html lang="zh-Hans">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f'<title>{html_lib.escape(title)} — PF2 离线百科</title>\n'
-        '<link rel="stylesheet" href="../assets/style.css">\n'
+        '<link rel="stylesheet" href="../assets/style.css?v=v2i">\n'
         '<link rel="icon" href="../assets/favicon.ico">\n'
-        '<script defer src="../assets/topnav.js"></script>\n'
-        '<script defer src="../assets/theme.js"></script>\n'
-        '<script defer src="../assets/external_links.js"></script>\n'
-        '<script defer src="../assets/mw_collapsible.js"></script>\n'
-        '<script defer src="../assets/updater_ui.js"></script>\n'
-        '<script defer src="../assets/bookmark.js"></script>\n'
+        '<script defer src="../assets/topnav.js?v=v2i"></script>\n'
+        '<script defer src="../assets/theme.js?v=v2i"></script>\n'
+        '<script defer src="../assets/external_links.js?v=v2i"></script>\n'
+        '<script defer src="../assets/mw_collapsible.js?v=v2i"></script>\n'
+        '<script defer src="../assets/updater_ui.js?v=v2i"></script>\n'
+        '<script defer src="../assets/bookmark.js?v=v2i"></script>\n'
         '</head>\n<body class="mediawiki ltr sitedir-ltr action-view skin--responsive">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
         f'{topnav}\n'
@@ -117,7 +117,7 @@ def page_html(title: str, body: str, bucket_breadcrumb: str = "") -> str:
 
 
 def build_classes_hub():
-    """Build classes/index.html — strict allowlist of 25 真职业.
+    """Build classes/index.html — strict allowlist of 27 真职业.
 
     Only includes pages whose title is in KNOWN_CLASSES dict. Falls back to
     placeholder row for titles not yet scraped.
@@ -194,7 +194,7 @@ def build_source_index():
         '<!DOCTYPE html>\n<html lang="zh-Hans">\n<head>\n<meta charset="utf-8">\n'
         f'<meta http-equiv="refresh" content="0; url={target}">\n'
         '<title>出版物索引 — 跳转中 — PF2 离线百科</title>\n'
-        '<link rel="stylesheet" href="../assets/style.css">\n</head>\n'
+        '<link rel="stylesheet" href="../assets/style.css?v=v2i">\n</head>\n'
         f'<body><p style="padding:24px">正在跳转到 <a href="{target}">出版物索引</a>…</p></body>\n</html>\n'
     )
     out = ROOT / "source" / "index.html"

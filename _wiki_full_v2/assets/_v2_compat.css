@@ -1003,6 +1003,34 @@ body.dark .well.quote-primary {
   border-color: var(--border, #3a3a3a) !important;
   box-shadow: inset 0 1px 1px rgba(0,0,0,.4);
 }
+/* v0.3.30 VF5: 上面的 border-color 四边 shorthand 把 README/关于页
+   .well 的内联 accent 左强调条也压成灰色 — 单独放行左边框。 */
+body.dark .well {
+  border-left-color: var(--accent, #d4633a) !important;
+}
+
+/* v0.3.30 VF4: 暗黑模式内联样式族兜底 — 无类名/无钩子的内联色无法被
+   类名规则压制, 用 [style*=] 属性选择器兜底。
+   (a) 生物页 强/弱 评级字: 纯蓝/纯红压深底分别 1.8:1 / 3.2:1。 */
+body.dark .mw-parser-output [style*="color:blue"],
+body.dark .mw-parser-output [style*="color: blue"] {
+  color: #7aa7ff !important;
+}
+body.dark .mw-parser-output [style*="color:red"],
+body.dark .mw-parser-output [style*="color: red"] {
+  color: #ff8a8a !important;
+}
+/* (b)(c) 奶油底浮窗面板(法术列表/N环 等 130 页 rgba(233,222,208)) +
+   首页族无类名公告块(rgb(245,239,224)) + 同族 237,227,200:
+   暗黑下底色保持奶油、文字被改浅 → 1.05:1 完全不可读。
+   注: 原审计 (d) 项 color:#004416 经核实全部为 background-color 子串
+   误报(白字绿底本就可读), 按 verifier 结论不加规则。 */
+body.dark .mw-parser-output div[style*="233,222,208"],
+body.dark .mw-parser-output div[style*="245,239,224"],
+body.dark .mw-parser-output div[style*="237,227,200"] {
+  background: var(--card) !important;
+  color: var(--fg) !important;
+}
 
 /* --- <code>, <pre>, <kbd>, <samp>, <tt> code surfaces --- */
 body.dark code,
@@ -1340,6 +1368,39 @@ body.dark div.page-categories .label {
 .mw-parser-output .pl-2 { padding-left: 0.5rem; }
 .mw-parser-output .w-full { width: 100%; }
 .mw-parser-output .w-1\/10 { width: 10%; }
+/* v0.3.30 RC5: 裸 .flex 是全站最普遍的布局原语(~58% 页面的金边状态块/
+   法术框), 但全级联零规则 — 原站 Tailwind 经 JS loader 注入, link 抓取
+   永远抓不到(根因见 CF2)。 */
+.mw-parser-output .flex { display: flex; }
+.mw-parser-output .flex-wrap { flex-wrap: wrap; }
+/* v0.3.30 CF5: Tailwind 任意值类 + 漏网静态工具类回填
+   (intro 简介块 my-[1em] / 地理页伪标题 text-[18px]+font-bold+my-0+
+   border-black / 地图盒 max-w-[350px] / 中枢页 text-[#004416] 等)。 */
+.mw-parser-output .my-\[1em\] { margin-top: 1em; margin-bottom: 1em; }
+.mw-parser-output .my-0 { margin-top: 0; margin-bottom: 0; }
+.mw-parser-output .font-bold { font-weight: 700; }
+.mw-parser-output .text-\[18px\] { font-size: 18px; }
+.mw-parser-output .text-\[24px\] { font-size: 24px; }
+.mw-parser-output .max-w-\[350px\] { max-width: 350px; }
+.mw-parser-output .max-h-\[500px\] { max-height: 500px; }
+.mw-parser-output .border-black { border-color: #000; }
+.mw-parser-output .gap-\[10px\] { gap: 10px; }
+.mw-parser-output .text-\[\#004416\] { color: #004416; }
+
+/* ---- 8a2. site.styles 语义类离线重建 (随 Common.css 丢失, 见 CF2) ---- */
+/* CF3: 约束怪物肖像 — CF1 恢复 <img class="monster-portrait"> 后, 原始
+   711-1500px 素材会以正文列全宽插在 statblock 第一行。数值为离线重建
+   (live Common.css 不可达), 待 CF2 重抓 site.styles 后用真值校正。 */
+.mw-parser-output img.monster-portrait {
+  float: right;
+  max-width: min(40%, 320px);
+  height: auto;
+  margin: 0 0 .5em 1em;
+}
+/* CF4: 通栏横幅图(侏儒/人偶族裔等 109 页), 意图明确可重建。 */
+.mw-parser-output img.img-fullwidth { width: 100%; height: auto; }
+/* CF4: 中文术语后的英文名外链 — 保守最小化(不臆造), 待 CF2 重抓校正。 */
+.mw-parser-output .enlink { font-size: .85em; opacity: .85; }
 
 /* ---- 8b. Navbox/list whitespace ---- */
 .mw-parser-output .nowraplinks { white-space: nowrap; }
@@ -1362,10 +1423,12 @@ body.dark div.page-categories .label {
 }
 
 /* ---- 8d. Statblock colour variants ----
-   按类型给左边一条色带：专长=青灰 / 法术=紫红 / 动作=琥珀。 */
+   按类型给左边一条色带：专长=青灰 / 法术=紫红 / 动作=琥珀 / 仪式=橄榄。 */
 .mw-parser-output .statblock-专长 { border-left: 4px solid #4a7d8f; }
 .mw-parser-output .statblock-法术 { border-left: 4px solid #8f4a7d; }
 .mw-parser-output .statblock-动作 { border-left: 4px solid #d97706; }
+/* v0.3.30 CF7: 同族唯一缺失的仪式变体(32 页仪式条目)。 */
+.mw-parser-output .statblock-仪式 { border-left: 4px solid #7d8f4a; }
 
 /* ---- 8e. MediaWiki collapsible default-state ----
    原 MediaWiki 用 JS 切 .mw-collapsed → 把 .mw-collapsible-content 隐藏。
@@ -1441,16 +1504,27 @@ body.dark div.page-categories .label {
   opacity: 0.7;
   margin-right: 4px;
 }
+/* v0.3.30 CF6: ext.cite 响应式分栏类(MW 上游真值, 非臆造) —
+   样本页(战士)无 <references/> 导致 ext.cite.styles 从未被抓取。 */
+.mw-parser-output .references-column-count-2 { column-count: 2; }
+.mw-parser-output .references-column-count-3 { column-count: 3; }
+.mw-parser-output .mw-references-columns { column-width: 30em; }
+.mw-parser-output .references-column-count-2 li,
+.mw-parser-output .references-column-count-3 li,
+.mw-parser-output .mw-references-columns li { break-inside: avoid; }
 
 /* ---- 8j. Narrow viewport: collapse refs to single column ---- */
 @media (max-width: 640px) {
   .mw-parser-output .mw-references-wrap { columns: 1; }
+  .mw-parser-output .references-column-count-2,
+  .mw-parser-output .references-column-count-3 { column-count: 1; }
 }
 
 /* ---- 8k. Dark-mode variants ---- */
 body.dark .mw-parser-output .statblock-专长 { border-left-color: #6fa3b6; }
 body.dark .mw-parser-output .statblock-法术 { border-left-color: #b66fa3; }
 body.dark .mw-parser-output .statblock-动作 { border-left-color: #f59e0b; }
+body.dark .mw-parser-output .statblock-仪式 { border-left-color: #a3b66f; }
 body.dark .mw-parser-output .tbui-goldborder { border-color: #d4b56a; }
 body.dark .mw-parser-output .cf-item {
   background: var(--card, #1d1d1d);
@@ -1700,6 +1774,32 @@ body.dark .pf2-keybind-modal-close:focus-visible {
 .mw-parser-output .trait {
   color: #fff !important;
 }
+/* v0.3.30 VF2: 上面的白字只命中 span 本体, chip 内 <a> 仍走全局琥珀/
+   暗黑蓝链接色, 压内联深色 chip 底对比低至 1.2:1(~8,216 处)。链接
+   一并强制白字。dark 态另列 :link/:visited 高特异性选择器(0,5,2)+,
+   压过既有 body.dark a.mw-redirect/.new/.external:link !important (0,4,2)。 */
+.mw-parser-output .statblock .tag a,
+.mw-parser-output .statblock .tag a:link,
+.mw-parser-output .statblock .tag a:visited,
+.mw-parser-output .traits .tag a,
+.mw-parser-output .traits .tag a:link,
+.mw-parser-output .traits .tag a:visited,
+.mw-parser-output .tag.trait a,
+.mw-parser-output .tag.trait a:link,
+.mw-parser-output .tag.trait a:visited,
+.mw-parser-output .trait a,
+.mw-parser-output .trait a:link,
+.mw-parser-output .trait a:visited,
+body.dark .mw-parser-output .statblock .tag a:link,
+body.dark .mw-parser-output .statblock .tag a:visited,
+body.dark .mw-parser-output .traits .tag a:link,
+body.dark .mw-parser-output .traits .tag a:visited,
+body.dark .mw-parser-output .tag.trait a:link,
+body.dark .mw-parser-output .tag.trait a:visited,
+body.dark .mw-parser-output .trait a:link,
+body.dark .mw-parser-output .trait a:visited {
+  color: #fff !important;
+}
 
 /* .classquote / .classtextbox: wiki sets an inline dark-green background but
    no text colour, so it inherits the dark --fg → dark-green-on-dark-green.
@@ -1714,3 +1814,103 @@ body.dark .pf2-keybind-modal-close:focus-visible {
 .mw-parser-output .classquote .classtextbox a {
   color: #ffe9a8 !important;
 }
+
+/* ---------- 12. v0.3.30 VF3: statblock 红冠头 — span.line 直挂变体 ----------
+   _components.css 的签名头规则只命中 .statblock > div:first-child;
+   约 26%(5,504 个/4,740 页, 武器/专长/法术/聚能类)的 statblock 名称行
+   是直挂的裸 span.line, 红冠头/金边线/Category 右浮全部缺失。
+   此处补一套平行规则(声明照抄 _components.css L180-209)。
+   注意: 仅限 span.line — 其他 first-child 变体(<b>/<p>/纯文本)是
+   label 先行的 affliction/quote 块, 不得加横幅。 */
+.mw-parser-output .statblock > span.line:first-child {
+  display: block;
+  background: var(--accent-band);
+  color: var(--accent-on);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 3px solid var(--gold);
+  margin: 0;
+}
+.mw-parser-output .statblock > span.line:first-child .name b {
+  color: var(--accent-on);
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-cjk);
+}
+.mw-parser-output .statblock > span.line:first-child .aonlink a {
+  color: rgba(255, 251, 246, 0.72);
+  font-style: italic;
+  font-size: var(--fs-sm);
+}
+.mw-parser-output .statblock > span.line:first-child .aonlink a:hover { color: #fff; }
+.mw-parser-output .statblock > span.line:first-child .category {
+  float: right;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: var(--r-pill);
+  padding: 1px 12px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+.mw-parser-output .statblock > span.line:first-child .category b { color: var(--accent-on); }
+.mw-parser-output .statblock > span.line:first-child .pf2icon { color: var(--accent-on); }
+
+/* ---------- 13. v0.3.30 字体别名: SourceHanSerifCN(-Bold) ----------
+   1,002 页内联 font-family:SourceHanSerifCN(-Bold), 但全站从未随附该
+   字体。映射到本机已装的 思源宋体/Noto Serif CJK(装机用户得到原观感),
+   其余回退宋体(SimSun, Windows 必有)。 */
+@font-face {
+  font-family: 'SourceHanSerifCN';
+  src: local('Source Han Serif SC'), local('SourceHanSerifSC-Regular'),
+       local('Source Han Serif CN'), local('Noto Serif CJK SC'),
+       local('NotoSerifCJKsc-Regular'), local('SimSun');
+}
+@font-face {
+  font-family: 'SourceHanSerifCN-Bold';
+  font-weight: bold;
+  src: local('Source Han Serif SC Bold'), local('SourceHanSerifSC-Bold'),
+       local('Source Han Serif CN Bold'), local('Noto Serif CJK SC Bold'),
+       local('NotoSerifCJKsc-Bold'), local('SimSun');
+}
+
+
+/* ---------- v0.3.30 RC4: 页脚分类条降级维护伪分类(span.new 纯文本) ----------
+   build_v2 对不再合成页面的伪分类输出 <li><span class="new">…</span></li>,
+   与红链同观感但不可点。 */
+.page-categories span.new {
+  color: #ba0000;
+}
+body.dark .page-categories span.new {
+  color: #ff7575;
+}
+
+/* ---------- v0.3.30 CF5 暗黑补丁: .text-[#004416] 深绿字在暗底 ~1.5:1 ---------- */
+body.dark .mw-parser-output .text-\[\#004416\] {
+  color: #7dd9a0;
+}
+
+/* ---------- v0.3.30 RC6-C: pages/首页.html 原版首页布局修复 ----------
+   维基首页用 Tailwind grid + 自定义 grid-main/grid-cell 类, 这些类在离线
+   级联里零规则 → 三栏塌成单列。规则全部以 body.page-首页 限定作用域,
+   避免通用类名(.grid/.p-4/.flex)外溢改变其他页面布局。 */
+body.page-首页 .mw-parser-output .grid{display:grid}
+body.page-首页 .mw-parser-output .grid-cols-1{grid-template-columns:1fr}
+body.page-首页 .mw-parser-output .gap-4{gap:1rem}
+body.page-首页 .mw-parser-output .flex{display:flex}
+body.page-首页 .mw-parser-output .p-4{padding:1rem}
+body.page-首页 .mw-parser-output .text-center{text-align:center}
+body.page-首页 .mw-parser-output .font-bold{font-weight:700}
+body.page-首页 .mw-parser-output .overflow-hidden{overflow:hidden}
+body.page-首页 .mw-parser-output .max-h-\[500px\]{max-height:500px}
+@media(min-width:640px){
+  body.page-首页 .mw-parser-output .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.page-首页 .mw-parser-output .sm\:col-span-2{grid-column:span 2/span 2}
+}
+body.page-首页 .mw-parser-output .grid-main{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;padding:8px}
+body.page-首页 .mw-parser-output .grid-cell{position:relative;text-align:center}
+body.page-首页 .mw-parser-output .grid-cell img{width:100%;height:auto;display:block;border-radius:4px}
+body.page-首页 .mw-parser-output .grid-text{position:absolute;inset:auto 0 0 0;background:rgba(0,68,22,.78);color:#fff;font-weight:700;padding:2px 0}
+body.page-首页 .mw-parser-output .grid-helper{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px}
+/* 离线死区: 隐藏 huiji 动态 embed 及其外层公告/编辑/评论框(WebView2 Chromium>=105 有 :has) */
+body.page-首页 .mw-parser-output div:has(>div>.huiji-bloglistembed),
+body.page-首页 .mw-parser-output div:has(>div>.huiji-activityembed),
+body.page-首页 .mw-parser-output div:has(>div>.huiji-commentembed){display:none}

@@ -169,6 +169,10 @@
   padding: 8px 0;
   margin: 0;
   list-style: none;
+  /* v0.3.30: 装备 menu grew to 18 items (RC2 native-list links) — cap the
+     panel to the viewport so short windows scroll instead of clipping. */
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
   /* Hidden by default; revealed via .open or :focus-within */
   display: none;
   z-index: 110;

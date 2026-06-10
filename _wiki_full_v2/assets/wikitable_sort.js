@@ -75,6 +75,40 @@
     return { row: first, cells: headerCells, container: tbody2, bodyRows: rows2.slice(1) };
   }
 
+  /* INT-2 guard: refuse to decorate tables whose structure a naive
+     row-reorder would corrupt. Returns false when any of:
+       (a) a body row is th-only (group subtitle row, e.g. 宝石与艺术品's
+           次等/中等半宝石 bands) — sorting scatters the groups and sinks
+           the subtitles to the bottom;
+       (b) any header/body cell has rowspan >= 2 — reordering detaches
+           continuation rows from their rowspan parent (化形生物变体);
+       (c) a body row's cell count differs from the header's column count
+           (colspan misalignment) — tr.children[colIdx] would read the
+           wrong column or undefined.
+     Such tables keep their original order: no sortable class, no ↕. */
+  function isSortSafe(hdr) {
+    var headerCols = hdr.cells.length;
+    var k, rs;
+    for (k = 0; k < hdr.cells.length; k++) {
+      rs = parseInt(hdr.cells[k].getAttribute('rowspan'), 10);
+      if (rs >= 2) return false;                       // (b) header spans into body
+    }
+    for (var i = 0; i < hdr.bodyRows.length; i++) {
+      var cells = hdr.bodyRows[i].children;
+      if (cells.length !== headerCols) return false;   // (c) column misalignment
+      var tds = 0, ths = 0;
+      for (var j = 0; j < cells.length; j++) {
+        var cell = cells[j];
+        if (cell.tagName === 'TD') tds++;
+        else if (cell.tagName === 'TH') ths++;
+        rs = parseInt(cell.getAttribute('rowspan'), 10);
+        if (rs >= 2) return false;                     // (b) rowspan in body
+      }
+      if (ths > 0 && tds === 0) return false;          // (a) th-only subtitle row
+    }
+    return true;
+  }
+
   function decorate(table, hdr) {
     // Capture original order for restore (3rd click) AND stable tie-break.
     hdr.bodyRows.forEach(function (tr, i) { tr.__wtOrigIdx = i; });
@@ -184,6 +218,7 @@
         var hdr = findHeader(tables[i]);
         if (!hdr) continue;
         if (hdr.bodyRows.length < 2) continue;  // nothing to sort
+        if (!isSortSafe(hdr)) continue;         // INT-2: grouped/spanned table — leave unsorted
         decorate(tables[i], hdr);
       } catch (e) {
         if (window.console && console.error) {

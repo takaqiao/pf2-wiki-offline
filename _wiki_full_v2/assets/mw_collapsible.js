@@ -17,9 +17,51 @@
   function findContent(el) {
     var content = el.querySelector('.mw-collapsible-content');
     if (content) return content;
-    // For <table>, content = tbody
-    if (el.tagName === 'TABLE') return el.querySelector('tbody');
+    // INT-1: tables have no single content wrapper — collapsing is handled
+    // row-by-row in applyCollapsedState() so the title row stays visible.
+    // (Returning tbody here used to hide the title row + toggle with it.)
+    if (el.tagName === 'TABLE') return null;
     return el;
+  }
+
+  // Direct rows of a table (inside its own thead/tbody/tfoot, or stray
+  // <tr> children), excluding rows of nested tables (navbox-subgroup etc.).
+  function getDirectRows(table) {
+    var rows = [];
+    for (var sec = table.firstElementChild; sec; sec = sec.nextElementSibling) {
+      if (sec.tagName === 'TBODY' || sec.tagName === 'THEAD' || sec.tagName === 'TFOOT') {
+        for (var r = sec.firstElementChild; r; r = r.nextElementSibling) {
+          if (r.tagName === 'TR') rows.push(r);
+        }
+      } else if (sec.tagName === 'TR') {
+        rows.push(sec);
+      }
+    }
+    return rows;
+  }
+
+  /* Apply collapsed/expanded state. Replicates MediaWiki
+   * jquery.makeCollapsible:
+   *   - explicit .mw-collapsible-content → show/hide that wrapper;
+   *   - TABLE (INT-1) → hide/show every direct row EXCEPT the row holding
+   *     the toggle (first row when no caption). <caption> and the title
+   *     row are therefore always visible; with a caption-hosted toggle all
+   *     rows hide but the caption (with the toggle) remains. */
+  function applyCollapsedState(el, btn, collapsed) {
+    var content = findContent(el);
+    if (content && content !== el) {
+      content.style.display = collapsed ? 'none' : '';
+      return;
+    }
+    if (el.tagName !== 'TABLE') return;
+    var rows = getDirectRows(el);
+    var keep = btn && btn.closest ? btn.closest('tr') : null;
+    if (keep && !el.contains(keep)) keep = null; // toggle in <caption> → closest tr is an outer table's
+    if (!keep && !el.querySelector(':scope > caption')) keep = rows[0] || null;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] === keep) continue;
+      rows[i].style.display = collapsed ? 'none' : '';
+    }
   }
 
   function injectToggle(el) {
@@ -40,19 +82,11 @@
       if (e) { e.preventDefault(); e.stopPropagation(); }
       var nowCollapsed = el.classList.toggle('mw-collapsed');
       btn.textContent = nowCollapsed ? '[展开]' : '[折叠]';
-      var content = findContent(el);
-      if (content && content !== el) {
-        content.style.display = nowCollapsed ? 'none' : '';
-      } else {
-        // For tables: hide all rows except first
-        if (el.tagName === 'TABLE') {
-          var rows = el.querySelectorAll('tbody > tr');
-          for (var i = 1; i < rows.length; i++) {
-            rows[i].style.display = nowCollapsed ? 'none' : '';
-          }
-        }
-      }
+      applyCollapsedState(el, btn, nowCollapsed);
     }
+    // INT-4: expose so mw-customtoggle-* banners can drive this collapsible
+    // while keeping the [展开]/[折叠] label in sync.
+    el.__mwCollapsibleToggle = toggle;
     btn.addEventListener('click', toggle);
     btn.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') toggle(e);
@@ -78,20 +112,21 @@
     } else {
       // For div/section: prepend
       el.insertBefore(btn, el.firstChild);
-    }
-
-    // Apply initial collapsed state
-    if (isCollapsed) {
-      var content = findContent(el);
-      if (content && content !== el) {
-        content.style.display = 'none';
-      } else if (el.tagName === 'TABLE') {
-        var rows = el.querySelectorAll('tbody > tr');
-        for (var i = 1; i < rows.length; i++) {
-          rows[i].style.display = 'none';
-        }
+      // INT-4: content-less collapsible div — wrap everything after the
+      // toggle into a real .mw-collapsible-content so collapse/expand and
+      // the mw-collapsed initial state have something to hide.
+      if (!el.querySelector('.mw-collapsible-content')) {
+        var wrap = document.createElement('div');
+        wrap.className = 'mw-collapsible-content';
+        var node = btn.nextSibling, next;
+        while (node) { next = node.nextSibling; wrap.appendChild(node); node = next; }
+        el.appendChild(wrap);
       }
     }
+
+    // Apply initial collapsed state (INT-1: row-level for tables, so the
+    // title row + toggle stay visible)
+    if (isCollapsed) applyCollapsedState(el, btn, true);
   }
 
   function init() {
@@ -108,6 +143,44 @@
     for (var i = 0; i < els.length; i++) {
       try { injectToggle(els[i]); } catch (e) { console.error('[mw_collapsible] failed', e); }
     }
+
+    // INT-4: delegated mw-customtoggle-<id> handler (was entirely missing).
+    // Clicking an element whose class contains mw-customtoggle-<id> toggles
+    // every collapsible with id="mw-customcollapsible-<id>". querySelectorAll
+    // on [id=...] tolerates the duplicate ids some pages emit (one id may map
+    // to multiple collapsibles). Clicks landing inside an <a> pass through to
+    // navigation; the injected [展开]/[折叠] anchor stops propagation itself.
+    document.addEventListener('click', function (e) {
+      var toggler = null;
+      for (var n = e.target; n && n.nodeType === 1; n = n.parentElement) {
+        if (n.tagName === 'A') return; // let links navigate
+        if (typeof n.className === 'string' && n.className.indexOf('mw-customtoggle-') !== -1) {
+          toggler = n;
+          break;
+        }
+      }
+      if (!toggler) return;
+      var cl = toggler.classList;
+      for (var c = 0; c < cl.length; c++) {
+        var m = /^mw-customtoggle-(.+)$/.exec(cl[c]);
+        if (!m) continue;
+        var sel = '[id="mw-customcollapsible-' +
+          m[1].replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]';
+        var targets;
+        try { targets = document.querySelectorAll(sel); } catch (err) { continue; }
+        for (var t = 0; t < targets.length; t++) {
+          var target = targets[t];
+          if (typeof target.__mwCollapsibleToggle === 'function') {
+            target.__mwCollapsibleToggle(); // reuse toggle: state + label in sync
+          } else {
+            // Collapsible that never got our toggle (pre-existing toggle
+            // markup): flip state directly.
+            var nowCollapsed = target.classList.toggle('mw-collapsed');
+            applyCollapsedState(target, null, nowCollapsed);
+          }
+        }
+      }
+    });
   }
 
   // Move the page TOC into .layout as a real third flex column (sticky right
