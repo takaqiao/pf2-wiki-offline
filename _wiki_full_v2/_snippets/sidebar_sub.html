@@ -6,12 +6,25 @@
     <button type="submit" aria-label="搜索">🔍</button>
   </form>
 
+  <a href="../random.html" class="sb-home">🎲 随机页面</a>
+
   <!-- The topnav already carries full category navigation, so the sidebar no
-       longer duplicates it as six open menus. One collapsed 浏览 group keeps
-       every hub reachable; bookmark.js injects ⌚最近 / ★收藏 above this at
-       runtime, making the sidebar a personal "this-page" utility rail. -->
+       longer duplicates it as six open menus. Two collapsed groups (原生清单 /
+       浏览表格视图) keep every hub reachable; bookmark.js injects ⌚最近 / ★收藏
+       above this at runtime, making the sidebar a personal utility rail. -->
   <details class="sb-group">
-    <summary>浏览全部</summary>
+    <summary>原生清单</summary>
+    <ul>
+      <li><a href="../pages/法术列表.html">法术列表</a></li>
+      <li><a href="../pages/生物总表.html">生物总表</a></li>
+      <li><a href="../pages/诸神总表.html">诸神总表</a></li>
+      <li><a href="../pages/仪式列表.html">仪式列表</a></li>
+      <li><a href="../pages/危害列表.html">危害列表</a></li>
+      <li><a href="../pages/GM帷幕.html">GM帷幕</a></li>
+    </ul>
+  </details>
+  <details class="sb-group">
+    <summary>浏览(表格视图)</summary>
     <ul>
       <li><a href="../classes/index.html">职业</a></li>
       <li><a href="../browse-ancestries.html">族裔</a></li>
@@ -21,7 +34,7 @@
       <li><a href="../browse-items.html">物品</a></li>
       <li><a href="../browse-spells.html">法术</a></li>
       <li><a href="../browse-creatures.html">生物</a></li>
-      <li><a href="../browse-other.html">异常状态</a></li>
+      <li><a href="../browse-other.html">状态</a></li>
       <li><a href="../browse-deities.html">信仰</a></li>
       <li><a href="../browse-locations.html">地理</a></li>
       <li><a href="../pages/出版物索引.html">出版物</a></li>

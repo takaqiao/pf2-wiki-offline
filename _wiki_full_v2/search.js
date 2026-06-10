@@ -287,6 +287,24 @@
     return out;
   }
 
+  /* ---------------- title matching (SRCH-5) ---------------- */
+  function escapeRegexStr(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  // For pure-ASCII queries, substring matching must respect word boundaries:
+  // 'AC' should hit "属性:AC" / "Owb Pact"… but NOT Sack/Tack/Acid/Reach.
+  // CJK or mixed queries keep plain indexOf (char-granular substring is the
+  // right semantics for Chinese). The returned predicate is shared by the
+  // +200 scoring tier and titleSubstringSearch so both stay consistent.
+  function makeTitleMatcher(lower) {
+    if (lower && /^[\x20-\x7e]+$/.test(lower)) {
+      var rx;
+      try {
+        rx = new RegExp("(^|[^a-z0-9])" + escapeRegexStr(lower));
+      } catch (e) { rx = null; }
+      if (rx) return function (tl) { return rx.test(tl); };
+    }
+    return function (tl) { return tl.indexOf(lower) >= 0; };
+  }
+
   /* ---------------- intersection ---------------- */
   function intersectSorted(a, b) {
     // Both are sorted ascending arrays of page ids.
@@ -381,13 +399,16 @@
       const name = state.typeLegend[code];
       if (name && TYPE_INFO[name]) return name;
     }
-    // 2. Fallback: slug-prefix heuristic for Data: pages.
+    // 2. Fallback: slug-prefix heuristic for Data: pages. (SRCH-2 fix: href
+    // is "data/Spells-Fireball.json.html" — strip the directory before
+    // splitting on "-", otherwise the head is "data/Spells" and never matches.)
     if (item.k === "d") {
       const decoded = (function () {
         try { return decodeURIComponent(item.h || ""); }
         catch (e) { return item.h || ""; }
       })();
-      const head = decoded.split("-", 1)[0];
+      const head = decoded.split("/").pop().split("-", 1)[0];
+      if (head === "Backgrounds") return "background";
       if (head === "Conditions") return "condition";
       if (head === "Spells")     return "spell";
       if (head === "Creatures")  return "creature";
@@ -426,24 +447,36 @@
     }
     for (const w of p.latin) {
       const sh = _wShards[wordBucket(w)];
-      // Exact match first; if missing, attempt prefix scan within bucket.
-      if (sh && sh[w]) {
-        lists.push(sh[w]);
-      } else if (sh) {
-        // prefix scan
-        const merged = [];
-        const seen = new Set();
-        for (const key in sh) {
-          if (key.startsWith(w)) {
-            for (const id of sh[key]) {
-              if (!seen.has(id)) { seen.add(id); merged.push(id); }
-            }
-          }
+      if (!sh) continue;
+      // SRCH-6: ALWAYS merge exact postings with prefix expansions. The old
+      // code only prefix-scanned when the exact word was missing, so 'fire'
+      // (itself an index word) could never expand to fireball/firebrand —
+      // contradicting the advertised prefix search. Caps keep very short
+      // prefixes from exploding: at most 200 expansion words / 5,000 ids.
+      const seen = new Set();
+      const merged = [];
+      const exact = sh[w];
+      if (exact) {
+        for (const id of exact) {
+          if (!seen.has(id)) { seen.add(id); merged.push(id); }
         }
-        if (merged.length) {
-          merged.sort(function (a, b) { return a - b; });
-          lists.push(merged);
+      }
+      const expKeys = [];
+      for (const key in sh) {
+        if (key.length > w.length && key.startsWith(w)) expKeys.push(key);
+      }
+      expKeys.sort();
+      let expanded = 0;
+      for (const key of expKeys) {
+        if (expanded >= 200 || merged.length >= 5000) break;
+        expanded++;
+        for (const id of sh[key]) {
+          if (!seen.has(id)) { seen.add(id); merged.push(id); }
         }
+      }
+      if (merged.length) {
+        merged.sort(function (a, b) { return a - b; });
+        lists.push(merged);
       }
     }
 
@@ -468,8 +501,9 @@
       }
     }
 
-    // Rank: title-prefix > title-substring > content-only.
+    // Rank: title-exact > title-prefix > en-name > title-substring > content.
     const lower = text.toLowerCase().trim();
+    const titleMatch = makeTitleMatcher(lower);  // SRCH-5 word-boundary aware
     const pop = state.popularity;  // may be null on legacy indexes
     const ranked = candidates.map(function (id) {
       const it = state.byId[id];
@@ -477,15 +511,30 @@
       let score = 0;
       if (tl === lower) score += 1000;
       else if (tl.startsWith(lower)) score += 500;
-      else if (tl.indexOf(lower) >= 0) score += 200;
-      // Shorter titles score higher (more relevant for direct matches)
-      score -= Math.min(50, (it.t || "").length);
+      else if (titleMatch(tl)) score += 200;
+      // SRCH-4: English original name (titles.js field `n`, extracted from
+      // the body head, e.g. 火球术 → "Fireball"). Slightly below the Chinese
+      // title tiers so the canonical title still wins on exact CJK queries.
+      const en = (it.n || "").toLowerCase();
+      if (en) {
+        if (en === lower) score += 900;
+        else if (en.startsWith(lower)) score += 450;
+      }
+      const popVal = (pop && typeof id === "number") ? (pop[id] | 0) : 0;
+      if (score >= 200) {
+        // Title-hit tier: shorter titles score higher ("法师" > "法师变体").
+        score -= Math.min(50, (it.t || "").length);
+      } else {
+        // SRCH-8: content-only tier — fold inbound-link popularity directly
+        // into the score (capped) instead of penalising title length, so
+        // heavily-referenced pages float above incidental mentions.
+        score += Math.min(20, Math.round(Math.log2(1 + popVal) * 3));
+      }
       // Namespace boost: main content > data
       if (it.k === "p") score += 5;
-      // Inbound-link popularity — used only as a tiebreaker, NOT folded into
-      // `score` so it can't outweigh title-match boosts. Stored alongside on
-      // the result row and consulted by the comparator below.
-      const popVal = (pop && typeof id === "number") ? (pop[id] | 0) : 0;
+      // SRCH-2: demote ns3500 Data:*.json pages so any 'p' page hit in the
+      // same tier always outranks the raw data stub.
+      if (it.k === "d") score -= 250;
       return { item: it, score: score, pop: popVal };
     });
     // Primary sort: relevance score (desc). Secondary: inbound-link count
@@ -497,7 +546,10 @@
       return (a.item.i | 0) - (b.item.i | 0);
     });
 
-    return ranked.slice(0, limit).map(function (r) {
+    // SRCH-7: expose the full match count on the returned array so the UI
+    // can say "显示前 50 / 共 846 条" instead of silently truncating.
+    // (Property on the array keeps the return shape backward-compatible.)
+    const out = ranked.slice(0, limit).map(function (r) {
       return {
         id: r.item.i,
         title: r.item.t,
@@ -508,15 +560,20 @@
         score: r.score,
       };
     });
+    out.total = ranked.length;
+    return out;
   }
 
   function titleSubstringSearch(q) {
     const lower = q.toLowerCase().trim();
     if (!lower) return [];
+    // SRCH-5: pure-ASCII queries use a word-boundary predicate (shared with
+    // the +200 scoring tier) so 'AC' stops matching Sack/Tack/Acid/Reach….
+    const match = makeTitleMatcher(lower);
     const out = [];
     const items = state.items;
     for (let i = 0; i < items.length; i++) {
-      if ((items[i].t || "").toLowerCase().indexOf(lower) >= 0) {
+      if (match((items[i].t || "").toLowerCase())) {
         out.push(items[i].i);
       }
     }
@@ -565,7 +622,8 @@
       return out;
     }
 
-    function renderResults(rs) {
+    function renderResults(rs, total) {
+      if (typeof total !== "number") total = rs.length;
       if (!rs.length) {
         host.innerHTML = '<div class="pf2s-empty">未找到结果。试试更短的关键词，或检查拼写。</div>';
         return;
@@ -582,9 +640,32 @@
         return ai - bi;
       });
 
-      const sum = '<div class="pf2s-summary">'
-        + escapeHtml(String(rs.length)) + " 条结果，共 "
+      // SRCH-7: surface the real total when the list is truncated.
+      const sumHead = (total > rs.length)
+        ? "显示前 " + escapeHtml(String(rs.length)) + " / 共 "
+          + escapeHtml(String(total)) + " 条"
+        : escapeHtml(String(rs.length)) + " 条结果";
+      const sum = '<div class="pf2s-summary">' + sumHead + "，共 "
         + escapeHtml(String(typeOrder.length)) + " 类</div>";
+
+      // Best-match banner: the list is grouped by FIXED type order, so an
+      // exact title / redirect-alias / exact en-name hit (score >= 900) can
+      // get buried below a big earlier group (e.g. "AC" under 7 acid spells).
+      // Surface that single top hit above the chips; it stays in its group too.
+      let bestHtml = "";
+      const top0 = rs[0];
+      if (top0 && typeof top0.score === "number" && top0.score >= 900) {
+        const REDIR0 = "重定向 → ";
+        const isRedir0 = (top0.excerpt || "").indexOf(REDIR0) === 0;
+        const tHtml = escapeHtml(top0.title)
+          + (isRedir0
+             ? '<span class="pf2s-redirect"> → ' + escapeHtml(top0.excerpt.slice(REDIR0.length)) + '</span>'
+             : '');
+        bestHtml = '<div class="pf2s-best">'
+          + '<span class="pf2s-best-label">最佳匹配</span>'
+          + '<a class="pf2s-t" href="' + escapeAttr(pageBase + top0.href) + '">'
+          + '<span class="pf2s-title">' + tHtml + '</span></a></div>';
+      }
 
       const chips = '<div class="pf2s-filters" role="tablist">'
         + '<button type="button" class="pf2s-chip kind-all" data-kind="__all">'
@@ -605,7 +686,17 @@
           // so prepend only pageBase. (Bug fix: previously re-added folder + "/" ->
           // pages/pages/X.html, 404ing every result; category results were unreachable.)
           const url = pageBase + r.href;
-          const ex = r.excerpt
+          // SRCH-1: synthesized redirect-alias entries carry the excerpt
+          // "重定向 → <目标>" — render inline as "AC → 护甲" and drop the
+          // excerpt line (there is no real body text behind an alias).
+          const REDIR = "重定向 → ";
+          const isRedir = (r.excerpt || "").indexOf(REDIR) === 0;
+          const redirTarget = isRedir ? r.excerpt.slice(REDIR.length) : "";
+          const titleHtml = escapeHtml(r.title)
+            + (isRedir
+               ? '<span class="pf2s-redirect"> → ' + escapeHtml(redirTarget) + '</span>'
+               : '');
+          const ex = (!isRedir && r.excerpt)
             ? '<div class="pf2s-ex">' + highlightExcerpt(r.excerpt, lastQ) + "</div>"
             : "";
           return ''
@@ -614,7 +705,7 @@
             +   '<span class="kind-badge ' + info.className + '">'
             +     escapeHtml(info.label)
             +   '</span>'
-            +   '<span class="pf2s-title">' + escapeHtml(r.title) + '</span>'
+            +   '<span class="pf2s-title">' + titleHtml + '</span>'
             + '</a>'
             + ex
             + '</li>';
@@ -632,7 +723,15 @@
           + '</section>';
       }).join("");
 
-      host.innerHTML = sum + chips + groupHtml;
+      // SRCH-7: "load more" re-runs the query with a larger limit (shards
+      // are already cached, so the cost is just a re-rank + re-render).
+      const moreHtml = (total > rs.length)
+        ? '<div class="pf2s-more-wrap"><button type="button" class="pf2s-more">'
+          + '加载更多（已显示 ' + escapeHtml(String(rs.length)) + ' / '
+          + escapeHtml(String(total)) + '）</button></div>'
+        : "";
+
+      host.innerHTML = sum + bestHtml + chips + groupHtml + moreHtml;
       applyFilter();
 
       // Wire up chips. Clicking a chip toggles its filter — click again to
@@ -651,6 +750,13 @@
           });
         }
       );
+      const moreBtn = host.querySelector(".pf2s-more");
+      if (moreBtn) {
+        moreBtn.addEventListener("click", function () {
+          curLimit += 50;
+          runQuery(lastQ, /*keepFilter=*/true);
+        });
+      }
     }
 
     function applyFilter() {
@@ -670,30 +776,42 @@
 
     let debounce = null;
     let lastQ = "";
+    let curLimit = 50;  // SRCH-7: grows by 50 per "加载更多" click
+
+    function runQuery(v, keepFilter) {
+      status.textContent = "搜索中…";
+      const t0 = performance.now();
+      query(v, { limit: curLimit }).then(function (rs) {
+        const dt = (performance.now() - t0).toFixed(1);
+        const total = (typeof rs.total === "number") ? rs.total : rs.length;
+        // SRCH-7: never report a silently-truncated count as the total.
+        status.textContent = (total > rs.length
+          ? "显示前 " + rs.length + " / 共 " + total + " 条"
+          : total + " 条结果") + " · " + dt + " ms";
+        // Reset filter for each new query so chip state never lies; keep it
+        // across "加载更多" re-queries of the same text.
+        if (!keepFilter) activeFilter = null;
+        renderResults(rs, total);
+      }).catch(function (e) {
+        status.textContent = "错误: " + e.message;
+        host.innerHTML = "";
+      });
+    }
+
     input.addEventListener("input", function () {
       clearTimeout(debounce);
       const v = input.value;
       debounce = setTimeout(function () {
         if (v === lastQ) return;
         lastQ = v;
+        curLimit = 50;
         if (!v.trim()) {
           host.innerHTML = "";
           status.textContent = "";
           activeFilter = null;
           return;
         }
-        status.textContent = "搜索中…";
-        const t0 = performance.now();
-        query(v, { limit: 50 }).then(function (rs) {
-          const dt = (performance.now() - t0).toFixed(1);
-          status.textContent = rs.length + " 条结果 · " + dt + " ms";
-          // Reset filter for each new query so chip state never lies.
-          activeFilter = null;
-          renderResults(rs);
-        }).catch(function (e) {
-          status.textContent = "错误: " + e.message;
-          host.innerHTML = "";
-        });
+        runQuery(v, false);
       }, 80);
     });
 

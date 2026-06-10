@@ -36,6 +36,32 @@ SHARDS_DIR = INDEX_DIR / "shards"
 
 STUB_BODY_THRESHOLD = 120
 
+# [RC3] ns0 子页面指针桩 (模板:物品类型数据): pure "请点击主页面" notices with no
+# content of their own — excluded from the index entirely so they stop flooding
+# results (5,017 pages, e.g. 治疗药水/次等治疗药水). Matches the stripped
+# soup.get_text() body; build_v2.py uses the same wording anchored on raw HTML.
+SUBPAGE_POINTER_TXT_RX = re.compile(
+    r"^本页面是存放物品数据的子页面[，,]\s*如果您是通过搜索栏进入本页的[，,]\s*请点击主页面[：:]"
+)
+
+# [SRCH-2] ns3500 Data:*.json pages carry no parse.categories, so infer their
+# type from the title prefix instead (Data:Spells-Fireball.json → spell, …).
+# Applied before the stub check so short data pages are typed correctly too.
+DATA_TITLE_PREFIX_RX = re.compile(r"^(?:Data|数据):([A-Za-z]+)-")
+DATA_PREFIX_TYPE = {
+    "Spells": "S", "Feats": "F", "Creatures": "C", "Items": "I",
+    "Traits": "R", "Conditions": "N", "Backgrounds": "B",
+}
+
+# [SRCH-4] English original name: ns0 bodies typically open with
+# "<中文标题> <English Name> <类别>…"; capture that leading Latin run (after
+# stripping the title prefix) so search.js can boost exact English-name hits.
+EN_NAME_RX = re.compile(r"^[A-Za-z][A-Za-z0-9'’ \-]{0,58}[A-Za-z0-9'’]")
+
+# [SRCH-1] excerpt prefix for synthesized redirect-alias entries; search.js
+# detects it and renders the result row as "AC → 护甲".
+REDIRECT_EXCERPT_PREFIX = "重定向 → "
+
 NS_TO_DIR = {
     0: "pages", 4: "project", 14: "category", 102: "pages", 3500: "data",
 }
@@ -64,13 +90,16 @@ TYPE_RULES: list[tuple[str, str, set[str]]] = [
     ("deity", "G", {"信仰", "信仰和哲学", "主流神祇", "其他神祇"}),
     # Condition: 状态.
     ("condition", "N", {"状态"}),
-    # Creature: size category (中型/小型/大型/巨型/微型/超巨型) is the canonical
-    # bestiary marker; 生物子类 catches sub-type pages too.
-    ("creature", "C", {"中型", "小型", "大型", "巨型", "微型", "超巨型", "极巨型", "生物子类"}),
-    # Item: 物品 + 装备 + 穿戴物品 / 手持物品 / 基础武器 / 基础护甲, etc.
+    # Creature: size category is the canonical bestiary marker. Real PF2 sizes are
+    # 超小型/小型/中型/大型/巨型/超大型 (NOT the dead 微型/超巨型/极巨型);
+    # 生物子类 catches sub-type pages too.
+    ("creature", "C", {"超小型", "小型", "中型", "大型", "巨型", "超大型", "生物子类"}),
+    # Item: 物品 + 物品导航 + base/variant categories + the …子页面 variant tags
+    # (which hold ~6000 magic-item variants the wiki indexes under 物品导航).
     ("item", "I", {
-        "物品", "装备", "穿戴物品", "手持物品", "辅助物品",
-        "基础武器", "基础护甲", "诅咒物品", "魔法物品",
+        "物品", "物品导航", "装备", "穿戴物品", "手持物品", "辅助物品",
+        "基础武器", "基础护甲",
+        "物品子页面", "穿戴物品子页面", "手持物品子页面", "特殊魔法武器子页面",
     }),
     # Location: 地理 (geography / regions).
     ("location", "P", {"地理"}),
@@ -235,6 +264,15 @@ def iter_parsed(limit: int | None = None):
             # license boilerplate — bare .well holds legitimate content, leave it.
             for tag in soup.select(".well.quote-success, .quote-primary"):
                 tag.decompose()
+            # [SRCH-3] Drop the '规则导航' navigation template — a top-level
+            # <div class="hidden-sm hidden-xs"> of ~2,200 chars that otherwise
+            # swallows the whole body[:600] index window AND the excerpt on 87
+            # core rules pages (伤害类型/护甲/遭遇模式…). Only divs whose text
+            # *starts* with 规则导航 are removed; the responsive classes alone
+            # are NOT a safe signal (they can wrap real content elsewhere).
+            for tag in soup.select("div.hidden-sm.hidden-xs"):
+                if tag.get_text(strip=True).startswith("规则导航"):
+                    tag.decompose()
             body_text = soup.get_text(" ", strip=True)
             body_text = WHITESPACE_RE.sub(" ", body_text)
             # Strip the ns=3500 data-page doc preamble ("此数据的文档可以在…创建").
@@ -312,20 +350,52 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
     t0 = time.time()
     seen_id = 0
     stub_count = 0
+    pointer_skipped = 0   # [RC3] subpage pointer stubs dropped
+    en_named = 0          # [SRCH-4] entries that got an English-name field
+    title_to_idx: dict[str, int] = {}  # title -> entry id (== array index)
     print("[2/2] tokenising titles + bodies …")
 
     for ns, pageid, title, body, excerpt, categories, _links in iter_parsed(limit=limit):
+        # [RC3] 物品数据 subpage pointer stubs: pure "click through to parent"
+        # notices — keep them out of the index entirely (the parent page is
+        # the real result; build_v2.py meta-refreshes the stub HTML to it).
+        if ns == 0 and SUBPAGE_POINTER_TXT_RX.match(body):
+            pointer_skipped += 1
+            continue
         href = page_href(ns, title)
         kind = "d" if ns == 3500 else ("c" if ns == 14 else "p")
         is_stub = len(body) < STUB_BODY_THRESHOLD
         if is_stub:
             stub_count += 1
 
+        # [SRCH-2] ns3500 data pages: type from title prefix (before the stub
+        # fallback, so short data pages are typed too); else category-based.
+        type_code = None
+        if ns == 3500:
+            m = DATA_TITLE_PREFIX_RX.match(title)
+            if m:
+                type_code = DATA_PREFIX_TYPE.get(m.group(1))
+        if type_code is None:
+            type_code = infer_type(categories, is_stub=is_stub)
+
+        # [SRCH-4] English original name — body head is "<标题> <English> …".
+        en_name = ""
+        if kind == "p" and body.startswith(title):
+            m = EN_NAME_RX.match(body[len(title):].lstrip())
+            if m:
+                en_name = m.group(0).strip(" -")
+
         entry_id = seen_id
         seen_id += 1
-        titles.append({"i": entry_id, "t": title, "h": href, "k": kind, "e": excerpt})
-        type_codes.append(infer_type(categories, is_stub=is_stub))
+        entry = {"i": entry_id, "t": title, "h": href, "k": kind, "e": excerpt}
+        if len(en_name) >= 2:
+            entry["n"] = en_name
+            en_named += 1
+        titles.append(entry)
+        type_codes.append(type_code)
         popularity.append(inlinks.get(title, 0))
+        if title not in title_to_idx:
+            title_to_idx[title] = entry_id
 
         # Index sources: title + first 600 chars of body (skip body for stubs)
         token_text = title + (" \n " + body[:600] if not is_stub else "")
@@ -345,6 +415,59 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         if entry_id % 2000 == 0 and entry_id > 0:
             elapsed = time.time() - t0
             print(f"  [{entry_id}] {elapsed:.1f}s, bigrams={len(bigram_posts)}, words={len(word_posts)}")
+
+    # ------------------------------------------------------------------
+    # [SRCH-1] Synthesize index entries for redirect aliases (AC→护甲,
+    # 巨龙→龙, 挥砍→伤害类型 …). redirect_map values are '' for terminal
+    # targets, so chains (alias→alias→page) are collapsed by following
+    # non-empty hops only; aliases that shadow a real indexed title, or
+    # whose terminal target is not indexed, are skipped. Entries reuse the
+    # target's href/type/popularity; the alias title itself is tokenised
+    # into the inverted index. Alias ids are appended after all page ids in
+    # ascending order, so posting lists stay sorted (search.js intersects
+    # sorted arrays).
+    # ------------------------------------------------------------------
+    alias_added = 0
+    alias_skipped = 0
+    redirect_map: dict[str, str] = {}
+    try:
+        meta = json.loads(META_FILE.read_text(encoding="utf-8"))
+        redirect_map = meta.get("redirect_map", {}) or {}
+    except Exception as e:
+        print(f"      WARNING: cannot load redirect_map from {META_FILE}: {e}")
+
+    def _terminal_target(t: str) -> str:
+        seen: set[str] = set()
+        while t and redirect_map.get(t) and t not in seen and len(seen) < 10:
+            seen.add(t)
+            t = redirect_map[t]
+        return t
+
+    for alias in sorted(redirect_map.keys()):
+        if not alias or should_skip(alias) or alias in title_to_idx:
+            continue  # empty, non-indexable, or shadows a real page title
+        final = _terminal_target(redirect_map.get(alias, ""))
+        tgt_idx = title_to_idx.get(final) if final else None
+        if tgt_idx is None:
+            alias_skipped += 1  # empty target or terminal target not indexed
+            continue
+        entry_id = seen_id
+        seen_id += 1
+        titles.append({
+            "i": entry_id, "t": alias, "h": titles[tgt_idx]["h"], "k": "p",
+            "e": REDIRECT_EXCERPT_PREFIX + final,
+        })
+        type_codes.append(type_codes[tgt_idx])
+        popularity.append(popularity[tgt_idx])
+        for w in set(tokenize_latin(alias)):
+            word_posts.setdefault(w, []).append(entry_id)
+        for bg in set(cjk_bigrams(alias)):
+            bigram_posts.setdefault(bg, []).append(entry_id)
+        alias_added += 1
+    print(f"      [SRCH-1] redirect aliases: +{alias_added} entries, "
+          f"{alias_skipped} skipped (empty/unindexed target); "
+          f"[RC3] pointer stubs dropped: {pointer_skipped}; "
+          f"[SRCH-4] en-name fields: {en_named}")
 
     # Bucket into shards
     bigram_shards: dict[str, dict[str, list[int]]] = {}
@@ -406,6 +529,8 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
         "v": 2,
         "n_pages": len(titles),
         "n_stubs": stub_count,
+        "n_aliases": alias_added,             # [SRCH-1] synthesized redirect entries
+        "n_pointer_skipped": pointer_skipped,  # [RC3] subpage pointer stubs dropped
         "bigram_shards": bg_shard_files,
         "word_shards": w_shard_files,
     }
@@ -442,7 +567,8 @@ def build(out_dir: Path, limit: int | None = None) -> dict:
     )[:5]
     top_pop_str = ", ".join(f"{t}({p})" for p, t in top_pop) if top_pop else "(none)"
 
-    print(f"\n[done] {len(titles)} pages, {stub_count} stubs, {len(bigram_posts)} bigrams, {len(word_posts)} words")
+    print(f"\n[done] {len(titles)} entries ({alias_added} aliases, {pointer_skipped} pointer stubs dropped), "
+          f"{stub_count} stubs, {len(bigram_posts)} bigrams, {len(word_posts)} words")
     print(f"       titles.js: {sizes['titles.js']/1024/1024:.1f} MB")
     print(f"       shards total: {sizes['shards_total']/1024/1024:.1f} MB ({len(bg_shard_files)}b + {len(w_shard_files)}w)")
     print(f"       types.js distribution: {dist_pretty}")

@@ -42,9 +42,9 @@ CACHE_VER = "v3"
 BUCKET_CATS = {
     "feats":        ["专长"],
     "spells":       ["法术"],
-    "items":        ["物品"],
+    "items":        ["物品", "物品导航", "基础武器", "基础护甲"],
     # creatures: 生物 is near-empty; size is creature-exclusive -> union of sizes.
-    "creatures":    ["微型", "小型", "中型", "大型", "巨型", "超大型"],
+    "creatures":    ["超小型", "小型", "中型", "大型", "巨型", "超大型"],
     "ancestries":   ["族裔"],
     "backgrounds":  ["背景"],
     "archetypes":   ["变体（特征）"],
@@ -59,8 +59,17 @@ BUCKET_CATS = {
 BUCKET_LABELS = {
     "feats": "专长", "spells": "法术", "items": "物品", "creatures": "生物",
     "ancestries": "族裔", "backgrounds": "背景", "archetypes": "变体",
-    "deities": "信仰", "locations": "地理", "other": "异常状态",
+    "deities": "信仰", "locations": "地理", "other": "状态",
     "categories": "分类页面", "all": "全部条目",
+}
+
+# R8: each browse list cross-links to its real topic *article* (wiki has a prose
+# overview the list itself isn't). Emitted only if the target page exists
+# (gated in render_browse_html) so no dead callouts. Title -> pages/<title>.html.
+BUCKET_TOPIC_ARTICLE = {
+    "feats": "通用专长", "spells": "法术", "items": "装备", "creatures": "生物",
+    "other": "状态", "ancestries": "族裔", "deities": "信仰综述",
+    "backgrounds": "背景", "archetypes": "变体（特征）", "locations": "地理",
 }
 
 # --- ns=3500 Data join: 中文 title -> useful fields (等级/环级/根源/物品分类/体型/稀有度) ---
@@ -196,6 +205,21 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
     table_body = "\n".join(rows)
     sub_label = f"{label} 共 {len(entries):,} 条"
 
+    # R8 topic-article callout — link to the prose overview if the page exists.
+    topic = BUCKET_TOPIC_ARTICLE.get(bucket)
+    topic_callout = ""
+    if topic:
+        # Existence check uses the UNQUOTED on-disk name (build writes raw-Chinese
+        # filenames); the href is URL-quoted for the browser.
+        tfile = ROOT / "pages" / f"{safe_title(topic)}.html"
+        if tfile.exists():
+            thref = f"pages/{urllib.parse.quote(safe_title(topic))}.html"
+            topic_callout = (
+                f'<aside class="browse-topic-callout">'
+                f'<a href="{thref}">📖 阅读《{html_lib.escape(topic)}》条目说明 →</a>'
+                f'</aside>\n'
+            )
+
     full_html = (
         '<!DOCTYPE html>\n'
         '<html lang="zh-Hans">\n'
@@ -205,17 +229,17 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
         f'<title>{html_lib.escape(label)} 浏览 — PF2 离线百科</title>\n'
         f'<meta name="description" content="PF2 中文百科 {html_lib.escape(label)} 浏览，共 {len(entries):,} 条。">\n'
-        '<link rel="stylesheet" href="assets/style.css">\n'
+        '<link rel="stylesheet" href="assets/style.css?v=v2i">\n'
         '<link rel="icon" href="assets/favicon.ico">\n'
-        '<script defer src="assets/topnav.js"></script>\n'
-        '<script defer src="assets/theme.js"></script>\n'
-        '<script defer src="assets/wikitable_sort.js"></script>\n'
-        '<script defer src="assets/external_links.js"></script>\n'
-        '<script defer src="assets/updater_ui.js"></script>\n'
-        '<script defer src="assets/mw_collapsible.js"></script>\n'
-        '<script defer src="assets/bookmark.js"></script>\n'
-        '<script defer src="assets/keybindings.js"></script>\n'
-        '<script defer src="assets/wikitable_paginate.js"></script>\n'
+        '<script defer src="assets/topnav.js?v=v2i"></script>\n'
+        '<script defer src="assets/theme.js?v=v2i"></script>\n'
+        '<script defer src="assets/wikitable_sort.js?v=v2i"></script>\n'
+        '<script defer src="assets/external_links.js?v=v2i"></script>\n'
+        '<script defer src="assets/updater_ui.js?v=v2i"></script>\n'
+        '<script defer src="assets/mw_collapsible.js?v=v2i"></script>\n'
+        '<script defer src="assets/bookmark.js?v=v2i"></script>\n'
+        '<script defer src="assets/keybindings.js?v=v2i"></script>\n'
+        '<script defer src="assets/wikitable_paginate.js?v=v2i"></script>\n'
         '<style>\n'
         '.browse-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: var(--card); font-size: 13.5px; }\n'
         '.browse-table thead th { background: var(--accent-band); color: var(--accent-on); padding: 8px 12px; text-align: left; font-weight: 600; cursor: pointer; user-select: none; }\n'
@@ -226,6 +250,11 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '.browse-controls { display: flex; gap: 16px; align-items: center; padding: 8px 0; }\n'
         '.browse-controls input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 3px; font: inherit; min-width: 200px; }\n'
         '.browse-info { color: var(--fg-mute); font-size: 13px; }\n'
+        '.browse-topic-callout { margin: 14px 0 4px; }\n'
+        '.browse-topic-callout a { display: inline-block; padding: 8px 14px; background: var(--surface-accent, var(--bg-alt)); '
+        'border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-sm, 4px); '
+        'color: var(--accent); text-decoration: none; font-weight: 600; font-size: 13.5px; transition: background .12s; }\n'
+        '.browse-topic-callout a:hover { background: var(--accent); color: var(--accent-on); }\n'
         '</style>\n'
         '</head>\n'
         f'<body class="mediawiki ltr sitedir-ltr action-view skin--responsive page-browse-{bucket}">\n'
@@ -244,6 +273,7 @@ def render_browse_html(bucket: str, entries: list[dict], topnav: str, sidebar: s
         '<main class="page-body" id="main-content">\n'
         '<div id="mw-content-text" class="mw-body-content mw-content-ltr">\n'
         '<div class="mw-parser-output">\n'
+        f'{topic_callout}'
         f'<p class="browse-info">{html_lib.escape(sub_label)}。点表头排序；下方分页栏可搜索 / 翻页 / 调整每页条数。</p>\n'
         '<table class="browse-table wikitable" id="browse-tbl">\n'
         f'{thead}\n'
@@ -307,11 +337,11 @@ def render_browse_all_hub(bucket_entries: dict, letters: list, topnav: str, side
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         '<script>/* pre-paint theme */(function(){try{var t=localStorage.getItem(\'theme\');if(t===\'dark\'||(t!==\'light\'&&window.matchMedia&&matchMedia(\'(prefers-color-scheme:dark)\').matches))document.documentElement.classList.add(\'dark\');}catch(e){}})();</script>\n'
         '<title>全部条目 — PF2 离线百科</title>\n'
-        '<link rel="stylesheet" href="assets/style.css">\n<link rel="icon" href="assets/favicon.ico">\n'
-        '<script defer src="assets/topnav.js"></script>\n<script defer src="assets/theme.js"></script>\n'
-        '<script defer src="assets/external_links.js"></script>\n<script defer src="assets/updater_ui.js"></script>\n'
-        '<script defer src="assets/mw_collapsible.js"></script>\n<script defer src="assets/bookmark.js"></script>\n'
-        '<script defer src="assets/keybindings.js"></script>\n' + style + '\n</head>\n'
+        '<link rel="stylesheet" href="assets/style.css?v=v2i">\n<link rel="icon" href="assets/favicon.ico">\n'
+        '<script defer src="assets/topnav.js?v=v2i"></script>\n<script defer src="assets/theme.js?v=v2i"></script>\n'
+        '<script defer src="assets/external_links.js?v=v2i"></script>\n<script defer src="assets/updater_ui.js?v=v2i"></script>\n'
+        '<script defer src="assets/mw_collapsible.js?v=v2i"></script>\n<script defer src="assets/bookmark.js?v=v2i"></script>\n'
+        '<script defer src="assets/keybindings.js?v=v2i"></script>\n' + style + '\n</head>\n'
         '<body class="mediawiki ltr sitedir-ltr action-view skin--responsive page-browse-all">\n'
         '<a class="skip-link" href="#main-content">跳到主要内容</a>\n'
         f'{topnav}\n<header class="page-head"><h1>全部条目</h1></header>\n'
@@ -392,13 +422,29 @@ def main() -> int:
     for e in ns14_entries:
         cat_names.add(e["title"])
     cat_entries = []
+    cat_dir = ROOT / "category"
+    n_drop_pageless = 0
     for cat in cat_names:
-        n = len(cat_to_entries.get(cat, []))
+        members = cat_to_entries.get(cat, [])
+        n = len(members)
+        href = page_href(14, f"Category:{cat}")
+        # [RC4] build_v2 [4b] no longer synthesizes bookkeeping/maintenance
+        # pseudo-cats (and sweeps their orphans from category/) — drop names
+        # whose page is not on disk, else they'd be dead links here.
+        fn = urllib.parse.unquote(href.split("/", 1)[1])
+        if not (cat_dir / fn).exists():
+            n_drop_pageless += 1
+            continue
+        # Single-member self-named cats are jump stubs now — link the article.
+        if n == 1 and members[0]["title"] == cat:
+            href = members[0]["href"]
         cat_entries.append({
             "pageid": 0, "ns": 14, "ns_label": "分类", "title": cat,
-            "href": page_href(14, f"Category:{cat}"),
+            "href": href,
             "cats": [f"{n} 个页面"] if n else [],
         })
+    if n_drop_pageless:
+        print(f"  [RC4] dropped {n_drop_pageless} pageless pseudo-cats from categories bucket")
     bucket_entries["categories"] = cat_entries
 
     print("[2/3] writing browse-*.html files ...")

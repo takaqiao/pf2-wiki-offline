@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* pre-paint theme to avoid FOUC */(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');}catch(e){}})();</script>
+<title>随机页面 — PF2 离线百科</title>
+<style>
+  /* Self-contained: no external CSS so the interstitial paints instantly.
+     Colours mirror assets/_v2_palette.css (light #ffffff / dark #1a1816). */
+  html { background: #ffffff; }
+  html.dark { background: #1a1816; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #ffffff; color: #202122;
+  }
+  html.dark body { background: #1a1816; color: #d9d4cd; }
+  .rnd-box { text-align: center; padding: 24px; }
+  .rnd-box a { color: #2a4b8d; }
+  html.dark .rnd-box a { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div class="rnd-box"><p id="rnd-msg">正在抽取随机页面…</p></div>
+
+<!-- Search-index data files register on window.* when loaded (JSONP-style,
+     same loader contract as search.js — file:// fetch is unreliable).
+     titles.js: window.__PF2_TITLES = {v, items:[{i,t,h,k,e},...]}
+     types.js:  window.__PF2_TYPES  = {v, n, codes:"..."} (per-entry type code,
+                loaded for future type-based filtering; not used for the draw
+                so every article keeps equal probability). -->
+<script src="index/titles.js"></script>
+<script src="index/types.js"></script>
+<script>
+(function () {
+  "use strict";
+  function fail() {
+    var el = document.getElementById("rnd-msg");
+    if (el) el.innerHTML = '随机页面数据加载失败 — <a href="index.html">返回首页</a> · <a href="search.html">前往搜索</a>';
+  }
+  try {
+    var T = window.__PF2_TITLES;
+    var items = (T && T.items) || [];
+    // Articles only: href under pages/ (excludes data/, category/, project/).
+    var pool = [];
+    for (var i = 0; i < items.length; i++) {
+      var h = items[i] && items[i].h;
+      if (h && h.indexOf("pages/") === 0) pool.push(h);
+    }
+    if (!pool.length) { fail(); return; }
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    location.replace(pick); // replace: back button skips this interstitial
+  } catch (e) {
+    fail();
+  }
+})();
+</script>
+<noscript><p style="text-align:center">随机页面需要启用 JavaScript。<a href="index.html">返回首页</a></p></noscript>
+</body>
+</html>
