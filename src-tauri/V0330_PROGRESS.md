@@ -61,4 +61,5 @@
 - 2026-06-10 | 审计工作流 42 agents 完成（2.37M tokens/982 工具调用/56 分钟）：RC1-RC7 全部 present/partial 确认 + 27 条新发现 confirmed（3 P0）+ 3 否决。
 - 2026-06-10 | 实施工作流 10 agents 完成（1.17M tokens）：build/search/js/nav 批准，css 审查 1 major（VF2 特异性）。
 - 2026-06-10 | 主控收尾 12 项整合完成；全量重建启动（后台）。
-- 2026-06-11 | 重建 0 fail；静态+死链+Playwright 验证全过；补修 最佳匹配横幅 + topnav 限高。**源码待提交备份 repo；打包/发版待用户授权（内容+资产改动含 search.js/CSS/topnav——资产在 portable 文件夹里随内容补丁走，无 Rust 改动，无需 -RebuildExe）。**
+- 2026-06-11 | 重建 0 fail；静态+死链+Playwright 验证全过；补修 最佳匹配横幅 + topnav 限高。源码 commit f28539e。
+- 2026-06-11 | **用户全部授权 → v0.3.30 已发布**：push f28539e + 8b28af8；release.ps1 -PrevVer v0.3.29 -NewVer v0.3.30（无 -RebuildExe，复用 exe）。补丁 275.58MB（+18/~43,728/-617——topnav+缓存戳重烤全站所致，同 v0.3.25 先例；下次纯内容补丁恢复小）。资产：portable.zip 1.33GB + 补丁 + patches.json（latest=v0.3.30，链 v0.3.29→v0.3.30 ✓）。打包前清理 _wiki_full_v2 内 .playwright-mcp/ 与 _audit_resolve.txt（历史发布无此杂物，本批新混入）。**下次补丁基准 = 干净 pf2-wiki-offline_0.3.30_x64-portable（勿覆盖）**；旧 folder/zip 已按惯例清理。
