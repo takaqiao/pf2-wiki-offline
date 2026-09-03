@@ -18,7 +18,10 @@ param(
   [switch]$RebuildExe
 )
 $ErrorActionPreference = 'Stop'
-$fvtt   = "$env:USERPROFILE\Desktop\fvtt"
+# Project root = the parent of the folder this script lives in. Derived, not
+# hardcoded, because the tree moved under a non-ASCII path and this file must
+# stay ASCII-only (see the NOTE above).
+$fvtt   = Split-Path -Parent $PSScriptRoot
 $rel    = "$fvtt\src-tauri\target\release"
 $base   = "$rel\bundle\portable"
 $repo   = "$env:USERPROFILE\pf2-wiki-offline"
@@ -54,7 +57,7 @@ Copy-Item "$rel\pf2-wiki.exe" "$newDir\pf2-wiki.exe"
 # Exclude build-only files from the shipped portable: Python generators, caches,
 # build-time snippets, and stray logs are never read at runtime.
 robocopy "$fvtt\_wiki_full_v2" "$newDir\_wiki_full_v2" /MIR /NFL /NDL /NJH /NJS /NP /NS /NC `
-    /XF *.py *.pyc *.log /XD __pycache__ _snippets | Out-Null
+    /XF *.py *.pyc *.log *.txt /XD __pycache__ _snippets .playwright-mcp | Out-Null
 
 Write-Host "[*] zipping ..."
 Remove-Item "$newDir.zip" -Force -ErrorAction SilentlyContinue

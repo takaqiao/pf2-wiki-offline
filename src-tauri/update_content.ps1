@@ -18,7 +18,8 @@ param(
   [switch]$SkipScrape   # 只重建+发布, 跳过抓取 (调试用)
 )
 $ErrorActionPreference = 'Stop'
-$fvtt    = "$env:USERPROFILE\Desktop\fvtt"
+# 项目根 = 本脚本所在目录的父目录（推导而非硬编码：目录树已移到中文路径下）
+$fvtt    = Split-Path -Parent $PSScriptRoot
 $scraper = "$fvtt\pf2wiki-scraper"
 $wfv     = "$fvtt\_wiki_full_v2"
 $py      = "$scraper\.venv\Scripts\python.exe"
@@ -28,7 +29,9 @@ if (-not $SkipScrape) {
   & $py "$scraper\cookie_warmup_v2.py"
   Write-Host "[2/6] 抓取最新 metadata (~20s) ..."
   & $py "$scraper\dump_metadata_v2.py"
-  Write-Host "[3/6] 抓取页面内容 (断点续传, 仅缺失/变化, ~数分钟) ..."
+  Write-Host "[2.5/6] 作废已被编辑的页面 (否则续传只补新页, 改过的页永不重抓) ..."
+  & $py "$scraper\invalidate_stale_v2.py" --write
+  Write-Host "[3/6] 抓取页面内容 (断点续传: 缺失 + 上一步作废的) ..."
   & $py "$scraper\dump_parsed_v2_concurrent.py" -c 20
   Write-Host "[4/6] 抓取图片 (断点续传) ..."
   & $py "$scraper\dump_images_v2_concurrent.py" -c 16
